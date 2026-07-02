@@ -1,121 +1,121 @@
-# Minimal Blog Design
+# 极简个人博客设计规格
 
-Date: 2026-07-02
+日期：2026-07-02
 
-## Goal
+## 目标
 
-Build a high-quality personal technical blog with a strict minimalist visual style. The first version should feel like a carefully typeset publication rather than a Hugo theme or generic template.
+做一个高级感的个人技术博客，视觉上严格走极简主义，不使用 Hugo 主题，也不套通用博客模板。
 
-The site will be hand-built with Astro and TailwindCSS. Existing Notion notes will be整理 into 3-5 initial articles.
+首版用 Astro 和 TailwindCSS 手写前端，从本地 Notion 笔记中整理 3-5 篇文章，形成可运行、可预览、可继续扩展的静态博客。
 
-## Non-Goals
+## 不做什么
 
-- Do not use Hugo or a prebuilt blog theme.
-- Do not connect to Notion as a live CMS in the first version.
-- Do not add a backend, admin panel, comments, accounts, or subscriptions.
-- Do not introduce a general-purpose UI component library.
-- Do not add complex animation. Keep only refined micro-interactions.
+- 不使用 Hugo 或现成博客主题。
+- 首版不把 Notion 接成实时 CMS。
+- 不做后台、登录、评论、订阅等动态功能。
+- 不引入通用 UI 组件库。
+- 不做复杂动效，只保留克制的微交互。
 
-## Audience
+## 读者
 
-The primary reader is someone browsing concise technical practice notes, deployment records, and personal learning writeups. The site should prioritize reading, scanning, and credibility.
+主要读者是来看技术实践、部署记录、学习笔记的人。网站应优先保证阅读、扫描和可信度，不做营销式首页。
 
-## Content Scope
+## 内容范围
 
-Initial posts will be adapted from local Notion notes:
+首版文章从本地 Notion 笔记中整理：
 
-- Hugo部署
+- Hugo 部署
 - 网站上线
 - 网站更新
-- CI/CD博客
+- CI/CD 博客
 - 爬个人博客
 
-The notes should not be copied raw. Each article should be rewritten into a consistent blog format:
+文章不直接复制原始笔记，而是整理成统一的博客格式：
 
-- Title
-- Date
-- Category
-- Short description
-- Structured body
-- Code blocks where useful
-- Clear closing notes when the original content is operational or partial
+- 标题
+- 日期
+- 分类
+- 简短摘要
+- 结构化正文
+- 必要的代码块
+- 对操作型或不完整内容补充说明
 
-## Pages
+## 页面
 
-### Home
+### 首页
 
-The home page introduces the author and presents the blog as a minimalist technical writing space.
+首页用于介绍作者和这个博客的写作方向，整体像一份排版克制的个人出版物入口。
 
-Required sections:
+包含：
 
-- Small metadata line
-- Large editorial headline
-- Short description
-- Featured article list
-- Recent writing list
-- Minimal footer
+- 一行小型元信息
+- 大字号主标题
+- 简短介绍
+- 精选文章
+- 最近文章
+- 极简页脚
 
-### Writing
+### 文章列表页
 
-The writing page lists all posts in an index-like layout.
+文章列表页使用索引式排版，不做卡片堆叠。
 
-Each row includes:
+每一行包含：
 
-- Index number
-- Date
-- Category
-- Title
-- Short description
+- 编号
+- 日期
+- 分类
+- 标题
+- 简短摘要
 
-Rows use dividers and grid alignment, not card shadows.
+行与行之间用细分隔线和网格对齐，不使用阴影。
 
-### Article Detail
+### 文章详情页
 
-The article page prioritizes long-form reading.
+文章详情页以阅读为核心。
 
-Required elements:
+包含：
 
-- Title
-- Date and category
-- Optional description
-- Body content
-- Code block styling
-- Back link to writing index
+- 标题
+- 日期和分类
+- 可选摘要
+- 正文
+- 代码块样式
+- 返回文章列表的链接
 
-Reading width should stay near 720-800px on desktop.
+桌面端阅读宽度控制在 720-800px 左右。
 
-### About
+### 关于页
 
-The about page is short and restrained.
+关于页保持简短。
 
-Content:
+包含：
 
-- Who the site is for
-- Current interests
-- Optional links for GitHub, email, or RSS; hide any link that has no real value yet
+- 这个网站写给谁看
+- 当前关注方向
+- GitHub、邮箱或 RSS 等真实链接；没有实际价值的链接先隐藏
 
-## Visual Direction
+## 视觉方向
 
-The visual system follows the provided Minimalism UI reference:
+视觉系统遵循你给的 Minimalism UI 参考：
 
-- White background
-- Black primary text
-- Neutral gray hierarchy
-- No decorative gradients, shadows, blobs, or ornamental illustrations
-- Layout driven by typography, whitespace, and grid
-- Accent color used rarely, only for links or focus states
+- 白色背景
+- 黑色主文字
+- 灰色建立信息层级
+- 不使用装饰渐变、阴影、色块、光斑或插画
+- 依靠排版、留白和网格形成视觉秩序
+- 点缀色只用于链接或焦点状态
 
-## Layout System
+## 布局系统
 
-Use a 12-column grid on desktop:
+桌面端使用 12 列网格：
 
 - `grid-template-columns: repeat(12, 1fr)`
-- Desktop gap: 32px
-- Tablet/mobile gap: 24px or less as needed
-- Content should occupy about 40-50% of the horizontal space on desktop
-- Whitespace should occupy about 50-60%
+- 桌面端列间距 32px
+- 平板和移动端根据空间收窄到 24px 或更低
+- 桌面端内容占页面宽度约 40-50%
+- 留白占页面宽度约 50-60%
 
-Spacing uses an 8px base scale:
+间距使用 8px 基础单位：
 
 - 8px
 - 16px
@@ -125,36 +125,36 @@ Spacing uses an 8px base scale:
 - 64px
 - 96px
 
-Main page padding:
+页面主区域留白：
 
-- Desktop: 64px horizontal or vertical where appropriate
-- Mobile: 24-32px
+- 桌面端按场景使用 64px
+- 移动端压缩到 24-32px
 
-## Typography
+## 排版
 
-Font stack:
+字体栈：
 
 ```css
 Inter, "Helvetica Neue", "SF Pro Display", Arial, sans-serif
 ```
 
-Type scale:
+字号层级：
 
-- Hero title: 48-72px, weight 300 or 700, letter-spacing -0.02em
-- Section title: 24-36px, weight 400
-- Body: 16-18px, line-height 1.8, letter-spacing 0.02em
-- Meta text: 12-14px, light weight, gray
+- 首页主标题：48-72px，字重 300 或 700，字距 -0.02em
+- 区块标题：24-36px，字重 400
+- 正文：16-18px，行高 1.8，字距 0.02em
+- 辅助文字：12-14px，浅字重，灰色
 
-Typography is the primary visual device. Avoid oversized cards or decorative surfaces.
+排版本身就是主要视觉，不用大面积卡片和装饰表面。
 
-## Color System
+## 颜色
 
-Primary:
+主色：
 
-- Black: `#000000`
-- White: `#ffffff`
+- 黑色：`#000000`
+- 白色：`#ffffff`
 
-Text hierarchy:
+文字层级：
 
 - `#1a1a1a`
 - `#2d2d2d`
@@ -163,40 +163,40 @@ Text hierarchy:
 - `#808080`
 - `#999999`
 
-Lines and surfaces:
+线条和浅色表面：
 
 - `#cccccc`
 - `#e5e5e5`
 - `#f5f5f5`
 
-Accent:
+点缀色：
 
-- Link blue: `#0066ff`, used sparingly
-- Red: `#ff0000`, only for destructive or warning states if such states exist later
+- 链接蓝：`#0066ff`，少量使用
+- 红色：`#ff0000`，后续如有警告或删除状态再使用
 
-## Interaction
+## 交互
 
-Interactions must stay subtle:
+交互保持克制：
 
-- Link hover changes color or opacity.
-- Article row hover changes border color or text color.
-- Buttons may invert black and white.
-- Transitions use `transition: all 0.3s ease`.
-- Avoid scale, bounce, parallax, large translation, or scroll-jacking.
+- 链接 hover 改变颜色或透明度。
+- 文章行 hover 改变边框颜色或文字颜色。
+- 按钮可以做黑白反转。
+- 过渡使用 `transition: all 0.3s ease`。
+- 不使用缩放、弹跳、视差、大位移或滚动劫持。
 
-Focus states must remain visible for keyboard users.
+键盘焦点状态必须可见。
 
-## Technical Architecture
+## 技术架构
 
-Use:
+使用：
 
 - Astro
 - TailwindCSS
 - TypeScript
-- Markdown or MDX content files
-- Astro Content Collections for post metadata
+- Markdown 或 MDX 内容文件
+- Astro Content Collections 管理文章元数据
 
-Suggested structure:
+建议目录：
 
 ```text
 src/
@@ -223,48 +223,48 @@ src/
     global.css
 ```
 
-## Component Boundaries
+## 组件边界
 
 `BaseLayout.astro`
 
-- HTML shell
-- Shared metadata
-- Global header and footer
-- Main container structure
+- HTML 外壳
+- 通用元信息
+- 全局头部和页脚
+- 主容器结构
 
 `ArticleLayout.astro`
 
-- Article title area
-- Metadata display
-- Markdown content styling
-- Back navigation
+- 文章标题区
+- 文章元信息
+- Markdown 正文样式
+- 返回导航
 
 `Header.astro`
 
-- Minimal text navigation
-- Links: Home, Writing, About
+- 极简文字导航
+- 链接：Home、Writing、About
 
 `ArticleIndex.astro`
 
-- Reusable article list layout
-- Supports featured and full index variants
+- 可复用文章列表
+- 支持精选列表和完整索引两种形态
 
 `MinimalFooter.astro`
 
-- Copyright
-- Small links
+- 版权信息
+- 少量链接
 
-## Validation
+## 验证
 
-Before implementation is considered complete:
+实现完成前需要验证：
 
-- Start the local dev server.
-- Check home, writing, about, and at least one article page.
-- Run the production build.
-- Inspect desktop and mobile layouts with browser screenshots.
-- Verify text does not overflow, overlap, or collapse on mobile.
-- Confirm the page still reads as minimalist: no shadows, no decorative gradients, no component-library defaults.
+- 启动本地开发服务器。
+- 检查首页、文章列表页、关于页和至少一篇文章页。
+- 运行生产构建。
+- 用浏览器截图检查桌面端和移动端排版。
+- 确认移动端文本不溢出、不重叠、不塌陷。
+- 确认整体仍然是极简主义：没有阴影、装饰渐变、组件库默认样式。
 
-## Open Decisions
+## 已确认决策
 
-None. The first version will prioritize a polished static blog with local Markdown content.
+首版做一个 polished static blog：静态博客、本地 Markdown 内容、极简视觉、轻量微交互。
