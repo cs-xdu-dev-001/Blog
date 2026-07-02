@@ -1,0 +1,18 @@
+---
+const navItems = [
+  { href: '/', label: 'Home' },
+  { href: '/writing', label: 'Writing' },
+  { href: '/about', label: 'About' },
+];
+---
+
+<header class="site-header minimal-grid mb-24 items-start text-sm tracking-[0.03em] text-[#666666]">
+  <a href="/" class="minimal-link col-span-3 text-[#000000]" aria-label="Home">
+    W.
+  </a>
+  <nav class="site-nav col-span-6 col-start-7 flex justify-between gap-6 md:justify-start md:gap-10" aria-label="Primary navigation">
+    {navItems.map((item) => (
+      <a class="minimal-link" href={item.href}>{item.label}</a>
+    ))}
+  </nav>
+</header>

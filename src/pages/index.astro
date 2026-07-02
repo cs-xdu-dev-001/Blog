@@ -1,0 +1,48 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ArticleIndex from '../components/ArticleIndex.astro';
+
+const posts = (await getCollection('posts')).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
+);
+const featured = posts.filter((post) => post.data.featured).slice(0, 3);
+const recent = posts.slice(0, 5);
+---
+
+<BaseLayout title="W. Notes · 极简技术博客" description="一个极简个人技术博客，记录部署、自动化和小型实践。">
+  <section class="minimal-grid mb-32">
+    <p class="col-span-2 text-xs uppercase tracking-[0.16em] text-[#999999]">
+      Personal technical notes
+    </p>
+    <div class="col-span-8 col-start-4">
+      <h1 class="max-w-[880px] text-balance text-[clamp(46px,8vw,92px)] font-light leading-[1.02] tracking-[-0.03em] text-[#000000]">
+        写下能复用的技术实践。
+      </h1>
+      <p class="mt-12 max-w-[680px] text-lg leading-[1.8] tracking-[0.02em] text-[#404040]">
+        这里收集部署、自动化、爬虫和个人网站实践。内容保持短、清楚、可回看，界面尽量不打扰阅读。
+      </p>
+    </div>
+  </section>
+
+  <section class="minimal-grid mb-28">
+    <div class="col-span-2">
+      <h2 class="text-sm tracking-[0.12em] text-[#999999]">Featured</h2>
+    </div>
+    <div class="col-span-10">
+      <ArticleIndex posts={featured} />
+    </div>
+  </section>
+
+  <section class="minimal-grid">
+    <div class="col-span-2">
+      <h2 class="text-sm tracking-[0.12em] text-[#999999]">Recent</h2>
+    </div>
+    <div class="col-span-10">
+      <ArticleIndex posts={recent} showDescriptions={false} />
+      <a class="minimal-link mt-10 inline-block text-sm tracking-[0.03em] text-[#000000]" href="/writing">
+        View all writing
+      </a>
+    </div>
+  </section>
+</BaseLayout>

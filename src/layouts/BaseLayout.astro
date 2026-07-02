@@ -1,0 +1,32 @@
+---
+import '../styles/global.css';
+import Header from '../components/Header.astro';
+import MinimalFooter from '../components/MinimalFooter.astro';
+
+const {
+  title = 'W. Notes',
+  description = 'A minimal personal technical blog.',
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <title>{title}</title>
+  </head>
+  <body>
+    <a class="sr-only focus:not-sr-only focus:fixed focus:left-6 focus:top-6 focus:z-50 focus:bg-white focus:px-4 focus:py-3 focus:text-sm focus:text-black" href="#main-content">
+      Skip to main content
+    </a>
+    <div class="minimal-shell">
+      <Header />
+      <main id="main-content">
+        <slot />
+      </main>
+      <MinimalFooter />
+    </div>
+  </body>
+</html>

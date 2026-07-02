@@ -1,0 +1,31 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ArticleIndex from '../components/ArticleIndex.astro';
+
+const posts = (await getCollection('posts')).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
+);
+---
+
+<BaseLayout title="Writing · W. Notes" description="全部文章索引。">
+  <section class="minimal-grid mb-24">
+    <div class="col-span-3">
+      <p class="text-xs uppercase tracking-[0.16em] text-[#999999]">Index</p>
+    </div>
+    <div class="col-span-8 col-start-5">
+      <h1 class="text-balance text-[clamp(48px,7vw,76px)] font-light leading-[1.08] tracking-[-0.022em] text-[#000000]">
+        Writing
+      </h1>
+      <p class="mt-8 max-w-[620px] text-lg leading-[1.8] tracking-[0.02em] text-[#666666]">
+        按时间整理的技术实践笔记。每篇文章都尽量只保留能复用的信息。
+      </p>
+    </div>
+  </section>
+
+  <section class="minimal-grid">
+    <div class="col-span-10 col-start-3">
+      <ArticleIndex posts={posts} />
+    </div>
+  </section>
+</BaseLayout>
