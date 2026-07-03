@@ -1,5 +1,5 @@
 ---
-const { posts, showDescriptions = true } = Astro.props;
+const { posts, showDescriptions = true, compact = false } = Astro.props;
 
 const formatDate = (date: Date) =>
   new Intl.DateTimeFormat('zh-CN', {
@@ -9,27 +9,27 @@ const formatDate = (date: Date) =>
   }).format(date);
 ---
 
-<ol class="border-t border-[#e5e5e5]">
+<ol class:list={['article-index', compact && 'article-index-compact']}>
   {posts.map((post, index) => (
     <li>
       <a
-        class="article-row minimal-grid group border-b border-[#e5e5e5] py-8 transition-colors duration-300 ease-minimal hover:border-[#000000]"
+        class="article-row group"
         href={`/posts/${post.slug}`}
       >
-        <span class="article-row-meta col-span-1 text-xs tabular-nums tracking-[0.03em] text-[#999999]">
+        <span class="article-row-number">
           {String(index + 1).padStart(2, '0')}
         </span>
-        <span class="article-row-meta col-span-2 text-xs tabular-nums tracking-[0.03em] text-[#808080]">
+        <span class="article-row-date">
           {formatDate(post.data.date)}
         </span>
-        <span class="article-row-meta col-span-2 text-xs tracking-[0.03em] text-[#999999]">
+        <span class="article-row-category">
           {post.data.category}
         </span>
-        <span class="article-row-title col-span-5 text-xl font-normal leading-tight tracking-[-0.012em] text-[#000000] transition-colors duration-300 ease-minimal group-hover:text-[#666666]">
+        <span class="article-row-title">
           {post.data.title}
         </span>
         {showDescriptions && (
-          <span class="col-span-2 text-sm leading-7 tracking-[0.02em] text-[#666666]">
+          <span class="article-row-description">
             {post.data.description}
           </span>
         )}

@@ -56,9 +56,9 @@ button:focus-visible {
 }
 
 .minimal-shell {
-  width: min(100%, 1440px);
+  width: min(100%, 1240px);
   margin: 0 auto;
-  padding: 48px 32px;
+  padding: 44px 40px 56px;
 }
 
 .minimal-grid {
@@ -73,9 +73,145 @@ button:focus-visible {
   transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.home-hero {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 780px);
+  gap: 64px;
+  align-items: start;
+  margin: 76px auto 128px;
+  max-width: 1024px;
+}
+
+.home-kicker {
+  margin: 10px 0 0;
+  max-width: 150px;
+  color: var(--faint);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.home-intro h1 {
+  margin: 0;
+  max-width: 700px;
+  color: var(--ink);
+  font-size: clamp(64px, 6.6vw, 88px);
+  font-weight: 300;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.home-intro p {
+  margin: 48px 0 0;
+  max-width: 650px;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.85;
+  letter-spacing: 0.02em;
+}
+
+.home-section {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 860px);
+  gap: 64px;
+  align-items: start;
+  max-width: 1104px;
+  margin: 0 auto 96px;
+}
+
+.home-section-label h2 {
+  margin: 3px 0 0;
+  color: var(--faint);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.16em;
+}
+
+.home-section-body {
+  min-width: 0;
+}
+
+.article-index {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+
+.article-row {
+  display: grid;
+  grid-template-columns: 52px 116px 120px minmax(220px, 1fr) minmax(220px, 300px);
+  gap: 28px;
+  align-items: baseline;
+  min-height: 116px;
+  padding: 28px 0;
+  border-bottom: 1px solid var(--line);
+  transition-property: border-color;
+  transition-duration: 260ms;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.article-index-compact .article-row {
+  grid-template-columns: 52px 116px 120px minmax(220px, 1fr);
+  min-height: 80px;
+}
+
+.article-row-number,
+.article-row-date,
+.article-row-category {
+  color: var(--faint);
+  font-size: 12px;
+  line-height: 1.4;
+  letter-spacing: 0.03em;
+}
+
+.article-row-date {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.article-row-title {
+  color: var(--ink);
+  font-size: 21px;
+  font-weight: 500;
+  line-height: 1.32;
+  letter-spacing: -0.012em;
+  transition-property: color;
+  transition-duration: 260ms;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.article-row-description {
+  max-width: 280px;
+  color: #666666;
+  font-size: 14px;
+  line-height: 1.75;
+  letter-spacing: 0.02em;
+}
+
+.view-all-link {
+  display: inline-block;
+  margin-top: 32px;
+  color: var(--ink);
+  font-size: 14px;
+  letter-spacing: 0.03em;
+}
+
 @media (hover: hover) {
   .minimal-link:hover {
     color: var(--muted);
+  }
+
+  .article-row:hover {
+    border-color: var(--ink);
+  }
+
+  .article-row:hover .article-row-title {
+    color: #666666;
   }
 }
 
@@ -163,6 +299,40 @@ button:focus-visible {
     display: block;
   }
 
+  .home-hero,
+  .home-section {
+    display: block;
+    max-width: 100%;
+  }
+
+  .home-hero {
+    margin: 72px 0 104px;
+  }
+
+  .home-kicker {
+    margin-bottom: 8px;
+    max-width: 100%;
+  }
+
+  .home-intro h1 {
+    font-size: clamp(44px, 13vw, 54px);
+    line-height: 1.08;
+  }
+
+  .home-intro p {
+    margin-top: 40px;
+    font-size: 16px;
+    line-height: 1.85;
+  }
+
+  .home-section {
+    margin-bottom: 88px;
+  }
+
+  .home-section-label {
+    margin-bottom: 18px;
+  }
+
   .minimal-shell h1,
   .minimal-shell h2,
   .minimal-shell h3,
@@ -191,6 +361,8 @@ button:focus-visible {
 
   .article-row {
     display: block;
+    min-height: 0;
+    padding: 30px 0;
   }
 
   .article-row > span {
@@ -202,9 +374,20 @@ button:focus-visible {
     margin-bottom: 12px;
   }
 
+  .article-row-number,
+  .article-row-date,
+  .article-row-category {
+    margin-bottom: 9px;
+  }
+
   .article-row-title {
-    margin-bottom: 12px;
+    margin: 10px 0 12px;
     font-size: 22px;
+  }
+
+  .article-row-description {
+    max-width: 100%;
+    font-size: 14px;
   }
 
   .article-prose pre {
