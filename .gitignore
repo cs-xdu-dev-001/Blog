@@ -3,3 +3,6 @@ dist/
 .astro/
 astro-dev*.log
 screens-*.png
+reference-*.json
+reference-*.png
+reference-*.js

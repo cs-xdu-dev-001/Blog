@@ -201,6 +201,528 @@ button:focus-visible {
   letter-spacing: 0.03em;
 }
 
+.mnml-page {
+  min-height: 100vh;
+  overflow-x: hidden;
+  background: #ffffff;
+  color: #000000;
+  font-family: Inter, "Helvetica Neue", "SF Pro Display", Arial, sans-serif;
+}
+
+.mnml-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 48px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(229, 229, 229, 0.46);
+}
+
+.mnml-logo {
+  color: #000000;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+.mnml-nav-links {
+  display: flex;
+  gap: 48px;
+  color: #737373;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.mnml-nav a,
+.mnml-footer a {
+  transition-property: color, opacity, border-color;
+  transition-duration: 300ms;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mnml-menu {
+  padding-bottom: 2px;
+  border-bottom: 1px solid #000000;
+  color: #000000;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.mnml-section {
+  padding: 128px 96px;
+}
+
+.mnml-hero {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  justify-content: center;
+  padding-top: 160px;
+}
+
+.mnml-eyebrow {
+  margin: 0 0 32px;
+  color: #a3a3a3;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.mnml-hero h1 {
+  margin: 0 0 48px;
+  color: #000000;
+  font-size: clamp(72px, 10vw, 144px);
+  font-weight: 300;
+  line-height: 0.9;
+  letter-spacing: -0.055em;
+}
+
+.mnml-hero h1 span {
+  font-weight: 650;
+}
+
+.mnml-hero-copy {
+  max-width: 600px;
+}
+
+.mnml-hero-copy p {
+  margin: 0;
+  color: #525252;
+  font-size: 20px;
+  font-weight: 300;
+  line-height: 1.75;
+  letter-spacing: 0.01em;
+}
+
+.mnml-hero-link {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 16px;
+  margin-top: 48px;
+  color: #000000;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.mnml-hero-link span:last-child {
+  transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mnml-divider {
+  width: 100%;
+  height: 1px;
+  background: #e5e5e5;
+}
+
+.mnml-fade {
+  opacity: 0;
+  transform: translateY(16px);
+  animation: mnmlFade 1000ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.mnml-delay-1 {
+  animation-delay: 200ms;
+}
+
+.mnml-delay-2 {
+  animation-delay: 420ms;
+}
+
+@keyframes mnmlFade {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mnml-concept {
+  display: grid;
+  grid-template-columns: 4fr 8fr;
+  gap: 48px;
+}
+
+.mnml-concept-copy h2,
+.mnml-materials-intro h2,
+.mnml-interactions h2 {
+  margin: 0 0 24px;
+  color: #000000;
+  font-size: 32px;
+  font-weight: 300;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.mnml-short-line {
+  width: 32px;
+  height: 1px;
+  margin-bottom: 24px;
+  background: #000000;
+}
+
+.mnml-concept-copy p,
+.mnml-materials-intro p,
+.mnml-interactions p {
+  margin: 0;
+  color: #737373;
+  font-size: 16px;
+  line-height: 2;
+  letter-spacing: 0.01em;
+}
+
+.mnml-principles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 32px;
+}
+
+.mnml-principle-card {
+  display: flex;
+  min-height: 360px;
+  flex-direction: column;
+  justify-content: space-between;
+  background: #fafafa;
+  padding: 32px;
+  transition-property: background-color;
+  transition-duration: 500ms;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mnml-principle-card > span {
+  color: #a3a3a3;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+}
+
+.mnml-principle-card h3 {
+  margin: 0 0 8px;
+  color: #000000;
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+}
+
+.mnml-principle-card p {
+  margin: 0;
+  color: #737373;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.mnml-scenarios {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid #f5f5f5;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.mnml-scenarios article {
+  min-height: 270px;
+  padding: 64px;
+  border-right: 1px solid #f5f5f5;
+  transition-property: background-color;
+  transition-duration: 500ms;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mnml-scenarios article:last-child {
+  border-right: 0;
+}
+
+.mnml-scenarios span,
+.mnml-card-label,
+.mnml-interaction-lab > div > span {
+  display: block;
+  margin-bottom: 16px;
+  color: #a3a3a3;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mnml-scenarios h3 {
+  margin: 0 0 16px;
+  color: #000000;
+  font-size: 26px;
+  font-weight: 300;
+  line-height: 1.25;
+  transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mnml-scenarios p {
+  margin: 0;
+  max-width: 280px;
+  color: #737373;
+  font-size: 14px;
+  line-height: 1.85;
+}
+
+.mnml-materials {
+  background: #fafafa;
+}
+
+.mnml-materials-intro {
+  margin-bottom: 64px;
+}
+
+.mnml-materials-intro p {
+  max-width: 720px;
+}
+
+.mnml-showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 48px;
+  align-items: start;
+}
+
+.mnml-form-card,
+.mnml-content-card {
+  background: #ffffff;
+  border: 1px solid #f5f5f5;
+}
+
+.mnml-form-card {
+  padding: 48px;
+}
+
+.mnml-input-line {
+  margin-bottom: 32px;
+}
+
+.mnml-input-line span {
+  display: block;
+  margin-bottom: 8px;
+  color: #a3a3a3;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.mnml-input-line strong {
+  display: block;
+  border-bottom: 1px solid #e5e5e5;
+  padding-bottom: 10px;
+  color: #000000;
+  font-size: 20px;
+  font-weight: 300;
+  letter-spacing: -0.012em;
+  transition: border-color 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mnml-solid-button {
+  display: inline-block;
+  margin-top: 16px;
+  background: #000000;
+  padding: 14px 32px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  transition-property: background-color;
+  transition-duration: 300ms;
+}
+
+.mnml-image-placeholder {
+  position: relative;
+  height: 260px;
+  overflow: hidden;
+  background: #e5e5e5;
+}
+
+.mnml-image-placeholder::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #d4d4d4;
+  transition: transform 1000ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mnml-image-placeholder span {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  z-index: 1;
+  background: #ffffff;
+  padding: 4px 12px;
+  color: #000000;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.mnml-content-body {
+  display: flex;
+  min-height: 280px;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 32px;
+}
+
+.mnml-content-body h3 {
+  margin: 0 0 16px;
+  color: #000000;
+  font-size: 28px;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+}
+
+.mnml-content-body p {
+  margin: 0;
+  color: #737373;
+  font-size: 14px;
+  line-height: 1.85;
+}
+
+.mnml-content-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  border-top: 1px solid #f5f5f5;
+  padding-top: 32px;
+  color: #a3a3a3;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.mnml-content-meta a {
+  transition: color 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mnml-interactions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 128px;
+}
+
+.mnml-interactions p {
+  margin-bottom: 32px;
+}
+
+.mnml-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #a3a3a3;
+  font-size: 14px;
+}
+
+.mnml-interaction-lab {
+  display: grid;
+  gap: 48px;
+}
+
+.mnml-outline-button {
+  display: inline-block;
+  border: 1px solid #e5e5e5;
+  padding: 14px 32px;
+  color: #525252;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  transition-property: border-color, color;
+  transition-duration: 300ms;
+}
+
+.mnml-text-link {
+  position: relative;
+  display: inline-block;
+  color: #000000;
+  font-size: 22px;
+  font-weight: 300;
+}
+
+.mnml-text-link::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -2px;
+  left: 0;
+  height: 1px;
+  background: #e5e5e5;
+  transition: background-color 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mnml-interaction-lab ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mnml-interaction-lab li a {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid transparent;
+  padding: 8px 0;
+  color: #a3a3a3;
+  transition-property: color, padding-left, border-color;
+  transition-duration: 300ms;
+}
+
+.mnml-black {
+  padding: 160px 48px;
+  background: #000000;
+  color: #ffffff;
+  text-align: center;
+}
+
+.mnml-black h2 {
+  margin: 0 0 32px;
+  font-size: clamp(42px, 6vw, 72px);
+  font-weight: 300;
+  letter-spacing: -0.03em;
+}
+
+.mnml-black p {
+  margin: 0 auto 48px;
+  max-width: 620px;
+  color: #a3a3a3;
+  font-size: 16px;
+  line-height: 1.85;
+}
+
+.mnml-black a {
+  display: inline-block;
+  background: #ffffff;
+  padding: 16px 40px;
+  color: #000000;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition-property: background-color;
+  transition-duration: 300ms;
+}
+
+.mnml-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 32px;
+  border-top: 1px solid #f5f5f5;
+  padding: 48px;
+  color: #a3a3a3;
+  font-size: 12px;
+}
+
+.mnml-footer div {
+  display: flex;
+  gap: 32px;
+}
+
+.mnml-footer > span {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  text-transform: uppercase;
+}
+
 @media (hover: hover) {
   .minimal-link:hover {
     color: var(--muted);
@@ -212,6 +734,59 @@ button:focus-visible {
 
   .article-row:hover .article-row-title {
     color: #666666;
+  }
+
+  .mnml-nav a:hover,
+  .mnml-footer a:hover,
+  .mnml-content-meta a:hover {
+    color: #000000;
+  }
+
+  .mnml-menu:hover,
+  .mnml-hero-link:hover {
+    opacity: 0.5;
+  }
+
+  .mnml-hero-link:hover span:last-child {
+    transform: translateX(8px);
+  }
+
+  .mnml-principle-card:hover,
+  .mnml-scenarios article:hover {
+    background: #f5f5f5;
+  }
+
+  .mnml-scenarios article:hover h3 {
+    transform: translateX(4px);
+  }
+
+  .mnml-input-line:focus-within strong,
+  .mnml-form-card:hover .mnml-input-line strong {
+    border-color: #000000;
+  }
+
+  .mnml-solid-button:hover,
+  .mnml-black a:hover {
+    background: #262626;
+  }
+
+  .mnml-image-placeholder:hover::before {
+    transform: scale(1.04);
+  }
+
+  .mnml-outline-button:hover {
+    border-color: #000000;
+    color: #000000;
+  }
+
+  .mnml-text-link:hover::after {
+    background: #000000;
+  }
+
+  .mnml-interaction-lab li a:hover {
+    border-color: #f5f5f5;
+    color: #000000;
+    padding-left: 8px;
   }
 }
 
@@ -402,6 +977,111 @@ button:focus-visible {
   .article-prose p,
   .article-prose li {
     max-width: 100%;
+  }
+
+  .mnml-nav {
+    padding: 22px 24px;
+  }
+
+  .mnml-nav-links {
+    display: none;
+  }
+
+  .mnml-section {
+    padding: 96px 24px;
+  }
+
+  .mnml-hero {
+    min-height: 760px;
+    padding-top: 128px;
+  }
+
+  .mnml-eyebrow {
+    font-size: 12px;
+  }
+
+  .mnml-hero h1 {
+    margin-bottom: 36px;
+    font-size: clamp(62px, 20vw, 78px);
+    line-height: 0.92;
+  }
+
+  .mnml-hero-copy p {
+    font-size: 17px;
+  }
+
+  .mnml-fade {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+
+  .mnml-concept,
+  .mnml-principles,
+  .mnml-showcase-grid,
+  .mnml-interactions,
+  .mnml-scenarios {
+    display: block;
+  }
+
+  .mnml-concept-copy,
+  .mnml-materials-intro,
+  .mnml-interactions > div:first-child {
+    margin-bottom: 56px;
+  }
+
+  .mnml-principle-card,
+  .mnml-scenarios article,
+  .mnml-form-card {
+    min-height: auto;
+    padding: 40px 24px;
+  }
+
+  .mnml-principle-card + .mnml-principle-card,
+  .mnml-content-card,
+  .mnml-scenarios article + article {
+    margin-top: 24px;
+  }
+
+  .mnml-scenarios article {
+    border-right: 0;
+    border-bottom: 1px solid #f5f5f5;
+  }
+
+  .mnml-image-placeholder {
+    height: 220px;
+  }
+
+  .mnml-content-meta {
+    display: block;
+  }
+
+  .mnml-content-meta a {
+    display: block;
+    margin-top: 12px;
+  }
+
+  .mnml-interactions {
+    gap: 0;
+  }
+
+  .mnml-black {
+    padding: 120px 24px;
+  }
+
+  .mnml-footer,
+  .mnml-footer div {
+    display: block;
+  }
+
+  .mnml-footer {
+    padding: 40px 24px;
+  }
+
+  .mnml-footer a,
+  .mnml-footer > span {
+    display: block;
+    margin-top: 16px;
   }
 }
 

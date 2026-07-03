@@ -6,6 +6,8 @@ import MinimalFooter from '../components/MinimalFooter.astro';
 const {
   title = 'W. Notes',
   description = 'A minimal personal technical blog.',
+  chrome = true,
+  shell = true,
 } = Astro.props;
 ---
 
@@ -21,12 +23,12 @@ const {
     <a class="sr-only focus:not-sr-only focus:fixed focus:left-6 focus:top-6 focus:z-50 focus:bg-white focus:px-4 focus:py-3 focus:text-sm focus:text-black" href="#main-content">
       Skip to main content
     </a>
-    <div class="minimal-shell">
-      <Header />
+    <div class={shell ? 'minimal-shell' : undefined}>
+      {chrome && <Header />}
       <main id="main-content">
         <slot />
       </main>
-      <MinimalFooter />
+      {chrome && <MinimalFooter />}
     </div>
   </body>
 </html>

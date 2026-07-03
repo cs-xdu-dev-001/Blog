@@ -1,48 +1,197 @@
 ---
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import ArticleIndex from '../components/ArticleIndex.astro';
 
 const posts = (await getCollection('posts')).sort(
   (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
 );
 const featured = posts.filter((post) => post.data.featured).slice(0, 3);
-const recent = posts.slice(0, 5);
+
+const principles = [
+  {
+    mark: 'Grid',
+    title: '结构先行',
+    description: '秩序来自网格、基线和对齐，不靠阴影或装饰制造层级。',
+  },
+  {
+    mark: 'Type',
+    title: '排版即视觉',
+    description: '标题、正文和辅助信息通过字号、字重、行高建立节奏。',
+  },
+];
+
+const scenarios = [
+  ['01', '文档工具', '适合高密度阅读，让用户长时间停留时不被视觉噪音打断。'],
+  ['02', '作品集网站', '界面退到幕后，真正重要的是作品、文字和判断力。'],
+  ['03', '数据故事', '用理性、克制的方式讲清事实，避免图形装饰抢走结论。'],
+];
 ---
 
-<BaseLayout title="W. Notes · 极简技术博客" description="一个极简个人技术博客，记录部署、自动化和小型实践。">
-  <section class="home-hero">
-    <p class="home-kicker">
-      Personal technical notes
-    </p>
-    <div class="home-intro">
-      <h1>
-        写下能复用的技术实践。
-      </h1>
+<BaseLayout title="Minimalism · W. Notes" description="一个用极简主义原则重做的个人技术博客首页。" chrome={false} shell={false}>
+  <div class="mnml-page">
+    <nav class="mnml-nav" aria-label="Primary navigation">
+      <a class="mnml-logo" href="/">MNML/NOTE</a>
+      <div class="mnml-nav-links">
+        <a href="#philosophy">Philosophy</a>
+        <a href="#materials">Materials</a>
+        <a href="#interactions">Interaction</a>
+      </div>
+      <a class="mnml-menu" href="/writing">Writing</a>
+    </nav>
+
+    <section class="mnml-section mnml-hero">
+      <div class="mnml-fade">
+        <p class="mnml-eyebrow">Visual principles</p>
+      </div>
+      <div class="mnml-fade mnml-delay-1">
+        <h1>
+          Less is
+          <br />
+          <span>More.</span>
+        </h1>
+      </div>
+      <div class="mnml-fade mnml-delay-2">
+        <div class="mnml-hero-copy">
+          <p>
+            极简不是把页面删空。
+            <br />
+            极简是把注意力交还给内容。
+          </p>
+          <a class="mnml-hero-link" href="#philosophy">
+            <span>Explore the system</span>
+            <span aria-hidden="true">→</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <div class="mnml-divider"></div>
+
+    <section id="philosophy" class="mnml-section mnml-concept">
+      <div class="mnml-concept-copy">
+        <h2>Visual concept</h2>
+        <div class="mnml-short-line"></div>
+        <p>
+          Minimalism 不是空白越多越好，而是有意识地删减装饰。信息通过网格、基线和明确层级组织，而不是靠粗边框、重阴影或复杂背景。
+        </p>
+      </div>
+      <div class="mnml-principles">
+        {principles.map((item) => (
+          <article class="mnml-principle-card">
+            <span>{item.mark}</span>
+            <div>
+              <h3>{item.title}</h3>
+              <p>{item.description}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section class="mnml-scenarios" aria-label="Minimalism scenarios">
+      {scenarios.map(([number, title, description]) => (
+        <article>
+          <span>{number}</span>
+          <h3>{title}</h3>
+          <p>{description}</p>
+        </article>
+      ))}
+    </section>
+
+    <section id="materials" class="mnml-section mnml-materials">
+      <div class="mnml-materials-intro">
+        <h2>Materiality & texture</h2>
+        <p>
+          Minimalism 家族里的材质几乎被压缩到看不见。页面依靠白色背景、1px 细线、浅灰区块和黑色文字形成质感。
+        </p>
+      </div>
+
+      <div class="mnml-showcase-grid">
+        <article class="mnml-form-card">
+          <p class="mnml-card-label">Example: Writing index</p>
+          <div class="mnml-input-line">
+            <span>Topic</span>
+            <strong>Deployment notes</strong>
+          </div>
+          <div class="mnml-input-line">
+            <span>Format</span>
+            <strong>Short, clear, reusable</strong>
+          </div>
+          <a class="mnml-solid-button" href="/writing">Open writing</a>
+        </article>
+
+        <article class="mnml-content-card">
+          <div class="mnml-image-placeholder">
+            <span>Article</span>
+          </div>
+          <div class="mnml-content-body">
+            <div>
+              <h3>安静的技术笔记</h3>
+              <p>部署、自动化、爬虫和个人网站实践被整理成可复用路径。</p>
+            </div>
+            <div class="mnml-content-meta">
+              <span>Reading time: 5 min</span>
+              <a href={`/posts/${featured[0]?.slug ?? 'hugo-deploy'}`}>Read more</a>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="interactions" class="mnml-section mnml-interactions">
+      <div>
+        <h2>Restrained interaction</h2>
+        <p>
+          反馈要明确，但不打扰。按钮不跳动，只改变边框和颜色；链接不炫技，只给出安静的下划线；列表 hover 轻微移动，告诉用户它可被打开。
+        </p>
+        <div class="mnml-hint">
+          <span>◎</span>
+          <span>Hover over elements on the right</span>
+        </div>
+      </div>
+
+      <div class="mnml-interaction-lab">
+        <div>
+          <span>Button: outline</span>
+          <a class="mnml-outline-button" href="/writing">View notes</a>
+        </div>
+        <div>
+          <span>Link: underline</span>
+          <a class="mnml-text-link" href="/about">Read the context</a>
+        </div>
+        <div>
+          <span>List: opacity</span>
+          <ul>
+            {featured.map((post) => (
+              <li>
+                <a href={`/posts/${post.slug}`}>
+                  <span>{post.data.title}</span>
+                  <span aria-hidden="true">→</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="mnml-black">
+      <h2>Space for thinking.</h2>
       <p>
-        收集部署、自动化、爬虫和个人网站实践。内容保持短、清楚、可回看，界面不抢阅读。
+        当视觉噪音停止，内容才开始说话。
+        <br />
+        这就是 Minimalism 家族的气质。
       </p>
-    </div>
-  </section>
+      <a href="/writing">Start reading</a>
+    </section>
 
-  <section class="home-section">
-    <div class="home-section-label">
-      <h2>Featured</h2>
-    </div>
-    <div class="home-section-body">
-      <ArticleIndex posts={featured} />
-    </div>
-  </section>
-
-  <section class="home-section">
-    <div class="home-section-label">
-      <h2>Recent</h2>
-    </div>
-    <div class="home-section-body">
-      <ArticleIndex posts={recent} showDescriptions={false} compact />
-      <a class="minimal-link view-all-link" href="/writing">
-        View all writing
-      </a>
-    </div>
-  </section>
+    <footer class="mnml-footer">
+      <div>
+        <span>© 2026 W. Notes</span>
+        <a href="/about">About</a>
+        <a href="/writing">Writing</a>
+      </div>
+      <span>Designed for clarity</span>
+    </footer>
+  </div>
 </BaseLayout>
