@@ -1,0 +1,37 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout
+  title="Dev Notes CMS | 站点设置"
+  active="site"
+  pageClass="site-admin-page"
+  layoutClass="cms-layout-site"
+  dataAttr="data-site-admin"
+  status="ONLINE / CONFIG DB"
+>
+  <input slot="search" class="cms-search" type="search" value="站点设置 / 首页文案 / AI助手 / About" readonly />
+  <button slot="actions" type="button" data-test-assistant>测试AI接口</button>
+  <button slot="actions" class="cms-primary-action" type="button" data-save-site>保存配置</button>
+  <a slot="actions" href="/" target="_blank" rel="noreferrer">预览首页</a>
+
+  <Fragment slot="sidebar-actions">
+    <span>快速操作</span>
+    <button type="button" data-save-site>保存配置</button>
+    <button type="button" data-test-assistant>测试AI接口</button>
+    <button type="button" data-reset-site>重新载入</button>
+  </Fragment>
+
+  <div class="cms-hero">
+    <div>
+      <span>Site Control</span>
+      <h1>站点设置中心</h1>
+      <p>管理首页文案、社交链接、About内容、AI助手和首页模块开关。保存后前台读取数据库配置，不需要改首页源码。</p>
+    </div>
+    <strong data-save-state>ONLINE / CONFIG DB</strong>
+  </div>
+
+  <div class="site-config-grid" data-site-config-form></div>
+
+  <script is:inline src="/admin-site.js"></script>
+</AdminLayout>

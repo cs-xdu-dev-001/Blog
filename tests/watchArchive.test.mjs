@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import { watchArchive } from '../src/data/watchArchive.mjs';
+
+assert.equal(watchArchive.stats.watched, 261);
+assert.equal(watchArchive.stats.wanted, 101);
+assert.equal(watchArchive.stats.series, 168);
+assert.equal(watchArchive.stats.films, 93);
+assert.ok(watchArchive.selected.length >= 8);
+assert.ok(watchArchive.wantedPreview.length >= 10);
+assert.equal(watchArchive.items.length, 362);
+assert.ok(watchArchive.items.every((item) => item.title && item.type && item.status && item.line));
+assert.ok(watchArchive.items.some((item) => item.title === '北平无战事' && item.lineSource));
+assert.equal(watchArchive.motion.durationSeconds, 520);
+assert.equal(watchArchive.imageConfig.publicDir, '/watch/');
+assert.equal(watchArchive.imageConfig.mode, 'filename');
+assert.equal(watchArchive.imageConfig.example, 'public/watch/北平无战事.jpg');
+assert.ok(watchArchive.lineSources['北平无战事']);
+assert.ok(watchArchive.items.find((item) => item.title === '北平无战事').lineSource);
+assert.ok(watchArchive.items.every((item) => item.image));
+assert.equal(watchArchive.rows.length, 2);
+assert.equal(watchArchive.rows[0].direction, 'normal');
+assert.equal(watchArchive.rows[1].direction, 'reverse');
+assert.equal(watchArchive.rows[0].items.length + watchArchive.rows[1].items.length, watchArchive.items.length);

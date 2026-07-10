@@ -1,197 +1,940 @@
----
-import { getCollection } from 'astro:content';
+﻿---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { getWatchArchiveFromDb } from '../lib/server/watchArchiveView.mjs';
+import { getAllReadingFromDb } from '../lib/server/readingArchiveView.mjs';
+import { radarRepository } from '../lib/server/radarRepository.mjs';
+import { mapRepository } from '../lib/server/mapRepository.mjs';
+import { postRepository } from '../lib/server/postRepository.mjs';
+import { siteConfigRepository } from '../lib/server/siteConfigRepository.mjs';
 
-const posts = (await getCollection('posts')).sort(
-  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
-);
-const featured = posts.filter((post) => post.data.featured).slice(0, 3);
+postRepository.ensureSeededFromContent();
+const posts = postRepository.list({ filter: 'published', limit: 100 }).items;
+const siteConfig = siteConfigRepository.getSiteConfig();
+const sectionList = siteConfigRepository.listSections();
+const sectionMap = Object.fromEntries(sectionList.map((section) => [section.key, section]));
+const isSectionEnabled = (key) => sectionMap[key]?.enabled !== 0;
+const section = (key, fallback) => ({
+  title: sectionMap[key]?.title || fallback.title,
+  eyebrow: sectionMap[key]?.eyebrow || fallback.eyebrow,
+  navLabel: sectionMap[key]?.navLabel || fallback.navLabel,
+  navSmall: sectionMap[key]?.navSmall || fallback.navSmall,
+});
+const navSmall = (key, fallback) => {
+  const value = sectionMap[key]?.navSmall || fallback;
+  if (value === 'auto') return fallback;
+  return value;
+};
 
-const principles = [
+const featured = posts.find((post) => post.featured) ?? posts[0];
+const highlightPosts = posts.slice(0, 6);
+const watchArchive = getWatchArchiveFromDb();
+const readingShelf = getAllReadingFromDb();
+const travelMap = mapRepository.getConfig();
+const travelMapStyle = [
+  `--map-x: ${travelMap.map.x}%`,
+  `--map-y: ${travelMap.map.y}%`,
+  `--map-scale: ${travelMap.map.scale}`,
+  `--map-saturation: ${travelMap.visual.saturation}`,
+  `--map-contrast: ${travelMap.visual.contrast}`,
+  `--map-brightness: ${travelMap.visual.brightness}`,
+  `--map-opacity: ${travelMap.visual.opacity}`,
+  `--map-overlay: ${travelMap.visual.overlay}`,
+  `--heat-size: ${travelMap.visual.heatSize}px`,
+  `--heat-opacity: ${travelMap.visual.heatOpacity}`,
+  `--current-heat-size: ${travelMap.visual.currentHeatSize}px`,
+  `--current-heat-opacity: ${travelMap.visual.currentHeatOpacity}`,
+].join('; ');
+const readingCarousel = [...readingShelf, ...readingShelf];
+const readingTotal = readingShelf.length;
+const watchStats = {
+  total: watchArchive.stats.total ?? watchArchive.items.length,
+  watched: watchArchive.stats.watched,
+  wanted: watchArchive.stats.wanted,
+  series: watchArchive.stats.series,
+};
+const archiveStats = [
+  { value: posts.length, label: '公开笔记', note: 'Writing' },
+  { value: watchStats.total, label: '影像作品', note: 'Cinema' },
+  { value: watchStats.watched, label: '已看', note: 'Watched' },
+  { value: watchStats.wanted, label: '待看', note: 'Queue' },
+  { value: readingTotal, label: '阅读书籍', note: 'Reading' },
+  { value: watchStats.series, label: '剧集', note: 'Series' },
+];
+const movieRadar = radarRepository.byScope('movie');
+const codeRadar = radarRepository.byScope('code');
+const radarAxes = (items) => {
+  const cx = 280;
+  const cy = 270;
+  const outer = 182;
+  const labelRadius = 242;
+  return items.map((item, index) => {
+    const angle = (-90 + (index * 360) / items.length) * Math.PI / 180;
+    const outerX = cx + Math.cos(angle) * outer;
+    const outerY = cy + Math.sin(angle) * outer;
+    const rawLabelX = cx + Math.cos(angle) * labelRadius;
+    const labelY = cy + Math.sin(angle) * labelRadius;
+    const isLongLeftLabel = item.label === 'Science Fiction';
+    const labelX = isLongLeftLabel ? Math.max(rawLabelX, 112) : rawLabelX;
+    const valueRadius = outer * (item.value / 100);
+    return {
+      ...item,
+      cx,
+      cy,
+      outerX,
+      outerY,
+      labelX,
+      labelY,
+      valueX: cx + Math.cos(angle) * valueRadius,
+      valueY: cy + Math.sin(angle) * valueRadius,
+      textAnchor: isLongLeftLabel ? 'middle' : Math.abs(labelX - cx) < 18 ? 'middle' : labelX > cx ? 'start' : 'end',
+    };
+  });
+};
+const radarPoints = (items) => radarAxes(items).map((item) => `${item.valueX},${item.valueY}`).join(' ');
+const radarGrid = (items, level) => radarAxes(items).map((item) => {
+  const x = item.cx + (item.outerX - item.cx) * level;
+  const y = item.cy + (item.outerY - item.cy) * level;
+  return `${x},${y}`;
+}).join(' ');
+const radarHitPoints = (items, item, index) => {
+  const axes = radarAxes(items);
+  const prev = axes[(index - 1 + axes.length) % axes.length];
+  const next = axes[(index + 1) % axes.length];
+  const midPrev = `${item.cx + (prev.outerX - item.cx) * 0.54},${item.cy + (prev.outerY - item.cy) * 0.54}`;
+  const midNext = `${item.cx + (next.outerX - item.cx) * 0.54},${item.cy + (next.outerY - item.cy) * 0.54}`;
+  return `${item.cx},${item.cy} ${midPrev} ${item.outerX},${item.outerY} ${midNext}`;
+};
+const topicCards = [
   {
-    mark: 'Grid',
-    title: '结构先行',
-    description: '秩序来自网格、基线和对齐，不靠阴影或装饰制造层级。',
+    title: 'AI Knowledge',
+    meta: 'Notion / RAG / Agent',
+    text: '把Notion、Markdown、RAG和Agent放进同一条工作流，让笔记能被检索、引用，也能继续长成文章。',
+    tone: 'magenta',
   },
   {
-    mark: 'Type',
-    title: '排版即视觉',
-    description: '标题、正文和辅助信息通过字号、字重、行高建立节奏。',
+    title: 'Deployment',
+    meta: 'Nginx / HTTPS / CI',
+    text: '从域名、Nginx、HTTPS到自动部署，把上线过程中容易忘的命令和判断留下来。',
+    tone: 'blue',
+  },
+  {
+    title: 'Frontend',
+    meta: 'Layout / UI / Screenshot',
+    text: '用截图检查真实页面，盯住中文断行、移动端溢出、动效节奏和第一眼的视觉秩序。',
+    tone: 'green',
+  },
+  {
+    title: 'Automation',
+    meta: 'Scripts / Workflow',
+    text: '把重复的整理、构建、校验和发布动作收束成工具，让个人站点可以长期维护。',
+    tone: 'orange',
   },
 ];
 
-const scenarios = [
-  ['01', '文档工具', '适合高密度阅读，让用户长时间停留时不被视觉噪音打断。'],
-  ['02', '作品集网站', '界面退到幕后，真正重要的是作品、文字和判断力。'],
-  ['03', '数据故事', '用理性、克制的方式讲清事实，避免图形装饰抢走结论。'],
+const orbitTags = [
+  { label: 'CINEMA', rx: 386, ry: 186, speed: 0.27, phase: 5.28 },
+  { label: 'RAG', rx: 270, ry: 270, speed: 0.48, phase: 1.42 },
+  { label: 'UI', rx: 352, ry: 224, speed: 0.34, phase: 0.56 },
+  { label: 'NOTION', rx: 228, ry: 214, speed: 0.56, phase: 3.78 },
+  { label: 'AGENT', rx: 318, ry: 292, speed: 0.41, phase: 4.46 },
+  { label: 'AI', rx: 252, ry: 178, speed: 0.52, phase: 2.84 },
+  { label: 'FLOW', rx: 414, ry: 250, speed: 0.24, phase: 0.04 },
 ];
+const configuredOrbitLabels = String(siteConfig.orbitTags || '')
+  .split('/')
+  .map((label) => label.trim())
+  .filter(Boolean);
+const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : orbitTags.map((tag) => tag.label))
+  .map((label, index) => ({ ...orbitTags[index % orbitTags.length], label }));
 ---
 
-<BaseLayout title="Minimalism · W. Notes" description="一个用极简主义原则重做的个人技术博客首页。" chrome={false} shell={false}>
-  <div class="mnml-page">
-    <nav class="mnml-nav" aria-label="Primary navigation">
-      <a class="mnml-logo" href="/">MNML/NOTE</a>
-      <div class="mnml-nav-links">
-        <a href="#philosophy">Philosophy</a>
-        <a href="#materials">Materials</a>
-        <a href="#interactions">Interaction</a>
+<BaseLayout
+  title={siteConfig.pageTitle}
+  description={siteConfig.pageDescription}
+  chrome={false}
+  shell={false}
+>
+  <main class="qzq-home">
+    <nav class="qzq-nav" aria-label="Primary navigation">
+      <a class="qzq-brand" href="/">{siteConfig.brandName}</a>
+      <div class="qzq-nav-links">
+        {isSectionEnabled('topics') && <a class="qzq-nav-item" href="#topics"><span>{section('topics', { navLabel: '主线' }).navLabel}</span><small>{navSmall('topics', '4')}</small></a>}
+        {isSectionEnabled('notes') && <a class="qzq-nav-item" href="#notes"><span>{section('notes', { navLabel: '笔记' }).navLabel}</span><small>{navSmall('notes', String(posts.length))}</small></a>}
+        {isSectionEnabled('watch') && <a class="qzq-nav-item" href="#watch"><span>{section('watch', { navLabel: '影像' }).navLabel}</span><small>{navSmall('watch', String(watchStats.watched))}</small></a>}
+        {isSectionEnabled('reading') && <a class="qzq-nav-item" href="#reading"><span>{section('reading', { navLabel: '书架' }).navLabel}</span><small>{navSmall('reading', String(readingTotal))}</small></a>}
+        {isSectionEnabled('statistics') && <a class="qzq-nav-item" href="#statistics"><span>{section('statistics', { navLabel: '统计' }).navLabel}</span><small>{navSmall('statistics', '∞')}</small></a>}
+        {isSectionEnabled('about') && <a class="qzq-nav-item" href="/about"><span>{section('about', { navLabel: '关于' }).navLabel}</span><small>{navSmall('about', 'me')}</small></a>}
       </div>
-      <a class="mnml-menu" href="/writing">Writing</a>
+      <div class="qzq-socials" aria-label="Social links">
+        <a href={siteConfig.social.github} target="_blank" rel="noreferrer" aria-label="GitHub">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 2C6.48 2 2 6.58 2 12.24c0 4.52 2.86 8.35 6.84 9.7.5.1.68-.22.68-.49v-1.88c-2.78.62-3.37-1.22-3.37-1.22-.46-1.18-1.11-1.5-1.11-1.5-.9-.63.07-.62.07-.62 1 .07 1.53 1.05 1.53 1.05.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.36-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05A9.35 9.35 0 0 1 12 6.95c.85 0 1.7.12 2.5.34 1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.8-4.57 5.06.36.32.68.94.68 1.9v2.8c0 .27.18.59.69.49A10.2 10.2 0 0 0 22 12.24C22 6.58 17.52 2 12 2Z" />
+          </svg>
+        </a>
+        <a href={siteConfig.social.bilibili} target="_blank" rel="noreferrer" aria-label="Bilibili">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8.06 4.1a.8.8 0 0 1 1.13-.03l2.08 1.96h1.46l2.08-1.96a.8.8 0 1 1 1.1 1.16l-.85.8h1.44A4.5 4.5 0 0 1 21 10.53v4.98A4.5 4.5 0 0 1 16.5 20h-9A4.5 4.5 0 0 1 3 15.5v-4.98a4.5 4.5 0 0 1 4.5-4.5h1.44l-.85-.8a.8.8 0 0 1-.03-1.13ZM7.5 8.02A2.5 2.5 0 0 0 5 10.52v4.98A2.5 2.5 0 0 0 7.5 18h9a2.5 2.5 0 0 0 2.5-2.5v-4.98a2.5 2.5 0 0 0-2.5-2.5h-9Zm1.8 3.05c.55 0 1 .45 1 1v1.36a1 1 0 1 1-2 0v-1.36c0-.55.45-1 1-1Zm5.4 0c.55 0 1 .45 1 1v1.36a1 1 0 1 1-2 0v-1.36c0-.55.45-1 1-1Z" />
+          </svg>
+        </a>
+        <span class="qzq-qq-contact">
+        <button type="button" aria-label="显示QQ号" aria-describedby="qq-number">
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M6.048 3.323c.022.277-.13.523-.338.55-.21.026-.397-.176-.419-.453s.13-.523.338-.55c.21-.026.397.176.42.453Zm2.265-.24c-.603-.146-.894.256-.936.333-.027.048-.008.117.037.15.045.035.092.025.119-.003.361-.39.751-.172.829-.129l.011.007c.053.024.147.028.193-.098.023-.063.017-.11-.006-.142-.016-.023-.089-.08-.247-.118"/>
+            <path d="M11.727 6.719c0-.022.01-.375.01-.557 0-3.07-1.45-6.156-5.015-6.156S1.708 3.092 1.708 6.162c0 .182.01.535.01.557l-.72 1.795a26 26 0 0 0-.534 1.508c-.68 2.187-.46 3.093-.292 3.113.36.044 1.401-1.647 1.401-1.647 0 .979.504 2.256 1.594 3.179-.408.126-.907.319-1.228.556-.29.213-.253.43-.201.518.228.386 3.92.246 4.985.126 1.065.12 4.756.26 4.984-.126.052-.088.088-.305-.2-.518-.322-.237-.822-.43-1.23-.557 1.09-.922 1.594-2.2 1.594-3.178 0 0 1.041 1.69 1.401 1.647.168-.02.388-.926-.292-3.113a26 26 0 0 0-.534-1.508l-.72-1.795ZM9.773 5.53a.1.1 0 0 1-.009.096c-.109.159-1.554.943-3.033.943h-.017c-1.48 0-2.925-.784-3.034-.943a.1.1 0 0 1-.018-.055q0-.022.01-.04c.13-.287 1.43-.606 3.042-.606h.017c1.611 0 2.912.319 3.042.605m-4.32-.989c-.483.022-.896-.529-.922-1.229s.344-1.286.828-1.308c.483-.022.896.529.922 1.23.027.7-.344 1.286-.827 1.307Zm2.538 0c-.484-.022-.854-.607-.828-1.308.027-.7.44-1.25.923-1.23.483.023.853.608.827 1.309-.026.7-.439 1.251-.922 1.23ZM2.928 8.99q.32.063.639.117v2.336s1.104.222 2.21.068V9.363q.49.027.937.023h.017c1.117.013 2.474-.136 3.786-.396.097.622.151 1.386.097 2.284-.146 2.45-1.6 3.99-3.846 4.012h-.091c-2.245-.023-3.7-1.562-3.846-4.011-.054-.9 0-1.663.097-2.285"/>
+          </svg>
+        </button>
+        <span id="qq-number" class="qzq-qq-number">QQ {siteConfig.social.qq}</span>
+        </span>
+      </div>
     </nav>
 
-    <section class="mnml-section mnml-hero">
-      <div class="mnml-fade">
-        <p class="mnml-eyebrow">Visual principles</p>
-      </div>
-      <div class="mnml-fade mnml-delay-1">
-        <h1>
-          Less is
-          <br />
-          <span>More.</span>
-        </h1>
-      </div>
-      <div class="mnml-fade mnml-delay-2">
-        <div class="mnml-hero-copy">
-          <p>
-            极简不是把页面删空。
-            <br />
-            极简是把注意力交还给内容。
-          </p>
-          <a class="mnml-hero-link" href="#philosophy">
-            <span>Explore the system</span>
-            <span aria-hidden="true">→</span>
-          </a>
+    <section class="qzq-hero" aria-label="Intro">
+      <div class="qzq-orbit-stage qzq-wordmark-stage" data-tilt-card>
+        <div class="qzq-orbit qzq-orbit-a"></div>
+        <div class="qzq-orbit qzq-orbit-b"></div>
+        <div class="qzq-orbit qzq-orbit-c"></div>
+        {orbitTagModels.map((tag) => (
+          <div
+            class="qzq-token"
+            data-orbit-token
+            data-rx={tag.rx}
+            data-ry={tag.ry}
+            data-speed={tag.speed}
+            data-phase={tag.phase}
+          >
+            {tag.label}
+          </div>
+        ))}
+
+        <div class="qzq-wordmark-card">
+          <div class="qzq-wordmark-topline">
+            <span>{siteConfig.heroKicker}</span>
+            <span>{siteConfig.heroMeta}</span>
+          </div>
+          <h1 aria-label="Dev Notes">
+            <span data-text="Dev">Dev</span>
+            <span data-text="Notes">Notes</span>
+          </h1>
+          <div class="qzq-wordmark-axis" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div class="qzq-wordmark-meta">
+            <span>Public field notes</span>
+            <span>Local AI stack</span>
+            <span>UI verification</span>
+            <span>Ship log</span>
+          </div>
         </div>
+      </div>
+
+      <div class="qzq-story">
+        <p>
+          {siteConfig.heroLine}
+        </p>
+        <p class="qzq-data-line">
+          {siteConfig.heroSubline}
+        </p>
+        <div class="qzq-stat-rhythm" aria-label="站点内容统计">
+          <span><strong data-count-to={posts.length}>0</strong><em>公开笔记</em></span>
+          <span><strong data-count-to={watchStats.total}>0</strong><em>影像作品</em></span>
+          <span><strong data-count-to={watchStats.watched}>0</strong><em>已看</em></span>
+          <span><strong data-count-to={watchStats.series}>0</strong><em>剧集</em></span>
+          <span><strong data-count-to={readingTotal}>0</strong><em>阅读书籍</em></span>
+          <span><strong data-count-to={watchStats.wanted}>0</strong><em>待看</em></span>
+        </div>
+        <p>
+          <mark data-highlight-sweep>{siteConfig.heroHighlight}</mark>
+        </p>
       </div>
     </section>
 
-    <div class="mnml-divider"></div>
-
-    <section id="philosophy" class="mnml-section mnml-concept">
-      <div class="mnml-concept-copy">
-        <h2>Visual concept</h2>
-        <div class="mnml-short-line"></div>
-        <p>
-          Minimalism 不是空白越多越好，而是有意识地删减装饰。信息通过网格、基线和明确层级组织，而不是靠粗边框、重阴影或复杂背景。
-        </p>
+    {isSectionEnabled('topics') && <section id="topics" class="qzq-topic-section" aria-label="Topics" data-reveal-section>
+      <div class="qzq-section-title">
+        <span>{section('topics', { eyebrow: 'Stories / Systems / Code' }).eyebrow}</span>
+        <h2>{section('topics', { title: '主线' }).title}</h2>
       </div>
-      <div class="mnml-principles">
-        {principles.map((item) => (
-          <article class="mnml-principle-card">
-            <span>{item.mark}</span>
-            <div>
-              <h3>{item.title}</h3>
-              <p>{item.description}</p>
-            </div>
-          </article>
+
+      <div class="qzq-card-marquee" aria-label="主题频道">
+        <div class="qzq-card-track">
+          {[...topicCards, ...topicCards].map((card) => (
+            <article class={`qzq-topic-card qzq-${card.tone}`} data-tilt-card>
+              <div>
+                <h3>{card.title}</h3>
+                <span>{card.meta}</span>
+              </div>
+              <p>{card.text}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>}
+
+    {isSectionEnabled('notes') && <section id="notes" class="qzq-notes-section" aria-label="近期笔记" data-reveal-section>
+      <div class="qzq-section-title">
+        <span>{section('notes', { eyebrow: '写作索引' }).eyebrow}</span>
+        <h2>{section('notes', { title: '近期笔记' }).title}</h2>
+      </div>
+
+      {featured && (
+        <div class="qzq-notes-panel">
+          <a class="qzq-note-feature" href={`/posts/${featured.slug}`} data-tilt-card>
+            <span>{featured.data.category}</span>
+            <h3>{featured.data.title}</h3>
+            <p>{featured.data.description}</p>
+            <small>{new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(featured.data.date)} · 重点笔记</small>
+          </a>
+
+          <div class="qzq-notes-list">
+            {highlightPosts.filter((post) => post.slug !== featured.slug).slice(0, 5).map((post, index) => (
+              <a class="qzq-note-row" href={`/posts/${post.slug}`}>
+                <span>{String(index + 1).padStart(2, '0')}</span>
+                <div>
+                  <strong>{post.data.title}</strong>
+                  <p>{post.data.description}</p>
+                </div>
+                <em>{post.data.category}</em>
+              </a>
+            ))}
+            <a class="qzq-notes-all" href="/writing">查看全部笔记</a>
+          </div>
+        </div>
+      )}
+    </section>}
+
+    {isSectionEnabled('watch') && <section id="watch" class="qzq-watch-section" aria-label="影像档案" data-reveal-section>
+      <div class="qzq-section-title qzq-watch-title">
+        <span>{section('watch', { eyebrow: '影像轨道' }).eyebrow}</span>
+        <h2>{section('watch', { title: '影像档案' }).title}</h2>
+      </div>
+
+      <div class="qzq-watch-summary">
+        <p>
+          影像档案不是片单打卡。它更像一组长期暴露的兴趣样本：有些作品提供叙事结构，
+          有些留下时代质感，有些只是提醒我，什么样的故事会被反复想起。
+        </p>
+        <div>
+          <strong>{watchArchive.stats.watched}</strong>
+          <span>已看</span>
+        </div>
+        <div>
+          <strong>{watchArchive.stats.wanted}</strong>
+          <span>想看</span>
+        </div>
+      </div>
+
+      <div class="qzq-watch-marquee" aria-label="影像档案卡片">
+        {watchArchive.rows.map((row) => (
+          <div
+            class={`qzq-watch-track qzq-watch-track-${row.direction}`}
+            data-random-watch-track
+            style={`--watch-duration: ${watchArchive.motion.durationSeconds * (10 / 9) * (10 / 9) * (10 / 9)}s`}
+          >
+            {[...row.items, ...row.items].map((item, index) => (
+              <article class={`qzq-watch-card qzq-work-card qzq-work-${index % 4}`} data-tilt-card>
+                {item.image ? (
+                  <img class="qzq-work-image qzq-work-photo" src={item.image} alt={`${item.title}配图`} loading="lazy" />
+                ) : (
+                  <div class="qzq-work-image" aria-hidden="true">
+                    <span></span>
+                  </div>
+                )}
+                <div class="qzq-watch-card-head">
+                  <span>{item.status} / {item.type}</span>
+                  <strong>{item.title}</strong>
+                </div>
+                <p>{item.lineSource ? item.line : (item.status === '想看' ? '已加入待看轨道' : '已收录到影像档案')}</p>
+                <small>{item.lineSource ?? (item.rating ? `${item.rating} 分` : '影像档案')}</small>
+              </article>
+            ))}
+          </div>
         ))}
       </div>
-    </section>
+    </section>}
 
-    <section class="mnml-scenarios" aria-label="Minimalism scenarios">
-      {scenarios.map(([number, title, description]) => (
-        <article>
-          <span>{number}</span>
-          <h3>{title}</h3>
-          <p>{description}</p>
-        </article>
-      ))}
-    </section>
-
-    <section id="materials" class="mnml-section mnml-materials">
-      <div class="mnml-materials-intro">
-        <h2>Materiality & texture</h2>
-        <p>
-          Minimalism 家族里的材质几乎被压缩到看不见。页面依靠白色背景、1px 细线、浅灰区块和黑色文字形成质感。
-        </p>
+    {isSectionEnabled('reading') && <section id="reading" class="qzq-reading-section" aria-label="阅读书架" data-reveal-section>
+      <div class="qzq-section-title qzq-reading-title">
+        <span>{section('reading', { eyebrow: 'Reading shelf' }).eyebrow}</span>
+        <h2>{section('reading', { title: '阅读书架' }).title}</h2>
       </div>
 
-      <div class="mnml-showcase-grid">
-        <article class="mnml-form-card">
-          <p class="mnml-card-label">Example: Writing index</p>
-          <div class="mnml-input-line">
-            <span>Topic</span>
-            <strong>Deployment notes</strong>
-          </div>
-          <div class="mnml-input-line">
-            <span>Format</span>
-            <strong>Short, clear, reusable</strong>
-          </div>
-          <a class="mnml-solid-button" href="/writing">Open writing</a>
-        </article>
+      <div class="qzq-reading-intro">
+        <p>
+          书架里放的是正在读、已经读完和准备回头再读的书。它们不只是列表，
+          也是我理解技术、组织、历史和叙事时反复借用的参照物。点击一本书会短暂高亮，双击可以进入书评页。
+        </p>
+        <a href="/reading">查看完整书架</a>
+      </div>
 
-        <article class="mnml-content-card">
-          <div class="mnml-image-placeholder">
-            <span>Article</span>
-          </div>
-          <div class="mnml-content-body">
+      <div class="qzq-bookshelf" data-reading-shelf>
+        <div class="qzq-shelf-rail" aria-hidden="true"></div>
+        <div class="qzq-book-row">
+          {readingCarousel.map((book, index) => (
+            <article
+              class={`qzq-book ${book.cover ? 'has-cover' : ''} ${index === 0 ? 'is-active' : ''}`}
+              data-reading-book
+              data-href={`/reading/${book.slug}`}
+              style={`--book-spine: ${book.spineColor}; --book-accent: ${book.accentColor}; --book-index: ${index}; ${book.cover ? `--book-cover-image: url('${book.cover}');` : ''}`}
+              tabindex={index < readingShelf.length ? '0' : '-1'}
+              aria-hidden={index >= readingShelf.length ? 'true' : 'false'}
+            >
+              <div class="qzq-book-spine" aria-hidden="true">
+                <span>{book.statusLabel}</span>
+                <strong>{book.title}</strong>
+                <em>{book.author}</em>
+              </div>
+              <div class="qzq-book-cover">
+                <span>{book.statusLabel} / {book.progress}</span>
+                <h3>{book.title}</h3>
+                <p>{book.summary}</p>
+                <blockquote>{book.quote}</blockquote>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>}
+
+    {isSectionEnabled('statistics') && <section id="statistics" class="qzq-statistics-section" aria-label="统计" data-reveal-section>
+      <div class="qzq-section-title qzq-statistics-title">
+        <span>{section('statistics', { eyebrow: '个人坐标' }).eyebrow}</span>
+        <h2>{section('statistics', { title: '统计' }).title}</h2>
+      </div>
+
+      <div class="qzq-statistics-grid" data-statistics-panel>
+        <article class="qzq-time-card qzq-stat-card" data-tilt-card>
+          <div class="qzq-stat-card-head">
             <div>
-              <h3>安静的技术笔记</h3>
-              <p>部署、自动化、爬虫和个人网站实践被整理成可复用路径。</p>
+              <span class="qzq-stat-display-title">时间</span>
+              <p>这不是精确计时，更像一张长期兴趣的地形图。</p>
             </div>
-            <div class="mnml-content-meta">
-              <span>Reading time: 5 min</span>
-              <a href={`/posts/${featured[0]?.slug ?? 'hugo-deploy'}`}>Read more</a>
+            <strong>0-25</strong>
+          </div>
+
+          <div class="qzq-time-chart" aria-label="精力分布面积图">
+            <svg viewBox="-30 -18 550 342" role="img" aria-label="时间兴趣分布图">
+              <defs>
+                <linearGradient id="time-study" x1="0" x2="1" y1="1" y2="0">
+                  <stop offset="0%" stop-color="#bfdbfe" />
+                  <stop offset="100%" stop-color="#bfdbfe" />
+                </linearGradient>
+                <linearGradient id="time-game" x1="0" x2="1" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#a5f3fc" />
+                  <stop offset="100%" stop-color="#a5f3fc" />
+                </linearGradient>
+                <linearGradient id="time-coding" x1="0" x2="1" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#99f6e4" />
+                  <stop offset="100%" stop-color="#99f6e4" />
+                </linearGradient>
+                <linearGradient id="time-social" x1="0" x2="1" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#a7f3d0" />
+                  <stop offset="100%" stop-color="#a7f3d0" />
+                </linearGradient>
+                <linearGradient id="time-music" x1="0" x2="1" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#bae6fd" />
+                  <stop offset="100%" stop-color="#bae6fd" />
+                </linearGradient>
+                <clipPath id="timeChartClip">
+                  <rect x="0" y="0" width="500" height="300" rx="16" />
+                </clipPath>
+              </defs>
+              <rect class="qzq-time-frame" x="0" y="0" width="500" height="300" rx="16" />
+              <g class="qzq-time-grid" clip-path="url(#timeChartClip)">
+                <line x1="0" y1="60" x2="500" y2="60" />
+                <line x1="0" y1="120" x2="500" y2="120" />
+                <line x1="0" y1="180" x2="500" y2="180" />
+                <line x1="0" y1="240" x2="500" y2="240" />
+              </g>
+              <g class="qzq-time-draw" clip-path="url(#timeChartClip)">
+                <g class="qzq-time-areas">
+                  <path class="qzq-time-area qzq-time-area-study" fill="url(#time-study)" style="--time-area-index: 0" d="M0,300L2.976,300C5.952,300,11.905,300,32.738,270C53.571,240,89.286,180,116.071,160C142.857,140,160.714,160,196.429,175C232.143,190,285.714,200,327.381,210C369.048,220,398.81,230,419.643,235C440.476,240,452.381,240,464.286,235C476.19,230,488.095,220,494.048,215L500,210L500,300L494.048,300C488.095,300,476.19,300,464.286,300C452.381,300,440.476,300,419.643,300C398.81,300,369.048,300,327.381,300C285.714,300,232.143,300,196.429,300C160.714,300,142.857,300,116.071,300C89.286,300,53.571,300,32.738,300C11.905,300,5.952,300,2.976,300L0,300Z" />
+                  <path class="qzq-time-area qzq-time-area-music" fill="url(#time-music)" style="--time-area-index: 1" d="M0,300L2.976,300C5.952,300,11.905,300,32.738,270C53.571,240,89.286,180,116.071,160C142.857,140,160.714,160,196.429,175C232.143,190,285.714,200,327.381,205C369.048,210,398.81,210,419.643,210C440.476,210,452.381,210,464.286,210C476.19,210,488.095,210,494.048,210L500,210L500,210L494.048,215C488.095,220,476.19,230,464.286,235C452.381,240,440.476,240,419.643,235C398.81,230,369.048,220,327.381,210C285.714,200,232.143,190,196.429,175C160.714,160,142.857,140,116.071,160C89.286,180,53.571,240,32.738,270C11.905,300,5.952,300,2.976,300L0,300Z" />
+                  <path class="qzq-time-area qzq-time-area-game" fill="url(#time-game)" style="--time-area-index: 2" d="M0,300L2.976,300C5.952,300,11.905,300,32.738,270C53.571,240,89.286,180,116.071,145C142.857,110,160.714,100,196.429,105C232.143,110,285.714,130,327.381,140C369.048,150,398.81,150,419.643,150C440.476,150,452.381,150,464.286,155C476.19,160,488.095,170,494.048,175L500,180L500,210L494.048,210C488.095,210,476.19,210,464.286,210C452.381,210,440.476,210,419.643,210C398.81,210,369.048,210,327.381,205C285.714,200,232.143,190,196.429,175C160.714,160,142.857,140,116.071,160C89.286,180,53.571,240,32.738,270C11.905,300,5.952,300,2.976,300L0,300Z" />
+                  <path class="qzq-time-area qzq-time-area-coding" fill="url(#time-coding)" style="--time-area-index: 3" d="M0,300L2.976,300C5.952,300,11.905,300,32.738,270C53.571,240,89.286,180,116.071,145C142.857,110,160.714,100,196.429,90C232.143,80,285.714,70,327.381,65C369.048,60,398.81,60,419.643,60C440.476,60,452.381,60,464.286,60C476.19,60,488.095,60,494.048,60L500,60L500,180L494.048,175C488.095,170,476.19,160,464.286,155C452.381,150,440.476,150,419.643,150C398.81,150,369.048,150,327.381,140C285.714,130,232.143,110,196.429,105C160.714,100,142.857,110,116.071,145C89.286,180,53.571,240,32.738,270C11.905,300,5.952,300,2.976,300L0,300Z" />
+                  <path class="qzq-time-area qzq-time-area-social" fill="url(#time-social)" style="--time-area-index: 4" d="M0,0L2.976,0C5.952,0,11.905,0,32.738,0C53.571,0,89.286,0,116.071,0C142.857,0,160.714,0,196.429,0C232.143,0,285.714,0,327.381,0C369.048,0,398.81,0,419.643,0C440.476,0,452.381,0,464.286,0C476.19,0,488.095,0,494.048,0L500,0L500,60L494.048,60C488.095,60,476.19,60,464.286,60C452.381,60,440.476,60,419.643,60C398.81,60,369.048,60,327.381,65C285.714,70,232.143,80,196.429,90C160.714,100,142.857,110,116.071,145C89.286,180,53.571,240,32.738,270C11.905,300,5.952,300,2.976,300L0,300Z" />
+                </g>
+              </g>
+              <g class="qzq-time-labels">
+                <text x="48" y="44">社交与家庭</text>
+                <text x="86" y="236">学习</text>
+                <text x="196" y="150">游戏</text>
+                <text x="342" y="104">编程</text>
+                <text x="420" y="224">音乐</text>
+              </g>
+              <g class="qzq-time-axis">
+                <text x="-26" y="64">80%</text>
+                <text x="-26" y="124">60%</text>
+                <text x="-26" y="184">40%</text>
+                <text x="-26" y="244">20%</text>
+                <text x="0" y="322">0</text>
+                <text x="93" y="322">5</text>
+                <text x="185" y="322">10</text>
+                <text x="278" y="322">15</text>
+                <text x="370" y="322">20</text>
+                <text x="462" y="322">25</text>
+                <text x="250" y="292" text-anchor="middle">年龄</text>
+              </g>
+            </svg>
+          </div>
+        </article>
+
+        <div class="qzq-space-stack">
+          <article class="qzq-space-card qzq-stat-card" data-tilt-card>
+            <div class="qzq-stat-card-head">
+              <div>
+                <span>空间</span>
+                <p>这里放我去过的城市和现在所在的位置。地图只保留必要标记，其余参数在管理端调整。</p>
+              </div>
+            </div>
+            <div
+              class={`qzq-space-map ${travelMap.visual.showCityLabels ? 'show-city-labels' : ''}`}
+              aria-label="个人空间坐标图"
+              style={travelMapStyle}
+            >
+              <div class="qzq-map-grid" aria-hidden="true"></div>
+              <div
+                class="qzq-map-tile-grid"
+                aria-hidden="true"
+              >
+                <img src="https://tile.openstreetmap.org/4/11/5.png" alt="" loading="lazy" />
+                <img src="https://tile.openstreetmap.org/4/12/5.png" alt="" loading="lazy" />
+                <img src="https://tile.openstreetmap.org/4/13/5.png" alt="" loading="lazy" />
+                <img src="https://tile.openstreetmap.org/4/11/6.png" alt="" loading="lazy" />
+                <img src="https://tile.openstreetmap.org/4/12/6.png" alt="" loading="lazy" />
+                <img src="https://tile.openstreetmap.org/4/13/6.png" alt="" loading="lazy" />
+                <img src="https://tile.openstreetmap.org/4/11/7.png" alt="" loading="lazy" />
+                <img src="https://tile.openstreetmap.org/4/12/7.png" alt="" loading="lazy" />
+                <img src="https://tile.openstreetmap.org/4/13/7.png" alt="" loading="lazy" />
+              </div>
+              <div class="qzq-map-vignette" aria-hidden="true"></div>
+              {travelMap.places.map((place, index) => (
+                <span
+                  class="qzq-travel-heat"
+                  title={place.label}
+                  style={`--x: ${place.x.toFixed(2)}%; --y: ${place.y.toFixed(2)}%; --delay: ${index * 70}ms`}
+                >
+                  <span>{place.label}</span>
+                </span>
+              ))}
+              <span class="qzq-current-orbit qzq-current-orbit-a" style={`--x: ${travelMap.current.x.toFixed(2)}%; --y: ${travelMap.current.y.toFixed(2)}%;`}></span>
+              <span class="qzq-current-orbit qzq-current-orbit-b" style={`--x: ${travelMap.current.x.toFixed(2)}%; --y: ${travelMap.current.y.toFixed(2)}%;`}></span>
+              <span class="qzq-current-pin" title={travelMap.current.label} style={`--x: ${travelMap.current.x.toFixed(2)}%; --y: ${travelMap.current.y.toFixed(2)}%;`}>
+              </span>
+              <span class="qzq-current-label" style={`--label-x: ${travelMap.label.x.toFixed(2)}%; --label-y: ${travelMap.label.y.toFixed(2)}%;`}>
+                <strong>中国西安</strong>
+                <em>Xi&apos;an, China</em>
+              </span>
+              <small class="qzq-map-credit">© OpenStreetMap</small>
+              <span class="qzq-map-node qzq-node-home">Dev Notes</span>
+              <span class="qzq-map-node qzq-node-ai">AI</span>
+              <span class="qzq-map-node qzq-node-code">Code</span>
+              <span class="qzq-map-node qzq-node-cinema">Cinema</span>
+              <span class="qzq-map-node qzq-node-books">Books</span>
+              <span class="qzq-map-orbit qzq-map-orbit-a"></span>
+              <span class="qzq-map-orbit qzq-map-orbit-b"></span>
+            </div>
+          </article>
+
+          <a class="qzq-statistics-button qzq-stat-card" href="#statistics" data-tilt-card aria-label="统计概览">
+            <span>统计</span>
+            <strong>概览</strong>
+            <small>{posts.length}篇笔记 · {watchStats.total}部影像 · {readingTotal}本书</small>
+          </a>
+        </div>
+
+        <article class="qzq-radar-card qzq-stat-card" data-tilt-card>
+          <div class="qzq-radar-head">
+            <h3>影像</h3>
+            <p>我看过的影视作品统计。</p>
+          </div>
+          <div class="qzq-radar-stage" data-radar-stage data-radar-metric="计数">
+            <svg class="qzq-radar qzq-radar-movie" viewBox="0 0 560 500" role="img" aria-label="影像偏好雷达图">
+              <g class="qzq-radar-grid">
+                {[1, 0.8, 0.6, 0.4, 0.2].map((level) => (
+                  <polygon points={radarGrid(movieRadar, level)} />
+                ))}
+                {radarAxes(movieRadar).map((item) => (
+                  <line x1={item.cx} y1={item.cy} x2={item.outerX} y2={item.outerY} />
+                ))}
+              </g>
+              <g class="qzq-radar-hover-layer">
+                {radarAxes(movieRadar).map((item) => (
+                  <line class="qzq-radar-guide" data-radar-guide={item.label} x1={item.cx} y1={item.cy} x2={item.valueX} y2={item.valueY} />
+                ))}
+              </g>
+              <polygon class="qzq-radar-shape" points={radarPoints(movieRadar)} />
+              {radarAxes(movieRadar).map((item, index) => (
+                <g
+                  class="qzq-radar-point"
+                  data-radar-point={item.label}
+                  data-radar-title={item.zh || item.label}
+                  data-radar-count={item.count}
+                >
+                  <polygon class="qzq-radar-hit-area" points={radarHitPoints(movieRadar, item, index)} />
+                  <circle cx={item.valueX} cy={item.valueY} r="7" />
+                  <text x={item.labelX} y={item.labelY} text-anchor={item.textAnchor}>{item.zh || item.label}</text>
+                </g>
+              ))}
+            </svg>
+            <div class="qzq-radar-popover" data-radar-popover aria-hidden="true">
+              <span class="qzq-radar-popover-kicker" data-radar-popover-metric>计数</span>
+              <strong data-radar-popover-count>132</strong>
+              <span class="qzq-radar-popover-title" data-radar-popover-title>动画</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="qzq-radar-card qzq-stat-card" data-tilt-card>
+          <div class="qzq-radar-head">
+            <h3>技术</h3>
+            <p>当前博客主线和实践记录的权重。</p>
+          </div>
+          <div class="qzq-radar-stage qzq-radar-stage-code" data-radar-stage data-radar-metric="权重">
+            <svg class="qzq-radar qzq-radar-code" viewBox="0 0 560 500" role="img" aria-label="技术主线雷达图">
+              <g class="qzq-radar-grid">
+                {[1, 0.8, 0.6, 0.4, 0.2].map((level) => (
+                  <polygon points={radarGrid(codeRadar, level)} />
+                ))}
+                {radarAxes(codeRadar).map((item) => (
+                  <line x1={item.cx} y1={item.cy} x2={item.outerX} y2={item.outerY} />
+                ))}
+              </g>
+              <g class="qzq-radar-hover-layer">
+                {radarAxes(codeRadar).map((item) => (
+                  <line class="qzq-radar-guide" data-radar-guide={item.label} x1={item.cx} y1={item.cy} x2={item.valueX} y2={item.valueY} />
+                ))}
+              </g>
+              <polygon class="qzq-radar-shape qzq-radar-shape-code" points={radarPoints(codeRadar)} />
+              {radarAxes(codeRadar).map((item, index) => (
+                <g
+                  class="qzq-radar-point"
+                  data-radar-point={item.label}
+                  data-radar-title={item.zh || item.label}
+                  data-radar-count={item.count}
+                >
+                  <polygon class="qzq-radar-hit-area" points={radarHitPoints(codeRadar, item, index)} />
+                  <circle cx={item.valueX} cy={item.valueY} r="7" />
+                  <text x={item.labelX} y={item.labelY} text-anchor={item.textAnchor}>{item.zh || item.label}</text>
+                </g>
+              ))}
+            </svg>
+            <div class="qzq-radar-popover" data-radar-popover aria-hidden="true">
+              <span class="qzq-radar-popover-kicker" data-radar-popover-metric>权重</span>
+              <strong data-radar-popover-count>88</strong>
+              <span class="qzq-radar-popover-title" data-radar-popover-title>AI知识</span>
             </div>
           </div>
         </article>
       </div>
-    </section>
+    </section>}
 
-    <section id="interactions" class="mnml-section mnml-interactions">
-      <div>
-        <h2>Restrained interaction</h2>
-        <p>
-          反馈要明确，但不打扰。按钮不跳动，只改变边框和颜色；链接不炫技，只给出安静的下划线；列表 hover 轻微移动，告诉用户它可被打开。
-        </p>
-        <div class="mnml-hint">
-          <span>◎</span>
-          <span>Hover over elements on the right</span>
-        </div>
-      </div>
+  </main>
 
-      <div class="mnml-interaction-lab">
-        <div>
-          <span>Button: outline</span>
-          <a class="mnml-outline-button" href="/writing">View notes</a>
-        </div>
-        <div>
-          <span>Link: underline</span>
-          <a class="mnml-text-link" href="/about">Read the context</a>
-        </div>
-        <div>
-          <span>List: opacity</span>
-          <ul>
-            {featured.map((post) => (
-              <li>
-                <a href={`/posts/${post.slug}`}>
-                  <span>{post.data.title}</span>
-                  <span aria-hidden="true">→</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </section>
+  <script>
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const cards = document.querySelectorAll('[data-tilt-card]');
+    const magneticLinks = document.querySelectorAll('.qzq-nav a, .qzq-feature-link');
+    cards.forEach((card) => {
+      card.addEventListener('pointermove', (event) => {
+        if (prefersReducedMotion.matches) return;
+        const rect = card.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / rect.width - 0.5;
+        const y = (event.clientY - rect.top) / rect.height - 0.5;
+        card.style.setProperty('--tilt-x', `${y * -8}deg`);
+        card.style.setProperty('--tilt-y', `${x * 8}deg`);
+        card.style.setProperty('--shine-x', `${event.clientX - rect.left}px`);
+        card.style.setProperty('--shine-y', `${event.clientY - rect.top}px`);
+      });
+      card.addEventListener('pointerleave', () => {
+        card.style.setProperty('--tilt-x', '0deg');
+        card.style.setProperty('--tilt-y', '0deg');
+      });
+    });
 
-    <section class="mnml-black">
-      <h2>Space for thinking.</h2>
-      <p>
-        当视觉噪音停止，内容才开始说话。
-        <br />
-        这就是 Minimalism 家族的气质。
-      </p>
-      <a href="/writing">Start reading</a>
-    </section>
+    magneticLinks.forEach((link) => {
+      link.addEventListener('pointermove', (event) => {
+        if (prefersReducedMotion.matches) return;
+        const rect = link.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / rect.width - 0.5;
+        const y = (event.clientY - rect.top) / rect.height - 0.5;
+        link.style.transform = `translate(${x * 8}px, ${y * 6}px)`;
+      });
+      link.addEventListener('pointerleave', () => {
+        link.style.transform = 'translate(0, 0)';
+      });
+    });
 
-    <footer class="mnml-footer">
-      <div>
-        <span>© 2026 W. Notes</span>
-        <a href="/about">About</a>
-        <a href="/writing">Writing</a>
-      </div>
-      <span>Designed for clarity</span>
-    </footer>
-  </div>
+    const timeAreas = document.querySelectorAll('.qzq-time-area');
+    timeAreas.forEach((area) => {
+      area.addEventListener('pointerenter', () => {
+        const group = area.closest('.qzq-time-areas');
+        group?.classList.add('is-hovering');
+        timeAreas.forEach((item) => item.classList.remove('is-active'));
+        area.classList.add('is-active');
+      });
+      area.addEventListener('pointerleave', () => {
+        const group = area.closest('.qzq-time-areas');
+        group?.classList.remove('is-hovering');
+        area.classList.remove('is-active');
+      });
+    });
+
+    document.querySelectorAll('[data-radar-stage]').forEach((stage) => {
+      const popover = stage.querySelector('[data-radar-popover]');
+      const title = stage.querySelector('[data-radar-popover-title]');
+      const count = stage.querySelector('[data-radar-popover-count]');
+      const metric = stage.querySelector('[data-radar-popover-metric]');
+      const showPopover = (point) => {
+        const circle = point.querySelector('circle');
+        if (!popover || !circle) return;
+        const stageRect = stage.getBoundingClientRect();
+        const circleRect = circle.getBoundingClientRect();
+        const x = Math.min(Math.max(circleRect.left + circleRect.width / 2 - stageRect.left, 170), stageRect.width - 170);
+        const y = circleRect.top + circleRect.height / 2 - stageRect.top;
+        popover.style.setProperty('--popover-x', `${x}px`);
+        popover.style.setProperty('--popover-y', `${y}px`);
+        popover.classList.toggle('is-below', y < 128);
+        title.textContent = point.getAttribute('data-radar-title') || '';
+        count.textContent = point.getAttribute('data-radar-count') || '0';
+        metric.textContent = stage.getAttribute('data-radar-metric') || '';
+        popover.setAttribute('aria-hidden', 'false');
+        popover.classList.add('is-visible');
+      };
+      const hidePopover = () => {
+        popover?.setAttribute('aria-hidden', 'true');
+        popover?.classList.remove('is-visible', 'is-below');
+      };
+      stage.querySelectorAll('[data-radar-point]').forEach((point) => {
+        point.addEventListener('pointerenter', () => showPopover(point));
+        point.addEventListener('focusin', () => showPopover(point));
+        point.addEventListener('pointerleave', hidePopover);
+        point.addEventListener('focusout', hidePopover);
+      });
+    });
+
+    const enableMapEdit = new URLSearchParams(window.location.search).has('mapEdit');
+    if (enableMapEdit) {
+      document.querySelectorAll('.qzq-space-map').forEach((map) => {
+        map.classList.add('is-editing');
+        const panel = document.createElement('div');
+        panel.className = 'qzq-map-edit-panel';
+        panel.textContent = '閹锋牕濮╃痪銏㈠仯閹存牜鍎归崝娑氬仯';
+        map.append(panel);
+
+        const movePoint = (point, event) => {
+          const rect = map.getBoundingClientRect();
+          const x = Math.min(100, Math.max(0, ((event.clientX - rect.left) / rect.width) * 100));
+          const y = Math.min(100, Math.max(0, ((event.clientY - rect.top) / rect.height) * 100));
+          point.style.setProperty('--x', `${x.toFixed(2)}%`);
+          point.style.setProperty('--y', `${y.toFixed(2)}%`);
+          panel.textContent = `${point.getAttribute('title') || 'point'}: x ${x.toFixed(2)}%, y ${y.toFixed(2)}%`;
+        };
+
+        map.querySelectorAll('.qzq-travel-heat, .qzq-current-pin').forEach((point) => {
+          point.addEventListener('pointerdown', (event) => {
+            event.preventDefault();
+            point.setPointerCapture(event.pointerId);
+            point.classList.add('is-dragging');
+            movePoint(point, event);
+          });
+          point.addEventListener('pointermove', (event) => {
+            if (!point.classList.contains('is-dragging')) return;
+            movePoint(point, event);
+          });
+          point.addEventListener('pointerup', (event) => {
+            point.releasePointerCapture(event.pointerId);
+            point.classList.remove('is-dragging');
+          });
+        });
+      });
+    }
+
+    const formatCounter = (value) => new Intl.NumberFormat('zh-CN').format(value);
+    const animateCounter = (counter) => {
+      const target = Number(counter.getAttribute('data-count-to') || 0);
+      if (prefersReducedMotion.matches) {
+        counter.textContent = formatCounter(target);
+        return;
+      }
+      let start = null;
+      const scrambleUntil = 0.48;
+      const tick = (time) => {
+        start ??= time;
+        const progress = Math.min((time - start) / 2600, 1);
+        const eased = 1 - Math.pow(1 - progress, 2.4);
+        const noise = progress < scrambleUntil ? Math.random() * target * (1 - progress) * 0.1 : 0;
+        counter.textContent = formatCounter(Math.min(target, Math.round(target * eased + noise)));
+        if (progress < 1) requestAnimationFrame(tick);
+        else counter.textContent = formatCounter(target);
+      };
+      requestAnimationFrame(tick);
+    };
+
+    const counterGroup = document.querySelector('.qzq-story');
+    if ('IntersectionObserver' in window && counterGroup) {
+      const counterObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting || counterGroup.dataset.countStarted) return;
+          counterGroup.dataset.countStarted = 'true';
+          counterGroup.querySelectorAll('[data-count-to]').forEach(animateCounter);
+          counterObserver.unobserve(counterGroup);
+        });
+      }, { threshold: 0.45 });
+      counterObserver.observe(counterGroup);
+    } else {
+      counterGroup?.querySelectorAll('[data-count-to]').forEach(animateCounter);
+    }
+
+    const revealSections = document.querySelectorAll('[data-reveal-section]');
+    const revealSection = (section) => {
+      section.classList.add('is-visible');
+      const statisticsPanel = section.querySelector('[data-statistics-panel]');
+      if (statisticsPanel) {
+        statisticsPanel.classList.add('is-visible');
+        if (!statisticsPanel.dataset.counting) {
+          statisticsPanel.dataset.counting = 'true';
+          statisticsPanel.querySelectorAll('[data-count-to]').forEach(animateCounter);
+          window.setTimeout(() => {
+            delete statisticsPanel.dataset.counting;
+          }, 2800);
+        }
+      }
+    };
+    const concealSection = (section) => {
+      section.classList.remove('is-visible');
+      const statisticsPanel = section.querySelector('[data-statistics-panel]');
+      statisticsPanel?.classList.remove('is-visible');
+    };
+    if ('IntersectionObserver' in window && revealSections.length) {
+      const sectionObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            revealSection(entry.target);
+          } else {
+            concealSection(entry.target);
+          }
+        });
+      }, { threshold: 0.01, rootMargin: '22% 0px -4% 0px' });
+      revealSections.forEach((section) => {
+        sectionObserver.observe(section);
+        const rect = section.getBoundingClientRect();
+        if (rect.top < window.innerHeight && rect.bottom > 0) {
+          revealSection(section);
+        }
+      });
+    } else {
+      revealSections.forEach(revealSection);
+    }
+
+    const highlightMarks = document.querySelectorAll('[data-highlight-sweep]');
+    const revealHighlight = (mark) => {
+      mark.classList.add('is-visible');
+    };
+    if ('IntersectionObserver' in window) {
+      const highlightObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          revealHighlight(entry.target);
+          highlightObserver.unobserve(entry.target);
+        });
+      }, { threshold: 0.72, rootMargin: '0px 0px -8% 0px' });
+      highlightMarks.forEach((mark) => highlightObserver.observe(mark));
+    } else {
+      highlightMarks.forEach(revealHighlight);
+    }
+
+    const orbitTokens = document.querySelectorAll('[data-orbit-token]');
+    const orbitStage = document.querySelector('.qzq-orbit-stage');
+    const animateOrbit = (time) => {
+      if (!prefersReducedMotion.matches) {
+        const stageWidth = orbitStage?.getBoundingClientRect().width || 760;
+        const orbitScale = Math.min(1, Math.max(0.48, stageWidth / 760));
+        orbitTokens.forEach((token) => {
+          const rx = Number(token.getAttribute('data-rx'));
+          const ry = Number(token.getAttribute('data-ry'));
+          const speed = Number(token.getAttribute('data-speed'));
+          const phase = Number(token.getAttribute('data-phase'));
+          const t = time / 1000 * speed + phase;
+          token.style.setProperty('--orbit-x', `${Math.cos(t) * rx * orbitScale}px`);
+          token.style.setProperty('--orbit-y', `${Math.sin(t) * ry * orbitScale}px`);
+        });
+      }
+      requestAnimationFrame(animateOrbit);
+    };
+    requestAnimationFrame(animateOrbit);
+
+    const watchTracks = document.querySelectorAll('[data-random-watch-track]');
+    if (!prefersReducedMotion.matches) {
+      watchTracks.forEach((track) => {
+        const duration = Number.parseFloat(getComputedStyle(track).getPropertyValue('--watch-duration')) || 3600;
+        track.style.animationDelay = `${-(Math.random() * duration * 0.18)}s`;
+      });
+    }
+
+    const readingShelf = document.querySelector('[data-reading-shelf]');
+    let readingRotationPaused = false;
+    let readingRotationHoldUntil = 0;
+
+    const refreshBookIndexes = (row) => {
+      row.querySelectorAll('[data-reading-book]').forEach((item, index) => {
+        item.style.setProperty('--book-index', index);
+      });
+    };
+
+    const activateBook = (book, options = {}) => {
+      const row = book.parentElement;
+      if (!row) return;
+      row.querySelectorAll('[data-reading-book]').forEach((item) => item.classList.remove('is-active'));
+      book.classList.add('is-active');
+      if (options.focus !== false) book.focus({ preventScroll: true });
+    };
+
+    const rotateReadingShelf = () => {
+      if (prefersReducedMotion.matches || readingRotationPaused || Date.now() < readingRotationHoldUntil) return;
+      const row = readingShelf?.querySelector('.qzq-book-row');
+      const books = row ? Array.from(row.querySelectorAll('[data-reading-book]')) : [];
+      if (books.length < 2) return;
+      const activeIndex = Math.max(0, books.findIndex((book) => book.classList.contains('is-active')));
+      activateBook(books[(activeIndex + 1) % books.length], { focus: false });
+    };
+
+    readingShelf?.querySelectorAll('[data-reading-book]').forEach((book) => {
+      book.addEventListener('click', () => {
+        readingRotationHoldUntil = Date.now() + 18000;
+        activateBook(book);
+      });
+      book.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          window.location.href = book.getAttribute('data-href');
+        }
+        if (event.key === ' ') {
+          event.preventDefault();
+          readingRotationHoldUntil = Date.now() + 18000;
+          activateBook(book);
+        }
+      });
+      book.addEventListener('dblclick', () => {
+        window.location.href = book.getAttribute('data-href');
+      });
+    });
+
+    if (readingShelf && !prefersReducedMotion.matches) {
+      readingShelf.addEventListener('pointerenter', () => {
+        readingRotationPaused = true;
+      });
+      readingShelf.addEventListener('pointerleave', () => {
+        readingRotationPaused = false;
+      });
+      readingShelf.addEventListener('focusin', () => {
+        readingRotationPaused = true;
+      });
+      readingShelf.addEventListener('focusout', () => {
+        readingRotationPaused = false;
+      });
+      window.setInterval(rotateReadingShelf, 9000);
+    }
+  </script>
 </BaseLayout>
+

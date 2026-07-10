@@ -1,17 +1,25 @@
 ---
-import { getCollection } from 'astro:content';
 import ArticleLayout from '../../layouts/ArticleLayout.astro';
+import { markdownToHtml, readingTimeForMarkdown } from '../../lib/server/markdownRenderer.mjs';
+import { postRepository } from '../../lib/server/postRepository.mjs';
 
-export async function getStaticPaths() {
-  const posts = await getCollection('posts');
-  return posts.map((post) => ({
-    params: { slug: post.slug },
-    props: { post },
-  }));
+export const prerender = false;
+
+postRepository.ensureSeededFromContent();
+const slug = Astro.params.slug;
+const post = postRepository.getBySlug(slug);
+
+if (!post) {
+  return Astro.redirect('/writing');
 }
 
-const { post } = Astro.props;
-const { Content } = await post.render();
+const rendered = markdownToHtml(post.body);
+const readingTime = readingTimeForMarkdown(post.body);
+const toc = rendered.headings.filter((heading) => heading.depth === 2).slice(0, 8);
+const allPosts = postRepository.list({ filter: 'published', limit: 500 }).items;
+const currentIndex = allPosts.findIndex((item) => item.slug === post.slug);
+const prevPost = allPosts[currentIndex - 1] ?? null;
+const nextPost = allPosts[currentIndex + 1] ?? null;
 ---
 
 <ArticleLayout
@@ -19,6 +27,10 @@ const { Content } = await post.render();
   description={post.data.description}
   date={post.data.date}
   category={post.data.category}
+  readingTime={readingTime}
+  headings={toc}
+  prevPost={prevPost}
+  nextPost={nextPost}
 >
-  <Content />
+  <Fragment set:html={rendered.html} />
 </ArticleLayout>

@@ -2,7 +2,16 @@ node_modules/
 dist/
 .astro/
 astro-dev*.log
+*.log
+.tmp-*.png
 screens-*.png
 reference-*.json
 reference-*.png
 reference-*.js
+.superpowers/
+data/
+public/uploads/
+.admin-dev*.log
+.start-admin-dev.ps1
+.env*
+!.env.example

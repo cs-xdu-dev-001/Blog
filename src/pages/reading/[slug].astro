@@ -1,0 +1,59 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getReadingBySlugFromDb } from '../../lib/server/readingArchiveView.mjs';
+
+export const prerender = false;
+
+const book = getReadingBySlugFromDb(Astro.params.slug);
+
+if (!book) {
+  return Astro.redirect('/reading');
+}
+---
+
+<BaseLayout title={`${book.title} | Dev Notes`} description={book.summary}>
+  <article class="book-review-shell">
+    <aside class="book-review-side">
+      <a href="/reading">返回书架</a>
+      <dl>
+        <div>
+          <dt>状态</dt>
+          <dd>{book.statusLabel}</dd>
+        </div>
+        <div>
+          <dt>作者</dt>
+          <dd>{book.author}</dd>
+        </div>
+        <div>
+          <dt>进度</dt>
+          <dd>{book.progress}</dd>
+        </div>
+      </dl>
+    </aside>
+
+    <div class="book-review-paper">
+      <header class="book-review-header">
+        <div
+          class={`book-review-cover ${book.cover ? 'has-cover' : ''}`}
+          style={`--book-spine: ${book.spineColor}; --book-accent: ${book.accentColor}; ${book.cover ? `--book-cover-image: url('${book.cover}');` : ''}`}
+          aria-hidden="true"
+        >
+          <span>{book.statusLabel}</span>
+          <strong>{book.title}</strong>
+          <em>{book.author}</em>
+        </div>
+        <div>
+          <span>Book note</span>
+          <h1>{book.title}</h1>
+          <p>{book.summary}</p>
+        </div>
+      </header>
+
+      <section class="book-review-body">
+        <blockquote>{book.quote}</blockquote>
+        <h2>我的记录</h2>
+        <p>{book.review}</p>
+      </section>
+    </div>
+  </article>
+</BaseLayout>

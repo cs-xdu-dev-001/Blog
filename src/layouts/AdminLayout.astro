@@ -1,0 +1,84 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import { requireAdmin } from '../lib/server/auth.mjs';
+
+const {
+  title = 'Dev Notes CMS',
+  active = '',
+  pageClass = '',
+  layoutClass = '',
+  dataAttr = '',
+} = Astro.props;
+
+if (!requireAdmin(Astro)) {
+  return Astro.redirect('/admin/login');
+}
+
+const pageAttrs = dataAttr ? { [dataAttr]: true } : {};
+
+const navGroups = [
+  {
+    label: '内容',
+    items: [
+      { key: 'posts', label: '近期笔记', href: '/admin/posts' },
+      { key: 'watch', label: '影像档案', href: '/admin/watch' },
+      { key: 'reading', label: '阅读书架', href: '/admin/reading' },
+    ],
+  },
+  {
+    label: '视觉',
+    items: [
+      { key: 'radar', label: '统计标签', href: '/admin/radar' },
+      { key: 'map', label: '地图校准', href: '/admin/map' },
+    ],
+  },
+  {
+    label: '系统',
+    items: [
+      { key: 'site', label: '站点信息', href: '/admin/site#site-basic' },
+      { key: 'assistant', label: 'AI助手', href: '/admin/site#assistant-config' },
+      { key: 'about', label: '社交/About', href: '/admin/site#about-config' },
+    ],
+  },
+];
+---
+
+<BaseLayout title={title} chrome={false} shell={false} assistant={false}>
+  <main class:list={['cms-page', pageClass]} {...pageAttrs}>
+    <header class="cms-topbar">
+      <a class="cms-brand" href="/admin/site"><span>DN</span> Dev Notes CMS</a>
+      <slot name="search">
+        <input class="cms-search" type="search" value="Control Center" readonly />
+      </slot>
+      <div class="cms-actions">
+        <slot name="actions">
+          <a href="/" target="_blank" rel="noreferrer">预览前台</a>
+        </slot>
+        <form method="post" action="/api/admin/logout">
+          <button type="submit">退出</button>
+        </form>
+      </div>
+    </header>
+
+    <div class:list={['cms-layout', layoutClass]}>
+      <aside class="cms-sidebar">
+        {navGroups.map((group) => (
+          <>
+            <span>{group.label}</span>
+            {group.items.map((item) => (
+              <a class={active === item.key ? 'active' : ''} href={item.href}>{item.label}</a>
+            ))}
+          </>
+        ))}
+
+        <slot name="sidebar-actions" />
+      </aside>
+
+      <section class="cms-main">
+        <slot />
+      </section>
+
+      <slot name="editor" />
+    </div>
+  </main>
+</BaseLayout>

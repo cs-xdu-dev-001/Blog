@@ -1,0 +1,21 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Dev Notes CMS Login" chrome={false} shell={false} assistant={false}>
+  <main class="admin-login-page">
+    <form class="admin-login-card" method="post" action="/api/admin/login">
+      <span>Dev Notes CMS</span>
+      <h1>登录管理端</h1>
+      <label>
+        用户名
+        <input name="username" autocomplete="username" required />
+      </label>
+      <label>
+        密码
+        <input name="password" type="password" autocomplete="current-password" required />
+      </label>
+      <button type="submit">进入控制台</button>
+    </form>
+  </main>
+</BaseLayout>

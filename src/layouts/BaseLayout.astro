@@ -4,11 +4,24 @@ import Header from '../components/Header.astro';
 import MinimalFooter from '../components/MinimalFooter.astro';
 
 const {
-  title = 'W. Notes',
+  title = 'Dev Notes',
   description = 'A minimal personal technical blog.',
   chrome = true,
   shell = true,
+  assistant = true,
 } = Astro.props;
+
+let assistantConfig = null;
+if (assistant) {
+  const { siteConfigRepository } = await import('../lib/server/siteConfigRepository.mjs');
+  const siteConfig = siteConfigRepository.getSiteConfig();
+  assistantConfig = siteConfig.assistant?.enabled === false ? null : {
+    title: siteConfig.assistant?.title,
+    welcome: siteConfig.assistant?.welcome,
+    placeholder: siteConfig.assistant?.placeholder,
+    maxQuestionLength: siteConfig.assistant?.maxQuestionLength,
+  };
+}
 ---
 
 <!doctype html>
@@ -30,5 +43,43 @@ const {
       </main>
       {chrome && <MinimalFooter />}
     </div>
+    {assistantConfig && (
+      <div
+        class="dn-assistant"
+        data-assistant-root
+        data-title={assistantConfig.title}
+        data-welcome={assistantConfig.welcome}
+        data-placeholder={assistantConfig.placeholder}
+      >
+        <button class="dn-assistant-trigger" type="button" data-assistant-open aria-label="打开站内AI助手">
+          <span>Ask</span>
+          <i>AI</i>
+        </button>
+        <section class="dn-assistant-panel" data-assistant-panel aria-hidden="true" aria-label="站内AI助手">
+          <div class="dn-assistant-head">
+            <div>
+              <span>Site assistant</span>
+              <h2>{assistantConfig.title}</h2>
+            </div>
+            <button type="button" data-assistant-close aria-label="关闭站内AI助手">×</button>
+          </div>
+          <div class="dn-assistant-body">
+            <p class="dn-assistant-welcome" data-assistant-welcome>{assistantConfig.welcome}</p>
+            <div class="dn-assistant-answer" data-assistant-answer hidden></div>
+            <div class="dn-assistant-sources" data-assistant-sources hidden></div>
+          </div>
+          <form class="dn-assistant-form" data-assistant-form>
+            <textarea data-assistant-input rows="3" maxlength={assistantConfig.maxQuestionLength} placeholder={assistantConfig.placeholder}></textarea>
+            <button type="submit">
+              <span>提问</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h13M13 6l6 6-6 6" />
+              </svg>
+            </button>
+          </form>
+        </section>
+      </div>
+    )}
+    {assistantConfig && <script is:inline src="/assistant.js"></script>}
   </body>
 </html>

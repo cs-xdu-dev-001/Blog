@@ -1,27 +1,62 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { siteConfigRepository } from '../lib/server/siteConfigRepository.mjs';
+
+const siteConfig = siteConfigRepository.getSiteConfig();
+const sections = Object.fromEntries(siteConfigRepository.listSections().map((section) => [section.key, section]));
+const navSmall = (key, fallback) => {
+  const value = sections[key]?.navSmall || fallback;
+  return value === 'auto' ? fallback : value;
+};
+const aboutParagraphs = String(siteConfig.aboutBody || '').split(/\n{2,}/).filter(Boolean);
 ---
 
-<BaseLayout title="About · W. Notes" description="关于这个极简个人技术博客。">
-  <section class="minimal-grid">
-    <div class="col-span-3">
-      <p class="text-xs uppercase tracking-[0.16em] text-[#999999]">About</p>
-    </div>
-    <div class="col-span-7 col-start-5">
-      <h1 class="text-balance text-[clamp(48px,7vw,76px)] font-light leading-[1.08] tracking-[-0.022em] text-[#000000]">
-        一个给自己回看的技术笔记站。
-      </h1>
-      <div class="article-prose mt-16">
-        <p>
-          这个博客记录个人网站、服务器部署、自动化和小型编程实践。内容不追求完整教程，更像是把做过的事整理成以后能复用的路径。
-        </p>
-        <p>
-          界面保持克制。少一点模板感，多一点排版秩序，让文章本身成为页面里最重要的东西。
-        </p>
-        <p>
-          当前关注方向：前端工程、AI 工具链、个人知识系统和轻量部署流程。
-        </p>
+<BaseLayout
+  title={`关于 | ${siteConfig.brandName}`}
+  description={`关于${siteConfig.brandName}和站点作者。`}
+  chrome={false}
+  shell={false}
+>
+  <main class="qzq-home qzq-about-page">
+    <nav class="qzq-nav" aria-label="Primary navigation">
+      <a class="qzq-brand" href="/">{siteConfig.brandName}</a>
+      <div class="qzq-nav-links">
+        <a class="qzq-nav-item" href="/#topics"><span>{sections.topics?.navLabel || '主线'}</span><small>{navSmall('topics', '4')}</small></a>
+        <a class="qzq-nav-item" href="/#notes"><span>{sections.notes?.navLabel || '笔记'}</span><small>{navSmall('notes', 'log')}</small></a>
+        <a class="qzq-nav-item" href="/#watch"><span>{sections.watch?.navLabel || '影像'}</span><small>{navSmall('watch', 'film')}</small></a>
+        <a class="qzq-nav-item" href="/#reading"><span>{sections.reading?.navLabel || '书架'}</span><small>{navSmall('reading', 'book')}</small></a>
+        <a class="qzq-nav-item" href="/#statistics"><span>{sections.statistics?.navLabel || '统计'}</span><small>{navSmall('statistics', '∞')}</small></a>
+        <a class="qzq-nav-item" href="/about"><span>{sections.about?.navLabel || '关于'}</span><small>{navSmall('about', 'me')}</small></a>
       </div>
-    </div>
-  </section>
+    </nav>
+
+    <section class="qzq-about-hero" aria-label="关于">
+      <div class="qzq-about-kicker">About / {siteConfig.brandName}</div>
+      <h1>{siteConfig.aboutTitle}</h1>
+      {aboutParagraphs.map((paragraph) => <p>{paragraph}</p>)}
+    </section>
+
+    <section class="qzq-about-grid" aria-label="个人信息">
+      <article>
+        <span>Now</span>
+        <h2>正在关注</h2>
+        <p>{siteConfig.aboutNow}</p>
+      </article>
+      <article>
+        <span>Method</span>
+        <h2>记录方式</h2>
+        <p>{siteConfig.aboutMethod}</p>
+      </article>
+      <article>
+        <span>Taste</span>
+        <h2>审美偏好</h2>
+        <p>{siteConfig.aboutTaste}</p>
+      </article>
+      <article>
+        <span>Contact</span>
+        <h2>联系我</h2>
+        <p>GitHub：{siteConfig.social.github}。B站：{siteConfig.social.bilibili}。QQ：{siteConfig.social.qq}。</p>
+      </article>
+    </section>
+  </main>
 </BaseLayout>

@@ -1,0 +1,43 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout
+  title="Dev Notes CMS | 近期笔记"
+  active="posts"
+  pageClass="post-admin-list-page"
+  layoutClass="cms-layout-post-list"
+  dataAttr="data-posts-admin"
+>
+  <input slot="search" class="cms-search" type="search" placeholder="搜索标题、分类、摘要和正文..." data-post-search />
+  <a slot="actions" href="/writing" target="_blank" rel="noreferrer">预览笔记</a>
+
+  <Fragment slot="sidebar-actions">
+    <span>快速操作</span>
+    <button type="button" data-create-post>新增笔记</button>
+    <button type="button" data-post-filter="all" class="active">全部笔记</button>
+    <button type="button" data-post-filter="published">已发布</button>
+    <button type="button" data-post-filter="draft">草稿</button>
+    <button type="button" data-post-filter="featured">重点笔记</button>
+  </Fragment>
+
+  <div class="cms-hero cms-hero-posts">
+    <div>
+      <span>Writing Desk</span>
+      <h1>近期笔记管理</h1>
+      <p>这里负责检索、筛选和进入单篇编辑。真正写作放到独立编辑页，避免导航、索引、Markdown原文和预览全部挤在一起。</p>
+    </div>
+    <strong data-post-save-state>ONLINE / DB CONNECTED</strong>
+  </div>
+
+  <div class="cms-metrics" data-post-stats></div>
+  <div class="cms-filters">
+    <button type="button" data-post-filter="all" class="active">全部</button>
+    <button type="button" data-post-filter="published">已发布</button>
+    <button type="button" data-post-filter="draft">草稿</button>
+    <button type="button" data-post-filter="featured">重点笔记</button>
+  </div>
+  <div class="cms-list cms-post-list" data-post-list></div>
+
+  <script is:inline src="/admin-posts.js"></script>
+</AdminLayout>

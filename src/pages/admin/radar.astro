@@ -1,0 +1,39 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Dev Notes CMS | 统计标签" active="radar" dataAttr="data-radar-admin">
+  <input slot="search" class="cms-search" type="search" placeholder="搜索标签、中文名或类型..." data-radar-search />
+  <a slot="actions" href="/#statistics" target="_blank" rel="noreferrer">预览统计区</a>
+
+  <Fragment slot="sidebar-actions">
+    <span>快速操作</span>
+    <button type="button" data-create-radar>新增标签</button>
+    <button type="button" data-filter="all">全部标签</button>
+    <button type="button" data-filter="movie">Movie雷达</button>
+    <button type="button" data-filter="code">Code雷达</button>
+  </Fragment>
+
+  <div class="cms-hero">
+    <div>
+      <span>Radar Tags</span>
+      <h1>统计标签控制台</h1>
+      <p>维护首页统计区的雷达图标签、计数、权重和排序。保存后前台自动读取，不再改首页源码。</p>
+    </div>
+    <strong data-save-state>ONLINE / DB CONNECTED</strong>
+  </div>
+
+  <div class="cms-metrics" data-radar-stats></div>
+  <div class="cms-filters">
+    <button type="button" data-filter="all" class="active">全部</button>
+    <button type="button" data-filter="movie">Movie</button>
+    <button type="button" data-filter="code">Code</button>
+  </div>
+  <div class="cms-list" data-radar-list></div>
+
+  <aside slot="editor" class="cms-editor" data-radar-editor>
+    <p>从左侧选择一个标签开始编辑，或点击“新增标签”。</p>
+  </aside>
+
+  <script is:inline src="/admin-radar.js"></script>
+</AdminLayout>

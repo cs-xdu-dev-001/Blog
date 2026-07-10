@@ -1,7 +1,16 @@
 ---
 import BaseLayout from './BaseLayout.astro';
 
-const { title, description, date, category } = Astro.props;
+const {
+  title,
+  description,
+  date,
+  category,
+  readingTime = 1,
+  headings = [],
+  prevPost = null,
+  nextPost = null,
+} = Astro.props;
 const formattedDate = new Intl.DateTimeFormat('zh-CN', {
   year: 'numeric',
   month: '2-digit',
@@ -9,24 +18,68 @@ const formattedDate = new Intl.DateTimeFormat('zh-CN', {
 }).format(date);
 ---
 
-<BaseLayout title={`${title} · W. Notes`} description={description}>
-  <article class="minimal-grid">
-    <header class="col-span-8 col-start-3 mb-20">
-      <a class="minimal-link mb-12 inline-block text-sm tracking-[0.03em] text-[#808080]" href="/writing">
-        Back to writing
-      </a>
-      <p class="mb-8 text-xs tracking-[0.12em] text-[#999999]">
-        {category} / {formattedDate}
-      </p>
-      <h1 class="max-w-[820px] text-balance text-[clamp(38px,7vw,72px)] font-light leading-[1.08] tracking-[-0.022em] text-[#000000]">
-        {title}
-      </h1>
-      <p class="mt-10 max-w-[680px] text-lg leading-8 tracking-[0.02em] text-[#666666]">
-        {description}
-      </p>
-    </header>
-    <div class="article-prose col-span-7 col-start-3">
-      <slot />
+<BaseLayout title={`${title} | Dev Notes`} description={description}>
+  <article class="post-shell">
+    <aside class="post-side" aria-label="文章信息">
+      <a class="post-side-back" href="/writing">返回文章索引</a>
+      <dl>
+        <div>
+          <dt>分类</dt>
+          <dd>{category}</dd>
+        </div>
+        <div>
+          <dt>日期</dt>
+          <dd>{formattedDate}</dd>
+        </div>
+        <div>
+          <dt>阅读</dt>
+          <dd>{readingTime}分钟</dd>
+        </div>
+      </dl>
+      {headings.length > 0 && (
+        <nav class="post-toc" aria-label="文章目录">
+          <span>目录</span>
+          {headings.map((heading) => (
+            <a href={`#${heading.slug}`}>{heading.text}</a>
+          ))}
+        </nav>
+      )}
+    </aside>
+
+    <div class="post-paper">
+      <header class="post-header">
+        <p class="post-kicker">{category} / {formattedDate}</p>
+        <h1>{title}</h1>
+        <p>{description}</p>
+      </header>
+
+      <div class="post-body article-prose">
+        <slot />
+      </div>
+
+      <footer class="post-footer">
+        <p>写给未来会再查一遍的自己。</p>
+        <div class="post-footer-links">
+          <a href="/writing">文章索引</a>
+          <a href="/">回到首页</a>
+        </div>
+        {(prevPost || nextPost) && (
+          <div class="post-read-next" aria-label="继续阅读">
+            {prevPost && (
+              <a href={`/posts/${prevPost.slug}`}>
+                <span>上一篇</span>
+                <strong>{prevPost.data.title}</strong>
+              </a>
+            )}
+            {nextPost && (
+              <a href={`/posts/${nextPost.slug}`}>
+                <span>下一篇</span>
+                <strong>{nextPost.data.title}</strong>
+              </a>
+            )}
+          </div>
+        )}
+      </footer>
     </div>
   </article>
 </BaseLayout>

@@ -1,0 +1,63 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getAllReadingFromDb, getReadingGroupsFromDb } from '../lib/server/readingArchiveView.mjs';
+
+const groups = getReadingGroupsFromDb();
+const readingArchive = getAllReadingFromDb();
+const groupMeta = [
+  ['reading', '正在阅读', groups.reading],
+  ['read', '已经读过', groups.read],
+  ['planned', '未来待读', groups.planned],
+];
+---
+
+<BaseLayout title="Reading | Dev Notes" description="阅读书架、书评和摘句。">
+  <section class="reading-page-hero">
+    <div>
+      <span>Reading archive</span>
+      <h1>阅读书架</h1>
+    </div>
+    <p>
+      这里先用本地数据维护书单。它不是完整数据库，而是把正在读、已读和待读的书，
+      按照能被回看的方式摆出来。
+    </p>
+  </section>
+
+  <section class="reading-wall" aria-label="全部书籍">
+    {groupMeta.map(([key, label, books]) => (
+      <div class="reading-group">
+        <div class="reading-group-title">
+          <span>{key}</span>
+          <h2>{label}</h2>
+          <small>{books.length} 本</small>
+        </div>
+        <div class="reading-group-shelf">
+          {books.map((book, index) => (
+            <a
+              class={`reading-book-card ${book.cover ? 'has-cover' : ''}`}
+              href={`/reading/${book.slug}`}
+              style={`--book-spine: ${book.spineColor}; --book-accent: ${book.accentColor}; --book-index: ${index}; ${book.cover ? `--book-cover-image: url('${book.cover}');` : ''}`}
+            >
+              <div class="reading-book-visual" aria-hidden="true">
+                <span>{book.statusLabel}</span>
+                <strong>{book.title}</strong>
+                <em>{book.author}</em>
+              </div>
+              <div>
+                <span>{book.progress}</span>
+                <h3>{book.title}</h3>
+                <p>{book.summary}</p>
+                <blockquote>{book.quote}</blockquote>
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    ))}
+  </section>
+
+  <footer class="reading-page-footer">
+    <span>{readingArchive.length} books indexed</span>
+    <a href="/">回到首页</a>
+  </footer>
+</BaseLayout>

@@ -1,0 +1,43 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Dev Notes CMS | 影像档案" active="watch" dataAttr="data-watch-admin">
+  <input slot="search" class="cms-search" type="search" placeholder="搜索影像名、评论、佳句..." data-watch-search />
+  <a slot="actions" href="/#watch" target="_blank" rel="noreferrer">预览影像区</a>
+
+  <Fragment slot="sidebar-actions">
+    <span>快速操作</span>
+    <button type="button" data-create-watch>新增影像</button>
+    <button type="button" data-filter="missing_image">扫描缺图</button>
+    <button type="button" data-filter="missing_comment">扫描缺评论</button>
+    <button type="button" data-filter="missing_quote">扫描缺佳句</button>
+  </Fragment>
+
+  <div class="cms-hero">
+    <div>
+      <span>Archive Health</span>
+      <h1>影像内容控制台</h1>
+      <p>写评论、填佳句、上传影像图。保存后前台即时生效，不需要SSH到服务器改文件。</p>
+    </div>
+    <strong data-save-state>ONLINE / DB CONNECTED</strong>
+  </div>
+
+  <div class="cms-metrics" data-watch-stats></div>
+  <div class="cms-filters">
+    <button type="button" data-filter="all" class="active">全部</button>
+    <button type="button" data-filter="missing_image">缺图</button>
+    <button type="button" data-filter="missing_comment">缺评论</button>
+    <button type="button" data-filter="missing_quote">缺佳句</button>
+    <button type="button" data-filter="watched">已看</button>
+    <button type="button" data-filter="wanted">想看</button>
+    <button type="button" data-filter="featured">精选</button>
+  </div>
+  <div class="cms-list" data-watch-list></div>
+
+  <aside slot="editor" class="cms-editor" data-watch-editor>
+    <p>从左侧选择一个影像条目开始编辑。</p>
+  </aside>
+
+  <script is:inline src="/admin-watch.js"></script>
+</AdminLayout>
