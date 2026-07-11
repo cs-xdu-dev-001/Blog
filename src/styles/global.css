@@ -7193,16 +7193,19 @@ button:focus-visible {
 }
 
 .dn-assistant-panel {
-  position: absolute;
-  right: 0;
-  bottom: 62px;
+  position: fixed;
+  right: 28px;
+  bottom: 90px;
   width: min(420px, calc(100vw - 40px));
   height: min(680px, calc(100vh - 120px));
+  min-width: 360px;
   min-height: 430px;
-  max-height: calc(100vh - 120px);
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 24px);
   display: grid;
   grid-template-rows: auto 1fr auto;
   overflow: hidden;
+  resize: both;
   border-radius: 26px;
   background: #fbfbf8;
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(0, 0, 0, 0.08);
@@ -7211,6 +7214,30 @@ button:focus-visible {
   transform: translateY(12px) scale(0.94);
   transform-origin: right bottom;
   transition: opacity 180ms ease, transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dn-assistant-panel[data-dragged="true"] {
+  transform-origin: center;
+}
+
+.dn-assistant-panel.is-dragging {
+  resize: none;
+  transition: none;
+  user-select: none;
+}
+
+.dn-assistant-panel::after {
+  content: "";
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  width: 18px;
+  height: 18px;
+  background:
+    linear-gradient(135deg, transparent 0 48%, rgba(0, 0, 0, 0.28) 50% 56%, transparent 58%),
+    linear-gradient(135deg, transparent 0 64%, rgba(0, 0, 0, 0.18) 66% 71%, transparent 73%);
+  opacity: 0.46;
+  pointer-events: none;
 }
 
 .dn-assistant.is-open .dn-assistant-panel {
@@ -7232,6 +7259,13 @@ button:focus-visible {
   gap: 20px;
   padding: 24px 24px 18px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.dn-assistant-panel.is-dragging .dn-assistant-head {
+  cursor: grabbing;
 }
 
 .dn-assistant-head span,
@@ -7314,6 +7348,118 @@ button:focus-visible {
   color: rgba(0, 0, 0, 0.58);
 }
 
+.dn-assistant-chat {
+  display: grid;
+  gap: 16px;
+}
+
+.dn-assistant-message {
+  display: grid;
+  gap: 7px;
+  max-width: 86%;
+}
+
+.dn-assistant-message > span {
+  color: rgba(0, 0, 0, 0.4);
+  font-size: 11px;
+  font-weight: 720;
+  line-height: 1;
+}
+
+.dn-assistant-message-user {
+  justify-self: end;
+  justify-items: end;
+}
+
+.dn-assistant-message-assistant {
+  justify-self: start;
+  justify-items: start;
+}
+
+.dn-assistant-bubble {
+  border-radius: 20px;
+  padding: 13px 15px;
+  font-size: 15px;
+  line-height: 1.72;
+  letter-spacing: 0.01em;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.dn-assistant-message-user .dn-assistant-bubble {
+  border-bottom-right-radius: 8px;
+  background: #050505;
+  color: #ffffff;
+}
+
+.dn-assistant-message-assistant .dn-assistant-bubble {
+  border-bottom-left-radius: 8px;
+  background: rgba(0, 0, 0, 0.055);
+  color: #151515;
+}
+
+.dn-assistant-message.is-loading .dn-assistant-bubble {
+  color: rgba(0, 0, 0, 0.54);
+}
+
+.dn-assistant-message.is-loading .dn-assistant-bubble::after {
+  content: "";
+  display: inline-block;
+  width: 18px;
+  height: 1px;
+  margin-left: 8px;
+  vertical-align: middle;
+  background: #111;
+  animation: dnAssistantPulse 880ms ease-in-out infinite;
+}
+
+.dn-assistant-message.is-error .dn-assistant-bubble {
+  background: rgba(180, 42, 42, 0.08);
+  color: rgba(97, 22, 22, 0.88);
+}
+
+.dn-assistant-message-sources {
+  display: grid;
+  gap: 8px;
+  width: min(100%, 360px);
+  margin-top: 3px;
+}
+
+.dn-assistant-message-sources > span {
+  color: rgba(0, 0, 0, 0.46);
+  font-size: 10px;
+  font-weight: 760;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.dn-assistant-message-sources a {
+  display: grid;
+  gap: 4px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.045);
+  color: #111;
+  padding: 12px 14px;
+  text-decoration: none;
+  transition: background 160ms ease, transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dn-assistant-message-sources a:hover {
+  background: rgba(0, 0, 0, 0.075);
+  transform: translateY(-1px);
+}
+
+.dn-assistant-message-sources small {
+  color: rgba(0, 0, 0, 0.48);
+  font-size: 11px;
+}
+
+.dn-assistant-message-sources strong {
+  font-size: 13px;
+  font-weight: 680;
+  line-height: 1.35;
+}
+
 .dn-assistant-sources {
   display: grid;
   gap: 8px;
@@ -7365,7 +7511,7 @@ button:focus-visible {
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
   color: #101010;
   padding: 14px 15px;
-  resize: vertical;
+  resize: none;
   outline: none;
   font: inherit;
   font-size: 14px;

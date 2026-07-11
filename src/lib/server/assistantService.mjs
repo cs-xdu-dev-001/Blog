@@ -253,6 +253,7 @@ function assistantRequestBody(question, sources, config) {
     ? {
         model: assistantModel(config),
         max_output_tokens: maxTokens,
+        stream: true,
         input: [
           { role: 'system', content: [{ type: 'input_text', text: systemText }] },
           { role: 'user', content: [{ type: 'input_text', text: userText }] },
@@ -271,9 +272,62 @@ function assistantRequestBody(question, sources, config) {
 
 function parseModelAnswer(data, config) {
   if (assistantApiMode(config) === 'responses') {
-    return (data.output_text || data.output?.flatMap((item) => item.content || []).map((item) => item.text || '').join('').trim() || '').trim();
+    return extractResponsesText(data);
   }
   return data.choices?.[0]?.message?.content?.trim() || '';
+}
+
+function extractResponsesText(data) {
+  return (
+    data?.output_text
+    || data?.response?.output_text
+    || data?.output?.flatMap((item) => item.content || []).map((item) => item.text || '').join('').trim()
+    || data?.response?.output?.flatMap((item) => item.content || []).map((item) => item.text || '').join('').trim()
+    || ''
+  ).trim();
+}
+
+function parseResponsesStream(text) {
+  const chunks = [];
+  let finalText = '';
+  String(text || '').split(/\r?\n/).forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('data:')) return;
+    const payload = trimmed.slice(5).trim();
+    if (!payload || payload === '[DONE]') return;
+
+    try {
+      const data = JSON.parse(payload);
+      const type = String(data.type || data.event || '');
+      const delta = data.delta || '';
+      if (delta && (!type || type.includes('delta'))) {
+        chunks.push(delta);
+        return;
+      }
+
+      const extracted = extractResponsesText(data);
+      if (extracted) finalText = extracted;
+    } catch {
+      // Ignore non-JSON heartbeat lines from SSE-compatible gateways.
+    }
+  });
+  return chunks.length ? chunks.join('').trim() : finalText.trim();
+}
+
+async function readModelAnswer(response, config) {
+  if (assistantApiMode(config) !== 'responses') {
+    return parseModelAnswer(await response.json(), config);
+  }
+
+  const text = await response.text();
+  const streamed = parseResponsesStream(text);
+  if (streamed) return streamed;
+
+  try {
+    return parseModelAnswer(JSON.parse(text), config);
+  } catch {
+    return '';
+  }
 }
 
 async function askModel(question, sources, config) {
@@ -297,8 +351,7 @@ async function askModel(question, sources, config) {
       sources,
     };
   }
-  const data = await response.json();
-  const answer = parseModelAnswer(data, config);
+  const answer = await readModelAnswer(response, config);
   return answer ? { refused: false, answer, sources } : null;
 }
 
@@ -348,10 +401,9 @@ export async function testAssistantConfig(assistantInput = {}) {
     };
   }
 
-  const data = await response.json();
   return {
     ok: true,
-    answer: parseModelAnswer(data, config) || 'OK',
+    answer: await readModelAnswer(response, config) || 'OK',
     endpoint: assistantEndpoint(config),
     mode: assistantApiMode(config),
     model: assistantModel(config),

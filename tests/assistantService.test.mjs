@@ -127,6 +127,7 @@ test('assistant can call responses-compatible endpoint', async () => {
     assert.equal(calls[0].url, 'https://example.com/v1/responses');
     assert.equal(calls[0].body.model, 'test-model');
     assert.equal(calls[0].body.max_output_tokens > 0, true);
+    assert.equal(calls[0].body.stream, true);
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -160,7 +161,74 @@ test('assistant config test uses selected endpoint without returning api key', a
     assert.equal(JSON.stringify(result).includes('secret-key'), false);
     assert.equal(calls[0].headers.Authorization, 'Bearer secret-key');
     assert.equal(calls[0].body.model, 'test-model');
+    assert.equal(calls[0].body.stream, true);
     assert.ok(calls[0].dispatcher);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('assistant parses responses stream events', async () => {
+  const { site, assistant } = createIsolatedAssistant(tempDbPath());
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response([
+    'event: response.output_text.delta',
+    'data: {"type":"response.output_text.delta","delta":"你"}',
+    '',
+    'event: response.output_text.delta',
+    'data: {"type":"response.output_text.delta","delta":"好"}',
+    '',
+    'data: [DONE]',
+    '',
+  ].join('\n'), {
+    status: 200,
+    headers: { 'Content-Type': 'text/event-stream' },
+  });
+
+  try {
+    site.updateSiteConfig({
+      assistant: {
+        apiBaseUrl: 'https://example.com/v1',
+        apiKey: 'test-key',
+        model: 'test-model',
+        apiMode: 'responses',
+      },
+    });
+    const result = await assistant.answer('hello', requestWithIp('10.0.0.4'));
+    assert.equal(result.status, 200);
+    assert.equal(result.body.answer, '你好');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('assistant does not duplicate cumulative responses stream text', async () => {
+  const { site, assistant } = createIsolatedAssistant(tempDbPath());
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response([
+    'data: {"type":"response.output_text.done","output_text":"你好！"}',
+    '',
+    'data: {"type":"response.completed","response":{"output_text":"你好！有什么可以帮你的吗？"}}',
+    '',
+    'data: [DONE]',
+    '',
+  ].join('\n'), {
+    status: 200,
+    headers: { 'Content-Type': 'text/event-stream' },
+  });
+
+  try {
+    site.updateSiteConfig({
+      assistant: {
+        apiBaseUrl: 'https://example.com/v1',
+        apiKey: 'test-key',
+        model: 'test-model',
+        apiMode: 'responses',
+      },
+    });
+    const result = await assistant.answer('你好', requestWithIp('10.0.0.5'));
+    assert.equal(result.status, 200);
+    assert.equal(result.body.answer, '你好！有什么可以帮你的吗？');
   } finally {
     globalThis.fetch = originalFetch;
   }
