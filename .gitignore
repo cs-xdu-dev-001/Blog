@@ -10,6 +10,7 @@ reference-*.png
 reference-*.js
 .superpowers/
 /data/
+/blog-runtime.tgz
 public/uploads/
 .admin-dev*.log
 .start-admin-dev.ps1

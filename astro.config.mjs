@@ -4,6 +4,11 @@ import tailwind from '@astrojs/tailwind';
 
 export default defineConfig({
   output: 'server',
+  security: {
+    allowedDomains: [
+      { protocol: 'https', hostname: 'blog.kards.asia' },
+    ],
+  },
   devToolbar: {
     enabled: false,
   },
