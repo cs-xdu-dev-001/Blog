@@ -9,7 +9,7 @@ reference-*.json
 reference-*.png
 reference-*.js
 .superpowers/
-data/
+/data/
 public/uploads/
 .admin-dev*.log
 .start-admin-dev.ps1
