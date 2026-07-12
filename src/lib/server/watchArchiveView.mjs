@@ -1,6 +1,11 @@
 import { watchArchive as fallbackArchive } from '../../data/watchArchive.mjs';
 import { watchRepository } from './watchRepository.mjs';
 
+const fallbackWithActivity = {
+  ...fallbackArchive,
+  activity: null,
+};
+
 function buildRows(items) {
   const sourcedItems = items.filter((item) => item.lineSource);
   const unsourcedItems = items.filter((item) => !item.lineSource);
@@ -49,7 +54,7 @@ export function createWatchArchiveView(repository = watchRepository) {
     getWatchArchiveFromDb() {
       try {
         const { items } = repository.list({ limit: 1000 });
-        if (!items.length) return fallbackArchive;
+        if (!items.length) return fallbackWithActivity;
 
         const mapped = items.map((item) => ({
           title: item.title,
@@ -59,7 +64,13 @@ export function createWatchArchiveView(repository = watchRepository) {
           image: item.image_path || null,
           line: item.quote || item.comment || '已收录到影像档案',
           lineSource: item.quote_source || (item.comment ? '个人评论' : null),
+          progressText: item.progress_text || '',
+          completedAt: item.completed_at || '',
+          isActivityFeatured: Boolean(item.is_activity_featured),
         }));
+
+        const watching = mapped.find((item) => item.status === '在看' && item.isActivityFeatured);
+        const finished = mapped.find((item) => item.status === '已看' && item.isActivityFeatured);
 
         return {
           motion: fallbackArchive.motion,
@@ -74,11 +85,12 @@ export function createWatchArchiveView(repository = watchRepository) {
           },
           selected: mapped.filter((item) => item.lineSource).slice(0, 8).map((item) => item.title),
           wantedPreview: mapped.filter(isWanted).slice(0, 12).map((item) => item.title),
+          activity: watching && finished ? { watching, finished } : null,
           items: mapped,
           rows: buildRows(mapped),
         };
       } catch {
-        return fallbackArchive;
+        return fallbackWithActivity;
       }
     },
   };

@@ -5,7 +5,7 @@ export const prerender = false;
 
 export const POST: APIRoute = async (context) => {
   const body = await context.request.json().catch(() => ({}));
-  const result = await assistantService.answer(body.question, context.request);
+  const result = await assistantService.answer(body.question, context.request, body.messages);
   return Response.json(result.body, { status: result.status });
 };
 

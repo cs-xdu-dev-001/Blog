@@ -14,6 +14,9 @@ export const PUT: APIRoute = async (context) => {
     quote: String(body.quote || ''),
     quote_source: String(body.quote_source || ''),
     is_featured: Boolean(body.is_featured),
+    progress_text: String(body.progress_text || ''),
+    completed_at: String(body.completed_at || ''),
+    is_activity_featured: Boolean(body.is_activity_featured),
   });
 
   if (!updated) return new Response('Not found', { status: 404 });

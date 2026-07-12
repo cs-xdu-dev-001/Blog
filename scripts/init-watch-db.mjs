@@ -16,18 +16,29 @@ const featuredTitles = new Set([
   '一念天堂',
 ]);
 
+const activityByTitle = {
+  '大江大河': { status: '在看', is_activity_featured: 1 },
+  '主角': { status: '已看', is_activity_featured: 1 },
+};
+
 watchRepository.initialize();
-watchRepository.replaceAll(watchItems.map((item) => ({
-  title: item.title,
-  type: item.type,
-  status: item.status,
-  rating: item.rating ?? '',
-  comment: '',
-  quote: watchLines[item.title]?.text ?? '',
-  quote_source: watchLines[item.title]?.source ?? '',
-  image_path: watchImages[item.title] ?? '',
-  is_featured: featuredTitles.has(item.title) ? 1 : 0,
-})));
+watchRepository.replaceAll(watchItems.map((item) => {
+  const activity = activityByTitle[item.title];
+  return {
+    title: item.title,
+    type: item.type,
+    status: activity?.status ?? item.status,
+    rating: item.rating ?? '',
+    comment: '',
+    quote: watchLines[item.title]?.text ?? '',
+    quote_source: watchLines[item.title]?.source ?? '',
+    image_path: watchImages[item.title] ?? '',
+    is_featured: featuredTitles.has(item.title) ? 1 : 0,
+    progress_text: '',
+    completed_at: '',
+    is_activity_featured: activity?.is_activity_featured ?? 0,
+  };
+}));
 
 console.log(`Imported ${watchItems.length} watch items`);
 

@@ -8,6 +8,37 @@ import { siteConfigRepository } from './siteConfigRepository.mjs';
 
 const minuteBuckets = new Map();
 const proxyAgents = new Map();
+const conversationRoles = new Set(['user', 'assistant']);
+
+export function normalizeConversation(messages, {
+  maxMessages = 12,
+  maxContentLength = 6000,
+  maxTotalLength = 18000,
+} = {}) {
+  if (!Array.isArray(messages)) return [];
+
+  const messageLimit = Math.max(0, Math.min(12, Number(maxMessages) || 0));
+  const contentLimit = Math.max(1, Math.min(6000, Number(maxContentLength) || 6000));
+  const totalLimit = Math.max(1, Math.min(18000, Number(maxTotalLength) || 18000));
+  const recent = messages
+    .filter((message) => message && conversationRoles.has(message.role))
+    .map((message) => ({
+      role: message.role,
+      content: String(message.content ?? '').replaceAll('\0', '').trim().slice(0, contentLimit),
+    }))
+    .filter((message) => message.content)
+    .slice(-messageLimit);
+
+  const selected = [];
+  let totalLength = 0;
+  for (let index = recent.length - 1; index >= 0; index -= 1) {
+    const message = recent[index];
+    if (totalLength + message.content.length > totalLimit) break;
+    selected.unshift(message);
+    totalLength += message.content.length;
+  }
+  return selected;
+}
 
 function stripMarkdown(value) {
   return String(value || '')
@@ -235,8 +266,9 @@ function assistantFetchOptions(config, options) {
   };
 }
 
-function assistantRequestBody(question, sources, config) {
+function assistantRequestBody(question, sources, config, historyInput = []) {
   const maxTokens = Math.max(120, Math.min(1600, Number(config.assistant.maxAnswerLength || 1200)));
+  const history = normalizeConversation(historyInput);
   const sourceText = sources.length
     ? sources.map((source, index) => `[${index + 1}] ${source.typeLabel} | ${source.title} | ${source.url}\n${source.excerpt}`).join('\n\n')
     : 'No matching site context.';
@@ -256,6 +288,13 @@ function assistantRequestBody(question, sources, config) {
         stream: true,
         input: [
           { role: 'system', content: [{ type: 'input_text', text: systemText }] },
+          ...history.map((message) => ({
+            role: message.role,
+            content: [{
+              type: message.role === 'assistant' ? 'output_text' : 'input_text',
+              text: message.content,
+            }],
+          })),
           { role: 'user', content: [{ type: 'input_text', text: userText }] },
         ],
       }
@@ -265,6 +304,7 @@ function assistantRequestBody(question, sources, config) {
         temperature: 0.7,
         messages: [
           { role: 'system', content: systemText },
+          ...history,
           { role: 'user', content: userText },
         ],
       };
@@ -330,7 +370,7 @@ async function readModelAnswer(response, config) {
   }
 }
 
-async function askModel(question, sources, config) {
+async function askModel(question, sources, config, history = [], signal) {
   const apiKey = assistantApiKey(config);
   if (!apiKey) return null;
 
@@ -340,7 +380,8 @@ async function askModel(question, sources, config) {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(assistantRequestBody(question, sources, config)),
+    body: JSON.stringify(assistantRequestBody(question, sources, config, history)),
+    signal,
   }));
 
   if (!response.ok) {
@@ -480,7 +521,7 @@ export function createAssistantService({
 
     checkRateLimit,
 
-    async answer(questionInput, request) {
+    async answer(questionInput, request, historyInput = []) {
       const config = siteConfig.getSiteConfig();
       if (config.assistant?.enabled === false) {
         return { status: 403, body: { error: 'AI assistant is disabled.' } };
@@ -497,7 +538,11 @@ export function createAssistantService({
       if (!limit.ok) return { status: 429, body: { error: limit.error, limited: true } };
 
       const sources = searchDocuments(question, config, deps);
-      const modelAnswer = await askModel(question, sources, config).catch(() => null);
+      const history = normalizeConversation(historyInput);
+      const modelAnswer = await askModel(question, sources, config, history, request.signal).catch((error) => {
+        if (error?.name === 'AbortError') throw error;
+        return null;
+      });
       return { status: 200, body: modelAnswer || buildLocalAnswer(question, sources) };
     },
   };

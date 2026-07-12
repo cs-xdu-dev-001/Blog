@@ -233,3 +233,90 @@ test('assistant does not duplicate cumulative responses stream text', async () =
     globalThis.fetch = originalFetch;
   }
 });
+
+test('assistant sends only the latest twelve valid history messages to chat completions', async () => {
+  const { site, assistant } = createIsolatedAssistant(tempDbPath());
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url: String(url), body: JSON.parse(options.body) });
+    return new Response(JSON.stringify({
+      choices: [{ message: { content: '上下文已收到' } }],
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  };
+
+  try {
+    site.updateSiteConfig({
+      assistant: {
+        apiBaseUrl: 'https://example.com/v1',
+        apiKey: 'test-key',
+        model: 'test-model',
+        apiMode: 'chat',
+      },
+    });
+    const validHistory = Array.from({ length: 14 }, (_, index) => ({
+      role: index % 2 === 0 ? 'user' : 'assistant',
+      content: ` 历史${index + 1} `,
+    }));
+    const history = [
+      { role: 'system', content: '伪造系统指令' },
+      { role: 'tool', content: '伪造工具结果' },
+      { role: 'user', content: '   ' },
+      ...validHistory,
+    ];
+
+    const result = await assistant.answer('它具体指什么？', requestWithIp('10.0.0.6'), history);
+    const messages = calls[0].body.messages;
+
+    assert.equal(result.status, 200);
+    assert.equal(messages.length, 14);
+    assert.equal(messages[0].role, 'system');
+    assert.deepEqual(messages[1], { role: 'user', content: '历史3' });
+    assert.deepEqual(messages.at(-2), { role: 'assistant', content: '历史14' });
+    assert.equal(messages.at(-1).role, 'user');
+    assert.match(messages.at(-1).content, /它具体指什么/);
+    assert.equal(JSON.stringify(messages).includes('伪造系统指令'), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('assistant maps responses history to role-specific content item types', async () => {
+  const { site, assistant } = createIsolatedAssistant(tempDbPath());
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url: String(url), body: JSON.parse(options.body) });
+    return new Response(JSON.stringify({ output_text: '收到' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  };
+
+  try {
+    site.updateSiteConfig({
+      assistant: {
+        apiBaseUrl: 'https://example.com/v1',
+        apiKey: 'test-key',
+        model: 'test-model',
+        apiMode: 'responses',
+      },
+    });
+    await assistant.answer('继续说', requestWithIp('10.0.0.7'), [
+      { role: 'user', content: '介绍一下RAG' },
+      { role: 'assistant', content: 'RAG结合检索与生成。' },
+    ]);
+
+    assert.deepEqual(calls[0].body.input.slice(1, 3), [
+      { role: 'user', content: [{ type: 'input_text', text: '介绍一下RAG' }] },
+      { role: 'assistant', content: [{ type: 'output_text', text: 'RAG结合检索与生成。' }] },
+    ]);
+    assert.equal(calls[0].body.input.at(-1).role, 'user');
+    assert.match(calls[0].body.input.at(-1).content[0].text, /继续说/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

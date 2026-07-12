@@ -25,4 +25,7 @@ assert.equal(created.quote, '');
 assert.equal(created.quote_source, '');
 assert.equal(created.image_path, '');
 assert.equal(created.is_featured, 0);
+assert.equal(created.progress_text, '');
+assert.equal(created.completed_at, '');
+assert.equal(created.is_activity_featured, 0);
 assert.equal(repo.stats().total, 1);

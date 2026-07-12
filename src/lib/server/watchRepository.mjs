@@ -9,6 +9,8 @@ const allowedFilters = new Set([
   'missing_quote',
   'watched',
   'wanted',
+  'watching',
+  'activity',
   'featured',
 ]);
 
@@ -33,6 +35,7 @@ export function createWatchRepository({ dbPath, uploadDir } = {}) {
     return {
       ...row,
       is_featured: Number(row.is_featured || 0),
+      is_activity_featured: Number(row.is_activity_featured || 0),
     };
   }
 
@@ -43,9 +46,9 @@ export function createWatchRepository({ dbPath, uploadDir } = {}) {
       initialize();
       const stmt = db.prepare(`
         INSERT INTO watch_items
-          (title, type, status, rating, comment, quote, quote_source, image_path, is_featured)
+          (title, type, status, rating, comment, quote, quote_source, image_path, is_featured, progress_text, completed_at, is_activity_featured)
         VALUES
-          (@title, @type, @status, @rating, @comment, @quote, @quote_source, @image_path, @is_featured)
+          (@title, @type, @status, @rating, @comment, @quote, @quote_source, @image_path, @is_featured, @progress_text, @completed_at, @is_activity_featured)
       `);
       const tx = db.transaction((rows) => rows.forEach((row) => stmt.run({
         title: row.title,
@@ -57,6 +60,9 @@ export function createWatchRepository({ dbPath, uploadDir } = {}) {
         quote_source: row.quote_source ?? '',
         image_path: row.image_path ?? '',
         is_featured: row.is_featured ? 1 : 0,
+        progress_text: row.progress_text ?? '',
+        completed_at: row.completed_at ?? '',
+        is_activity_featured: row.is_activity_featured ? 1 : 0,
       })));
       tx(items);
     },
@@ -116,12 +122,14 @@ export function createWatchRepository({ dbPath, uploadDir } = {}) {
       if (safeFilter === 'missing_quote') where.push("quote = ''");
       if (safeFilter === 'watched') where.push("status = '已看'");
       if (safeFilter === 'wanted') where.push("status = '想看'");
+      if (safeFilter === 'watching') where.push("status = '在看'");
+      if (safeFilter === 'activity') where.push('is_activity_featured = 1');
       if (safeFilter === 'featured') where.push('is_featured = 1');
 
       const sql = `
         SELECT * FROM watch_items
         ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
-        ORDER BY is_featured DESC, updated_at DESC, id ASC
+        ORDER BY is_activity_featured DESC, is_featured DESC, updated_at DESC, id ASC
         LIMIT @limit
       `;
       const items = db.prepare(sql).all({ ...params, limit }).map(normalize);
@@ -140,25 +148,47 @@ export function createWatchRepository({ dbPath, uploadDir } = {}) {
 
     update(id, input) {
       initialize();
-      db.prepare(`
-        UPDATE watch_items SET
-          status = @status,
-          rating = @rating,
-          comment = @comment,
-          quote = @quote,
-          quote_source = @quote_source,
-          is_featured = @is_featured,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = @id
-      `).run({
+      const current = this.get(id);
+      if (!current) return null;
+      const values = {
         id,
-        status: input.status,
-        rating: input.rating ?? '',
-        comment: input.comment ?? '',
-        quote: input.quote ?? '',
-        quote_source: input.quote_source ?? '',
-        is_featured: input.is_featured ? 1 : 0,
+        status: input.status ?? current.status,
+        rating: input.rating ?? current.rating ?? '',
+        comment: input.comment ?? current.comment ?? '',
+        quote: input.quote ?? current.quote ?? '',
+        quote_source: input.quote_source ?? current.quote_source ?? '',
+        is_featured: input.is_featured === undefined ? current.is_featured : input.is_featured ? 1 : 0,
+        progress_text: input.progress_text ?? current.progress_text ?? '',
+        completed_at: input.completed_at ?? current.completed_at ?? '',
+        is_activity_featured: input.is_activity_featured === undefined
+          ? current.is_activity_featured
+          : input.is_activity_featured ? 1 : 0,
+      };
+
+      const updateItem = db.prepare(`
+          UPDATE watch_items SET
+            status = @status,
+            rating = @rating,
+            comment = @comment,
+            quote = @quote,
+            quote_source = @quote_source,
+            is_featured = @is_featured,
+            progress_text = @progress_text,
+            completed_at = @completed_at,
+            is_activity_featured = @is_activity_featured,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = @id
+        `);
+      const clearActivity = db.prepare(`
+        UPDATE watch_items
+        SET is_activity_featured = 0, updated_at = CURRENT_TIMESTAMP
+        WHERE status = @status AND id <> @id AND is_activity_featured = 1
+      `);
+      const tx = db.transaction(() => {
+        if (values.is_activity_featured) clearActivity.run({ status: values.status, id });
+        updateItem.run(values);
       });
+      tx();
       return this.get(id);
     },
 

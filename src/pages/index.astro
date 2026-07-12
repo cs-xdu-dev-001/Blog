@@ -176,6 +176,20 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
             <path d="M8.06 4.1a.8.8 0 0 1 1.13-.03l2.08 1.96h1.46l2.08-1.96a.8.8 0 1 1 1.1 1.16l-.85.8h1.44A4.5 4.5 0 0 1 21 10.53v4.98A4.5 4.5 0 0 1 16.5 20h-9A4.5 4.5 0 0 1 3 15.5v-4.98a4.5 4.5 0 0 1 4.5-4.5h1.44l-.85-.8a.8.8 0 0 1-.03-1.13ZM7.5 8.02A2.5 2.5 0 0 0 5 10.52v4.98A2.5 2.5 0 0 0 7.5 18h9a2.5 2.5 0 0 0 2.5-2.5v-4.98a2.5 2.5 0 0 0-2.5-2.5h-9Zm1.8 3.05c.55 0 1 .45 1 1v1.36a1 1 0 1 1-2 0v-1.36c0-.55.45-1 1-1Zm5.4 0c.55 0 1 .45 1 1v1.36a1 1 0 1 1-2 0v-1.36c0-.55.45-1 1-1Z" />
           </svg>
         </a>
+        {siteConfig.social.monitor && (
+          <a
+            class="qzq-monitor-link"
+            href={siteConfig.social.monitor}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="监控仪表盘"
+            title="监控仪表盘"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M2 12h4l3-8 6 16 3-8h4" />
+            </svg>
+          </a>
+        )}
         <span class="qzq-qq-contact">
         <button type="button" aria-label="显示QQ号" aria-describedby="qq-number">
           <svg viewBox="0 0 16 16" aria-hidden="true">
@@ -323,6 +337,68 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
           <span>想看</span>
         </div>
       </div>
+
+      {watchArchive.activity && (
+        <div class="qzq-watch-activity" data-watch-activity>
+          <article
+            class="qzq-watch-activity-card qzq-watch-activity-watching"
+            style={watchArchive.activity.watching.image ? `--activity-image: url('${watchArchive.activity.watching.image}')` : undefined}
+            tabindex="0"
+            role="button"
+            aria-expanded="false"
+            aria-label={`查看《${watchArchive.activity.watching.title}》观看记录`}
+            data-watch-activity-card
+          >
+            <div class="qzq-watch-activity-copy">
+              <span class="qzq-watch-activity-state"><i></i>近期在看</span>
+              <h3>{watchArchive.activity.watching.title}</h3>
+              <p>{watchArchive.activity.watching.type}</p>
+            </div>
+            {watchArchive.activity.watching.image && (
+              <img
+                class="qzq-watch-activity-poster"
+                src={watchArchive.activity.watching.image}
+                alt=""
+                loading="lazy"
+                data-depth-poster
+              />
+            )}
+            <div class="qzq-watch-activity-detail" aria-hidden="true">
+              <strong>观看记录</strong>
+              <span>{watchArchive.activity.watching.progressText || '进度尚未填写'}</span>
+            </div>
+          </article>
+
+          <article
+            class="qzq-watch-activity-card qzq-watch-activity-finished"
+            style={watchArchive.activity.finished.image ? `--activity-image: url('${watchArchive.activity.finished.image}')` : undefined}
+            tabindex="0"
+            role="button"
+            aria-expanded="false"
+            aria-label={`查看《${watchArchive.activity.finished.title}》观看记录`}
+            data-watch-activity-card
+          >
+            <div class="qzq-watch-activity-copy">
+              <span class="qzq-watch-activity-state"><i></i>近期看完</span>
+              <h3>{watchArchive.activity.finished.title}</h3>
+              <p>{watchArchive.activity.finished.type}</p>
+            </div>
+            {watchArchive.activity.finished.image && (
+              <img
+                class="qzq-watch-activity-poster"
+                src={watchArchive.activity.finished.image}
+                alt=""
+                loading="lazy"
+                data-depth-poster
+              />
+            )}
+            <div class="qzq-watch-activity-detail" aria-hidden="true">
+              <strong>观看记录</strong>
+              <span>{watchArchive.activity.finished.completedAt || '完成日期尚未填写'}</span>
+            </div>
+          </article>
+        </div>
+      )}
 
       <div class="qzq-watch-marquee" aria-label="影像档案卡片">
         {watchArchive.rows.map((row) => (
@@ -652,6 +728,60 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
       });
     });
 
+    const watchActivity = document.querySelector('[data-watch-activity]');
+    const watchActivityCards = [...document.querySelectorAll('[data-watch-activity-card]')];
+    const clearWatchActivity = () => {
+      watchActivity?.classList.remove('has-active');
+      watchActivityCards.forEach((card) => {
+        card.classList.remove('is-active');
+        card.setAttribute('aria-expanded', 'false');
+        card.querySelector('.qzq-watch-activity-detail')?.setAttribute('aria-hidden', 'true');
+      });
+    };
+    const toggleWatchActivity = (card) => {
+      const shouldOpen = !card.classList.contains('is-active');
+      clearWatchActivity();
+      if (!shouldOpen) return;
+      card.classList.add('is-active');
+      card.setAttribute('aria-expanded', 'true');
+      card.querySelector('.qzq-watch-activity-detail')?.setAttribute('aria-hidden', 'false');
+      watchActivity?.classList.add('has-active');
+    };
+
+    watchActivityCards.forEach((card) => {
+      let pointerFrame = 0;
+      card.addEventListener('pointermove', (event) => {
+        if (prefersReducedMotion.matches) return;
+        window.cancelAnimationFrame(pointerFrame);
+        pointerFrame = window.requestAnimationFrame(() => {
+          const rect = card.getBoundingClientRect();
+          const x = (event.clientX - rect.left) / rect.width;
+          const y = (event.clientY - rect.top) / rect.height;
+          card.style.setProperty('--activity-pointer-x', `${(x * 100).toFixed(1)}%`);
+          card.style.setProperty('--activity-pointer-y', `${(y * 100).toFixed(1)}%`);
+          card.style.setProperty('--activity-tilt-x', `${((0.5 - y) * 3.2).toFixed(2)}deg`);
+          card.style.setProperty('--activity-tilt-y', `${((x - 0.5) * 4.2).toFixed(2)}deg`);
+        });
+      });
+      card.addEventListener('pointerleave', () => {
+        window.cancelAnimationFrame(pointerFrame);
+        card.style.setProperty('--activity-pointer-x', '50%');
+        card.style.setProperty('--activity-pointer-y', '50%');
+        card.style.setProperty('--activity-tilt-x', '0deg');
+        card.style.setProperty('--activity-tilt-y', '0deg');
+      });
+      card.addEventListener('click', () => toggleWatchActivity(card));
+      card.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        toggleWatchActivity(card);
+      });
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!watchActivity?.contains(event.target)) clearWatchActivity();
+    });
+
     magneticLinks.forEach((link) => {
       link.addEventListener('pointermove', (event) => {
         if (prefersReducedMotion.matches) return;
@@ -805,6 +935,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
       section.classList.remove('is-visible');
       const statisticsPanel = section.querySelector('[data-statistics-panel]');
       statisticsPanel?.classList.remove('is-visible');
+      if (watchActivity && section.contains(watchActivity)) clearWatchActivity();
     };
     if ('IntersectionObserver' in window && revealSections.length) {
       const sectionObserver = new IntersectionObserver((entries) => {

@@ -13,6 +13,11 @@ export function openDatabase(dbPath = getDefaultDbPath()) {
   return db;
 }
 
+function ensureColumn(db, table, name, definition) {
+  const exists = db.prepare(`PRAGMA table_info(${table})`).all().some((column) => column.name === name);
+  if (!exists) db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${definition}`);
+}
+
 export function initializeSchema(db) {
   db.exec(`
     DROP INDEX IF EXISTS idx_watch_items_title_type_status;
@@ -28,6 +33,9 @@ export function initializeSchema(db) {
       quote_source TEXT NOT NULL DEFAULT '',
       image_path TEXT NOT NULL DEFAULT '',
       is_featured INTEGER NOT NULL DEFAULT 0,
+      progress_text TEXT NOT NULL DEFAULT '',
+      completed_at TEXT NOT NULL DEFAULT '',
+      is_activity_featured INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
@@ -116,4 +124,8 @@ export function initializeSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_assistant_usage_day
       ON assistant_usage(day, ip_hash);
   `);
+
+  ensureColumn(db, 'watch_items', 'progress_text', "TEXT NOT NULL DEFAULT ''");
+  ensureColumn(db, 'watch_items', 'completed_at', "TEXT NOT NULL DEFAULT ''");
+  ensureColumn(db, 'watch_items', 'is_activity_featured', 'INTEGER NOT NULL DEFAULT 0');
 }

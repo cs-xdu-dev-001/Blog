@@ -135,10 +135,11 @@ function render() {
 
       <section class="site-config-card" id="social-links" data-site-section>
         <span>社交链接</span>
-        <div class="site-config-fields three">
+        <div class="site-config-fields two">
           ${input('social.github', 'GitHub', config.social?.github)}
           ${input('social.bilibili', 'B站', config.social?.bilibili)}
           ${input('social.qq', 'QQ号', config.social?.qq)}
+          ${input('social.monitor', '监控仪表盘', config.social?.monitor)}
         </div>
       </section>
 
@@ -237,6 +238,7 @@ function readForm() {
         github: form.get('social.github'),
         bilibili: form.get('social.bilibili'),
         qq: form.get('social.qq'),
+        monitor: form.get('social.monitor'),
       },
       assistant: {
         enabled: form.get('assistant.enabled') === 'on',

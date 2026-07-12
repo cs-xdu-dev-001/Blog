@@ -15,6 +15,8 @@ test('site config repository reads defaults and updates site settings', () => {
   const defaults = repo.getSiteConfig();
   assert.equal(defaults.brandName, 'Dev Notes');
   assert.equal(defaults.social.github, 'https://github.com/cs-xdu-dev-001');
+  assert.equal(defaults.social.monitor, 'https://pulseboard.academicedu.me/');
+  assert.equal(defaults.assistant.placeholder, '在Dev Notes中问任何问题');
 
   const updated = repo.updateSiteConfig({
     brandName: 'Dev Lab',
@@ -29,6 +31,18 @@ test('site config repository reads defaults and updates site settings', () => {
   assert.equal(updated.brandName, 'Dev Lab');
   assert.equal(updated.heroLine, '新的首页文案');
   assert.equal(updated.social.qq, '123456');
+});
+
+test('homepage exposes the monitor dashboard as a configurable external icon link', () => {
+  const homepage = fs.readFileSync(new URL('../src/pages/index.astro', import.meta.url), 'utf8');
+  const admin = fs.readFileSync(new URL('../public/admin-site.js', import.meta.url), 'utf8');
+
+  assert.match(homepage, /href=\{siteConfig\.social\.monitor\}/);
+  assert.match(homepage, /aria-label="监控仪表盘"/);
+  assert.match(homepage, /target="_blank"/);
+  assert.match(homepage, /rel="noopener noreferrer"/);
+  assert.match(admin, /input\('social\.monitor', '监控仪表盘'/);
+  assert.match(admin, /monitor: form\.get\('social\.monitor'\)/);
 });
 
 test('site config repository manages homepage section switches and ordering', () => {

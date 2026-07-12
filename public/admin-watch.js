@@ -74,7 +74,7 @@ function renderList() {
           <strong>${escapeHtml(item.title)}</strong>
           <em>${escapeHtml(line)}</em>
         </span>
-        <b>${item.image_path ? '有图' : '缺图'}</b>
+        <b>${item.is_activity_featured ? '近况' : item.image_path ? '有图' : '缺图'}</b>
       </button>
     `;
   }).join('');
@@ -109,6 +109,7 @@ function renderCreateForm() {
         <select name="status">
           <option>已看</option>
           <option>想看</option>
+          <option>在看</option>
         </select>
       </label>
       <button type="submit">创建并继续编辑</button>
@@ -140,13 +141,17 @@ function renderEditor() {
         <select name="status">
           <option ${item.status === '已看' ? 'selected' : ''}>已看</option>
           <option ${item.status === '想看' ? 'selected' : ''}>想看</option>
+          <option ${item.status === '在看' ? 'selected' : ''}>在看</option>
         </select>
       </label>
+      <label data-activity-field="watching">观看进度 <input name="progress_text" value="${escapeHtml(item.progress_text || '')}" placeholder="例如 第18集" /></label>
+      <label data-activity-field="finished">完成日期 <input name="completed_at" type="date" value="${escapeHtml(item.completed_at || '')}" /></label>
       <label>评分 <input name="rating" value="${escapeHtml(item.rating || '')}" placeholder="例如 4" /></label>
       <label>个人评论 <textarea name="comment" placeholder="写你自己的短评">${escapeHtml(item.comment || '')}</textarea></label>
       <label>佳句 <textarea name="quote" placeholder="摘录一句适合放在卡片上的话">${escapeHtml(item.quote || '')}</textarea></label>
       <label>佳句来源 <input name="quote_source" value="${escapeHtml(item.quote_source || '')}" placeholder="例如 官方台词 / 豆瓣 / 自己整理" /></label>
       <label class="cms-check"><input type="checkbox" name="is_featured" ${item.is_featured ? 'checked' : ''} /> 精选展示</label>
+      <label class="cms-check"><input type="checkbox" name="is_activity_featured" ${item.is_activity_featured ? 'checked' : ''} /> 展示在观看近况</label>
       <button type="submit">保存内容</button>
     </form>
     <form data-image-form>
@@ -160,9 +165,24 @@ function renderEditor() {
     </form>
   `;
 
-  editorEl.querySelector('[data-edit-form]').addEventListener('submit', saveSelected);
+  const editForm = editorEl.querySelector('[data-edit-form]');
+  editForm.addEventListener('submit', saveSelected);
+  editForm.elements.status.addEventListener('change', () => syncActivityFields(editForm));
+  syncActivityFields(editForm);
   editorEl.querySelector('[data-image-form]').addEventListener('submit', uploadImage);
   editorEl.querySelector('[data-delete-form]').addEventListener('submit', deleteSelected);
+}
+
+function syncActivityFields(form) {
+  const status = form.elements.status.value;
+  const watchingField = form.querySelector('[data-activity-field="watching"]');
+  const finishedField = form.querySelector('[data-activity-field="finished"]');
+  const activityToggle = form.elements.is_activity_featured;
+
+  watchingField.hidden = status !== '在看';
+  finishedField.hidden = status !== '已看';
+  activityToggle.disabled = status === '想看';
+  if (activityToggle.disabled) activityToggle.checked = false;
 }
 
 function render() {
@@ -214,6 +234,9 @@ async function saveSelected(event) {
       quote: form.get('quote'),
       quote_source: form.get('quote_source'),
       is_featured: form.get('is_featured') === 'on',
+      progress_text: form.get('progress_text'),
+      completed_at: form.get('completed_at'),
+      is_activity_featured: form.get('is_activity_featured') === 'on',
     }),
   });
 
