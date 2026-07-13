@@ -9,8 +9,9 @@ test('all homepage watch cards expose double click and keyboard detail navigatio
   assert.match(homepage, /data-href=\{watchArchive\.activity\.watching\.href\}/);
   assert.match(homepage, /data-href=\{watchArchive\.activity\.finished\.href\}/);
   assert.match(homepage, /data-href=\{item\.href\}/);
-  assert.match(homepage, /querySelectorAll\('\[data-watch-detail\]'\)/);
-  assert.match(homepage, /addEventListener\('dblclick', openDetail\)/);
+  assert.doesNotMatch(homepage, /querySelectorAll\('\[data-watch-detail\]'\)\.forEach/);
+  assert.match(homepage, /watchSection\?\.addEventListener\('dblclick'/);
+  assert.match(homepage, /watchCardFromEvent/);
   assert.match(homepage, /event\.key !== 'Enter'/);
   assert.match(homepage, /event\.key !== ' '/);
 });

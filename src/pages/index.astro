@@ -27,6 +27,33 @@ const navSmall = (key, fallback) => {
 const featured = posts.find((post) => post.featured) ?? posts[0];
 const highlightPosts = posts.slice(0, 6);
 const watchArchive = getWatchArchiveFromDb();
+const WATCH_TRACK_BATCH_SIZE = 12;
+const compactWatchItem = (item) => ({
+  title: item.title,
+  type: item.type,
+  status: item.status,
+  rating: item.rating,
+  image: item.image,
+  line: item.line,
+  lineSource: item.lineSource,
+  href: item.href,
+});
+const takeWatchBatch = (items, offset) => Array.from(
+  { length: Math.min(WATCH_TRACK_BATCH_SIZE, items.length) },
+  (_, index) => items[(offset + index) % items.length],
+);
+const watchTrackRows = watchArchive.rows.map((row, rowIndex) => {
+  const catalog = row.items.map(compactWatchItem);
+  const startIndex = catalog.length ? Math.floor(Math.random() * catalog.length) : 0;
+  return {
+    ...row,
+    rowIndex,
+    startIndex,
+    catalog,
+    initialItems: takeWatchBatch(catalog, startIndex),
+  };
+});
+const watchCatalogJson = JSON.stringify(watchTrackRows.map((row) => row.catalog)).replace(/</g, '\\u003c');
 const readingShelf = getAllReadingFromDb();
 const travelMap = mapRepository.getConfig();
 const travelMapStyle = [
@@ -208,7 +235,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
     </nav>
 
     <section class="qzq-hero" aria-label="Intro">
-      <div class="qzq-orbit-stage qzq-wordmark-stage" data-tilt-card>
+      <div class="qzq-orbit-stage qzq-wordmark-stage is-motion-paused" data-tilt-card>
         <div class="qzq-orbit qzq-orbit-a"></div>
         <div class="qzq-orbit qzq-orbit-b"></div>
         <div class="qzq-orbit qzq-orbit-c"></div>
@@ -402,14 +429,17 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
         </div>
       )}
 
-      <div class="qzq-watch-marquee" aria-label="影像档案卡片">
-        {watchArchive.rows.map((row) => (
+      <div class="qzq-watch-marquee is-motion-paused" aria-label="影像档案卡片">
+        {watchTrackRows.map((row) => (
           <div
             class={`qzq-watch-track qzq-watch-track-${row.direction}`}
             data-random-watch-track
-            style={`--watch-duration: ${watchArchive.motion.durationSeconds * (10 / 9) * (10 / 9) * (10 / 9)}s`}
+            data-watch-row={row.rowIndex}
+            data-watch-offset={row.startIndex}
+            data-watch-batch-size={WATCH_TRACK_BATCH_SIZE}
+            style="--watch-duration: 96s"
           >
-            {[...row.items, ...row.items].map((item, index) => (
+            {[...row.initialItems, ...row.initialItems].map((item, index) => (
               <article
                 class={`qzq-watch-card qzq-work-card qzq-work-${index % 4}`}
                 tabindex="0"
@@ -420,7 +450,16 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
                 data-href={item.href}
               >
                 {item.image ? (
-                  <img class="qzq-work-image qzq-work-photo" src={item.image} alt={`${item.title}配图`} loading="lazy" />
+                  <img
+                    class="qzq-work-image qzq-work-photo"
+                    src={item.image}
+                    alt={`${item.title}配图`}
+                    width="600"
+                    height="394"
+                    loading="lazy"
+                    decoding="async"
+                    fetchpriority="low"
+                  />
                 ) : (
                   <div class="qzq-work-image" aria-hidden="true">
                     <span></span>
@@ -436,6 +475,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
             ))}
           </div>
         ))}
+        <script is:inline type="application/json" data-watch-catalog set:html={watchCatalogJson}></script>
       </div>
     </section>}
 
@@ -709,24 +749,26 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
 
   <script>
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const cards = document.querySelectorAll('[data-tilt-card]');
+    const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const cards = document.querySelectorAll('[data-tilt-card]:not([data-watch-detail])');
     const magneticLinks = document.querySelectorAll('.qzq-nav a, .qzq-feature-link');
-    cards.forEach((card) => {
-      card.addEventListener('pointermove', (event) => {
-        if (prefersReducedMotion.matches) return;
-        const rect = card.getBoundingClientRect();
-        const x = (event.clientX - rect.left) / rect.width - 0.5;
-        const y = (event.clientY - rect.top) / rect.height - 0.5;
-        card.style.setProperty('--tilt-x', `${y * -8}deg`);
-        card.style.setProperty('--tilt-y', `${x * 8}deg`);
-        card.style.setProperty('--shine-x', `${event.clientX - rect.left}px`);
-        card.style.setProperty('--shine-y', `${event.clientY - rect.top}px`);
+    if (finePointer.matches && !prefersReducedMotion.matches) {
+      cards.forEach((card) => {
+        card.addEventListener('pointermove', (event) => {
+          const rect = card.getBoundingClientRect();
+          const x = (event.clientX - rect.left) / rect.width - 0.5;
+          const y = (event.clientY - rect.top) / rect.height - 0.5;
+          card.style.setProperty('--tilt-x', `${y * -8}deg`);
+          card.style.setProperty('--tilt-y', `${x * 8}deg`);
+          card.style.setProperty('--shine-x', `${event.clientX - rect.left}px`);
+          card.style.setProperty('--shine-y', `${event.clientY - rect.top}px`);
+        });
+        card.addEventListener('pointerleave', () => {
+          card.style.setProperty('--tilt-x', '0deg');
+          card.style.setProperty('--tilt-y', '0deg');
+        });
       });
-      card.addEventListener('pointerleave', () => {
-        card.style.setProperty('--tilt-x', '0deg');
-        card.style.setProperty('--tilt-y', '0deg');
-      });
-    });
+    }
 
     const watchActivity = document.querySelector('[data-watch-activity]');
     const watchActivityCards = [...document.querySelectorAll('[data-watch-activity-card]')];
@@ -750,26 +792,27 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
 
     watchActivityCards.forEach((card) => {
       let pointerFrame = 0;
-      card.addEventListener('pointermove', (event) => {
-        if (prefersReducedMotion.matches) return;
-        window.cancelAnimationFrame(pointerFrame);
-        pointerFrame = window.requestAnimationFrame(() => {
-          const rect = card.getBoundingClientRect();
-          const x = (event.clientX - rect.left) / rect.width;
-          const y = (event.clientY - rect.top) / rect.height;
-          card.style.setProperty('--activity-pointer-x', `${(x * 100).toFixed(1)}%`);
-          card.style.setProperty('--activity-pointer-y', `${(y * 100).toFixed(1)}%`);
-          card.style.setProperty('--activity-tilt-x', `${((0.5 - y) * 3.2).toFixed(2)}deg`);
-          card.style.setProperty('--activity-tilt-y', `${((x - 0.5) * 4.2).toFixed(2)}deg`);
+      if (finePointer.matches && !prefersReducedMotion.matches) {
+        card.addEventListener('pointermove', (event) => {
+          window.cancelAnimationFrame(pointerFrame);
+          pointerFrame = window.requestAnimationFrame(() => {
+            const rect = card.getBoundingClientRect();
+            const x = (event.clientX - rect.left) / rect.width;
+            const y = (event.clientY - rect.top) / rect.height;
+            card.style.setProperty('--activity-pointer-x', `${(x * 100).toFixed(1)}%`);
+            card.style.setProperty('--activity-pointer-y', `${(y * 100).toFixed(1)}%`);
+            card.style.setProperty('--activity-tilt-x', `${((0.5 - y) * 3.2).toFixed(2)}deg`);
+            card.style.setProperty('--activity-tilt-y', `${((x - 0.5) * 4.2).toFixed(2)}deg`);
+          });
         });
-      });
-      card.addEventListener('pointerleave', () => {
-        window.cancelAnimationFrame(pointerFrame);
-        card.style.setProperty('--activity-pointer-x', '50%');
-        card.style.setProperty('--activity-pointer-y', '50%');
-        card.style.setProperty('--activity-tilt-x', '0deg');
-        card.style.setProperty('--activity-tilt-y', '0deg');
-      });
+        card.addEventListener('pointerleave', () => {
+          window.cancelAnimationFrame(pointerFrame);
+          card.style.setProperty('--activity-pointer-x', '50%');
+          card.style.setProperty('--activity-pointer-y', '50%');
+          card.style.setProperty('--activity-tilt-x', '0deg');
+          card.style.setProperty('--activity-tilt-y', '0deg');
+        });
+      }
       card.addEventListener('click', () => toggleWatchActivity(card));
       card.addEventListener('keydown', (event) => {
         if (event.key !== ' ') return;
@@ -778,35 +821,162 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
       });
     });
 
-    document.querySelectorAll('[data-watch-detail]').forEach((card) => {
-      const openDetail = () => {
-        const href = card.getAttribute('data-href');
-        if (href) window.location.href = href;
-      };
-      card.addEventListener('dblclick', openDetail);
-      card.addEventListener('keydown', (event) => {
-        if (event.key !== 'Enter') return;
-        event.preventDefault();
-        openDetail();
+    const watchMarquee = document.querySelector('.qzq-watch-marquee');
+    const watchSection = watchMarquee?.closest('.qzq-watch-section');
+    const watchTracks = [...document.querySelectorAll('[data-random-watch-track]')];
+    const watchCatalogElement = document.querySelector('[data-watch-catalog]');
+    let watchCatalogs = [];
+    try {
+      watchCatalogs = JSON.parse(watchCatalogElement?.textContent || '[]');
+    } catch {
+      watchCatalogs = [];
+    }
+
+    const createWatchCard = (item, index) => {
+      const card = document.createElement('article');
+      card.className = `qzq-watch-card qzq-work-card qzq-work-${index % 4}`;
+      card.tabIndex = 0;
+      card.setAttribute('role', 'link');
+      card.setAttribute('aria-label', `打开《${item.title || '未命名'}》影评`);
+      card.setAttribute('data-tilt-card', '');
+      card.setAttribute('data-watch-detail', '');
+      card.setAttribute('data-href', item.href || '');
+
+      if (item.image) {
+        const image = document.createElement('img');
+        image.className = 'qzq-work-image qzq-work-photo';
+        image.src = item.image;
+        image.alt = `${item.title || '影像'}配图`;
+        image.width = 600;
+        image.height = 394;
+        image.loading = 'lazy';
+        image.decoding = 'async';
+        image.fetchPriority = 'low';
+        card.append(image);
+      } else {
+        const image = document.createElement('div');
+        image.className = 'qzq-work-image';
+        image.setAttribute('aria-hidden', 'true');
+        image.append(document.createElement('span'));
+        card.append(image);
+      }
+
+      const head = document.createElement('div');
+      head.className = 'qzq-watch-card-head';
+      const meta = document.createElement('span');
+      meta.textContent = `${item.status || ''} / ${item.type || ''}`;
+      const title = document.createElement('strong');
+      title.textContent = item.title || '未命名';
+      head.append(meta, title);
+
+      const line = document.createElement('p');
+      line.textContent = item.lineSource
+        ? item.line || ''
+        : item.status === '想看' ? '已加入待看轨道' : '已收录到影像档案';
+      const source = document.createElement('small');
+      source.textContent = item.lineSource || (item.rating ? `${item.rating} 分` : '影像档案');
+      card.append(head, line, source);
+      return card;
+    };
+
+    const renderWatchBatch = (track, catalog, offset) => {
+      if (!catalog?.length) return;
+      const batchSize = Math.min(Number(track.dataset.watchBatchSize) || 12, catalog.length);
+      const normalizedOffset = ((offset % catalog.length) + catalog.length) % catalog.length;
+      const batch = Array.from(
+        { length: batchSize },
+        (_, index) => catalog[(normalizedOffset + index) % catalog.length],
+      );
+      const fragment = document.createDocumentFragment();
+      [...batch, ...batch].forEach((item, index) => fragment.append(createWatchCard(item, index)));
+      track.replaceChildren(fragment);
+      track.dataset.watchOffset = String(normalizedOffset);
+    };
+
+    watchTracks.forEach((track) => {
+      const rowIndex = Number(track.dataset.watchRow);
+      const catalog = watchCatalogs[rowIndex] || [];
+      const duration = Number.parseFloat(getComputedStyle(track).getPropertyValue('--watch-duration')) || 96;
+      track.style.animationDelay = `${-(Math.random() * duration * 0.18)}s`;
+      track.addEventListener('animationiteration', () => {
+        const offset = Number(track.dataset.watchOffset) || 0;
+        const batchSize = Number(track.dataset.watchBatchSize) || 12;
+        renderWatchBatch(track, catalog, offset + batchSize);
       });
     });
+
+    const watchCardFromEvent = (event) => {
+      const card = event.target instanceof Element ? event.target.closest('[data-watch-detail]') : null;
+      return card && watchSection?.contains(card) ? card : null;
+    };
+    const openWatchDetail = (card) => {
+      const href = card?.getAttribute('data-href') || '';
+      if (/^\/watch\/\d+$/.test(href)) window.location.href = href;
+    };
+    watchSection?.addEventListener('dblclick', (event) => openWatchDetail(watchCardFromEvent(event)));
+    watchSection?.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      const card = watchCardFromEvent(event);
+      if (!card) return;
+      event.preventDefault();
+      openWatchDetail(card);
+    });
+
+    if (finePointer.matches && !prefersReducedMotion.matches) {
+      watchMarquee?.addEventListener('pointermove', (event) => {
+        const card = watchCardFromEvent(event);
+        if (!card) return;
+        const rect = card.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / rect.width - 0.5;
+        const y = (event.clientY - rect.top) / rect.height - 0.5;
+        card.style.setProperty('--tilt-x', `${y * -8}deg`);
+        card.style.setProperty('--tilt-y', `${x * 8}deg`);
+        card.style.setProperty('--shine-x', `${event.clientX - rect.left}px`);
+        card.style.setProperty('--shine-y', `${event.clientY - rect.top}px`);
+      });
+      watchMarquee?.addEventListener('pointerout', (event) => {
+        const card = watchCardFromEvent(event);
+        if (!card || (event.relatedTarget instanceof Node && card.contains(event.relatedTarget))) return;
+        card.style.setProperty('--tilt-x', '0deg');
+        card.style.setProperty('--tilt-y', '0deg');
+      });
+    }
+
+    let watchMarqueeVisible = false;
+    const syncWatchMotion = () => {
+      const paused = prefersReducedMotion.matches || document.hidden || !watchMarqueeVisible;
+      watchMarquee?.classList.toggle('is-motion-paused', paused);
+    };
+    if ('IntersectionObserver' in window && watchMarquee) {
+      const watchMotionObserver = new IntersectionObserver(([entry]) => {
+        watchMarqueeVisible = Boolean(entry?.isIntersecting);
+        syncWatchMotion();
+      }, { threshold: 0.01, rootMargin: '12% 0px' });
+      watchMotionObserver.observe(watchMarquee);
+    } else {
+      watchMarqueeVisible = true;
+      syncWatchMotion();
+    }
+    document.addEventListener('visibilitychange', syncWatchMotion);
+    prefersReducedMotion.addEventListener?.('change', syncWatchMotion);
 
     document.addEventListener('click', (event) => {
       if (!watchActivity?.contains(event.target)) clearWatchActivity();
     });
 
-    magneticLinks.forEach((link) => {
-      link.addEventListener('pointermove', (event) => {
-        if (prefersReducedMotion.matches) return;
-        const rect = link.getBoundingClientRect();
-        const x = (event.clientX - rect.left) / rect.width - 0.5;
-        const y = (event.clientY - rect.top) / rect.height - 0.5;
-        link.style.transform = `translate(${x * 8}px, ${y * 6}px)`;
+    if (finePointer.matches && !prefersReducedMotion.matches) {
+      magneticLinks.forEach((link) => {
+        link.addEventListener('pointermove', (event) => {
+          const rect = link.getBoundingClientRect();
+          const x = (event.clientX - rect.left) / rect.width - 0.5;
+          const y = (event.clientY - rect.top) / rect.height - 0.5;
+          link.style.transform = `translate(${x * 8}px, ${y * 6}px)`;
+        });
+        link.addEventListener('pointerleave', () => {
+          link.style.transform = 'translate(0, 0)';
+        });
       });
-      link.addEventListener('pointerleave', () => {
-        link.style.transform = 'translate(0, 0)';
-      });
-    });
+    }
 
     const timeAreas = document.querySelectorAll('.qzq-time-area');
     timeAreas.forEach((area) => {
@@ -990,31 +1160,60 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
 
     const orbitTokens = document.querySelectorAll('[data-orbit-token]');
     const orbitStage = document.querySelector('.qzq-orbit-stage');
-    const animateOrbit = (time) => {
-      if (!prefersReducedMotion.matches) {
-        const stageWidth = orbitStage?.getBoundingClientRect().width || 760;
-        const orbitScale = Math.min(1, Math.max(0.48, stageWidth / 760));
-        orbitTokens.forEach((token) => {
-          const rx = Number(token.getAttribute('data-rx'));
-          const ry = Number(token.getAttribute('data-ry'));
-          const speed = Number(token.getAttribute('data-speed'));
-          const phase = Number(token.getAttribute('data-phase'));
-          const t = time / 1000 * speed + phase;
-          token.style.setProperty('--orbit-x', `${Math.cos(t) * rx * orbitScale}px`);
-          token.style.setProperty('--orbit-y', `${Math.sin(t) * ry * orbitScale}px`);
-        });
-      }
-      requestAnimationFrame(animateOrbit);
+    let orbitScale = 0.48;
+    let orbitVisible = false;
+    let orbitFrame = 0;
+    const updateOrbitScale = () => {
+      const stageWidth = orbitStage?.clientWidth || 760;
+      orbitScale = Math.min(1, Math.max(0.48, stageWidth / 760));
     };
-    requestAnimationFrame(animateOrbit);
-
-    const watchTracks = document.querySelectorAll('[data-random-watch-track]');
-    if (!prefersReducedMotion.matches) {
-      watchTracks.forEach((track) => {
-        const duration = Number.parseFloat(getComputedStyle(track).getPropertyValue('--watch-duration')) || 3600;
-        track.style.animationDelay = `${-(Math.random() * duration * 0.18)}s`;
+    const canAnimateOrbit = () => (
+      Boolean(orbitStage)
+      && orbitVisible
+      && !document.hidden
+      && !prefersReducedMotion.matches
+    );
+    const animateOrbit = (time) => {
+      if (!canAnimateOrbit()) {
+        orbitFrame = 0;
+        return;
+      }
+      orbitTokens.forEach((token) => {
+        const rx = Number(token.getAttribute('data-rx'));
+        const ry = Number(token.getAttribute('data-ry'));
+        const speed = Number(token.getAttribute('data-speed'));
+        const phase = Number(token.getAttribute('data-phase'));
+        const t = time / 1000 * speed + phase;
+        token.style.setProperty('--orbit-x', `${Math.cos(t) * rx * orbitScale}px`);
+        token.style.setProperty('--orbit-y', `${Math.sin(t) * ry * orbitScale}px`);
       });
+      orbitFrame = window.requestAnimationFrame(animateOrbit);
+    };
+    const syncOrbitMotion = () => {
+      const running = canAnimateOrbit();
+      orbitStage?.classList.toggle('is-motion-paused', !running);
+      if (running && !orbitFrame) orbitFrame = window.requestAnimationFrame(animateOrbit);
+      if (!running && orbitFrame) {
+        window.cancelAnimationFrame(orbitFrame);
+        orbitFrame = 0;
+      }
+    };
+    updateOrbitScale();
+    if ('ResizeObserver' in window && orbitStage) {
+      new ResizeObserver(updateOrbitScale).observe(orbitStage);
     }
+    if ('IntersectionObserver' in window && orbitStage) {
+      const orbitObserver = new IntersectionObserver(([entry]) => {
+        orbitVisible = Boolean(entry?.isIntersecting);
+        syncOrbitMotion();
+      }, { threshold: 0.01, rootMargin: '12% 0px' });
+      orbitObserver.observe(orbitStage);
+    } else {
+      orbitVisible = true;
+      syncOrbitMotion();
+    }
+    document.addEventListener('visibilitychange', syncOrbitMotion);
+    prefersReducedMotion.addEventListener?.('change', syncOrbitMotion);
 
     const readingShelf = document.querySelector('[data-reading-shelf]');
     let readingRotationPaused = false;

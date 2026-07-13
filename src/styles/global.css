@@ -767,6 +767,10 @@ button:focus-visible {
   animation: qzqSpin 70s linear infinite;
 }
 
+.qzq-orbit-stage.is-motion-paused .qzq-orbit {
+  animation-play-state: paused;
+}
+
 .qzq-token {
   position: absolute;
   left: 50%;
@@ -1460,7 +1464,6 @@ button:focus-visible {
     transform 520ms cubic-bezier(0.16, 1, 0.3, 1),
     filter 360ms ease,
     box-shadow 360ms ease;
-  will-change: transform;
 }
 
 .qzq-watch-activity-card::before {
@@ -1612,7 +1615,6 @@ button:focus-visible {
   transform: translateZ(72px) rotateY(-10deg) rotateZ(1deg);
   transform-origin: center bottom;
   transition: transform 620ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 420ms ease, opacity 520ms ease;
-  will-change: transform;
 }
 
 .qzq-watch-activity-finished .qzq-watch-activity-poster {
@@ -1739,7 +1741,7 @@ button:focus-visible {
   display: flex;
   width: max-content;
   gap: 18px;
-  padding-left: 180px;
+  padding-left: 0;
   animation: qzqMarquee var(--watch-duration, 3600s) linear infinite;
 }
 
@@ -1752,6 +1754,10 @@ button:focus-visible {
 }
 
 .qzq-watch-marquee:hover .qzq-watch-track {
+  animation-play-state: paused;
+}
+
+.qzq-watch-marquee.is-motion-paused .qzq-watch-track {
   animation-play-state: paused;
 }
 
@@ -5977,8 +5983,11 @@ button:focus-visible {
 
   .qzq-watch-marquee {
     display: block;
+    overflow-x: hidden;
     margin-right: -16px;
+    padding-bottom: 20px;
     mask-image: linear-gradient(to right, transparent 0%, #000 8%, #000 88%, transparent 100%);
+    scroll-snap-type: none;
   }
 
   .qzq-card-track {
@@ -5989,11 +5998,10 @@ button:focus-visible {
   }
 
   .qzq-watch-track {
-    overflow-x: auto;
-    animation: none;
-    scroll-snap-type: x mandatory;
+    overflow: visible;
     padding-left: 0;
-    padding-right: 16px;
+    padding-right: 0;
+    scroll-snap-type: none;
   }
 
   .qzq-watch-track + .qzq-watch-track {
