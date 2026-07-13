@@ -22,6 +22,7 @@ import {
   let dragState = null;
   const storageKey = 'dev-notes-assistant-window';
   const minPanelSize = { width: 360, height: 430 };
+  const compactViewport = window.matchMedia('(max-width: 640px)');
 
   const escapeHtml = (value) => String(value ?? '')
     .replaceAll('&', '&amp;')
@@ -72,7 +73,7 @@ import {
   };
 
   const applyPanelSize = (width, height, persist = true) => {
-    if (!panel) return;
+    if (!panel || compactViewport.matches) return;
     const next = clampSize(width, height);
     panel.style.width = `${next.width}px`;
     panel.style.height = `${next.height}px`;
@@ -81,7 +82,7 @@ import {
   };
 
   const applyPanelPosition = (left, top, persist = true) => {
-    if (!panel) return;
+    if (!panel || compactViewport.matches) return;
     const next = clampPosition(left, top);
     panel.style.left = `${next.left}px`;
     panel.style.top = `${next.top}px`;
@@ -92,19 +93,19 @@ import {
   };
 
   const clampPanelPosition = () => {
-    if (!panel || panel.dataset.dragged !== 'true') return;
+    if (!panel || compactViewport.matches || panel.dataset.dragged !== 'true') return;
     const rect = panel.getBoundingClientRect();
     applyPanelPosition(rect.left, rect.top, false);
   };
 
   const persistPanelSize = () => {
-    if (!panel || !root.classList.contains('is-open')) return;
+    if (!panel || compactViewport.matches || !root.classList.contains('is-open')) return;
     const rect = panel.getBoundingClientRect();
     saveWindowState(clampSize(rect.width, rect.height));
     clampPanelPosition();
   };
 
-  const resetPanelWindow = () => {
+  const clearPanelPresentation = () => {
     if (!panel) return;
     panel.style.left = '';
     panel.style.top = '';
@@ -114,10 +115,18 @@ import {
     panel.style.height = '';
     delete panel.dataset.dragged;
     delete panel.dataset.resized;
+  };
+
+  const resetPanelWindow = () => {
+    clearPanelPresentation();
     localStorage.removeItem(storageKey);
   };
 
   const restorePanelWindow = () => {
+    if (compactViewport.matches) {
+      clearPanelPresentation();
+      return;
+    }
     const state = readWindowState();
     if (Number.isFinite(state.width) && Number.isFinite(state.height)) {
       applyPanelSize(state.width, state.height, false);
@@ -213,7 +222,7 @@ import {
   clearButton?.addEventListener('click', clearConversation);
 
   dragHandle?.addEventListener('pointerdown', (event) => {
-    if (!panel || event.target.closest('button')) return;
+    if (!panel || compactViewport.matches || event.target.closest('button')) return;
     const rect = panel.getBoundingClientRect();
     dragState = {
       pointerId: event.pointerId,
@@ -241,6 +250,7 @@ import {
   dragHandle?.addEventListener('pointercancel', stopDragging);
   dragHandle?.addEventListener('dblclick', resetPanelWindow);
   window.addEventListener('resize', clampPanelPosition);
+  compactViewport.addEventListener?.('change', restorePanelWindow);
 
   if ('ResizeObserver' in window && panel) {
     let resizeTimer = null;

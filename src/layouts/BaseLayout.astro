@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import GlobalSearch from '../components/GlobalSearch.astro';
 import Header from '../components/Header.astro';
 import MinimalFooter from '../components/MinimalFooter.astro';
 
@@ -42,6 +43,7 @@ if (assistant) {
       </main>
       {chrome && <MinimalFooter />}
     </div>
+    <GlobalSearch />
     {assistantConfig && (
       <div
         class="dn-assistant"
@@ -75,5 +77,6 @@ if (assistant) {
       </div>
     )}
     {assistantConfig && <script is:inline type="module" src="/assistant.js"></script>}
+    <script is:inline type="module" src="/global-search.js"></script>
   </body>
 </html>

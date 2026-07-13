@@ -15,5 +15,11 @@ const navItems = [
     {navItems.map((item) => (
       <a class="minimal-link" href={item.href}>{item.label}</a>
     ))}
+    <button type="button" class="global-search-trigger global-search-trigger-minimal" data-global-search-open aria-label="打开全站搜索">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"></circle>
+        <path d="m16 16 5 5"></path>
+      </svg>
+    </button>
   </nav>
 </header>

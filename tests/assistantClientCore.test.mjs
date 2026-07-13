@@ -16,6 +16,13 @@ test('assistant initial shell keeps guidance in the composer instead of explanat
   assert.match(layout, /placeholder=\{assistantConfig\.placeholder\}/);
 });
 
+test('assistant client isolates compact viewport behavior from desktop window state', () => {
+  const client = fs.readFileSync(new URL('../public/assistant.js', import.meta.url), 'utf8');
+
+  assert.match(client, /matchMedia\('\(max-width: 640px\)'\)/);
+  assert.match(client, /compactViewport\.matches/);
+});
+
 test('assistant session stores completed turns and clears them together', () => {
   const session = createAssistantSession();
 

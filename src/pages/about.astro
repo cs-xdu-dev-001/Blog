@@ -28,6 +28,14 @@ const aboutParagraphs = String(siteConfig.aboutBody || '').split(/\n{2,}/).filte
         <a class="qzq-nav-item" href="/#statistics"><span>{sections.statistics?.navLabel || '统计'}</span><small>{navSmall('statistics', '∞')}</small></a>
         <a class="qzq-nav-item" href="/about"><span>{sections.about?.navLabel || '关于'}</span><small>{navSmall('about', 'me')}</small></a>
       </div>
+      <div class="qzq-socials" aria-label="站点工具">
+        <button type="button" class="global-search-trigger" data-global-search-open aria-label="打开全站搜索">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="m16 16 5 5"></path>
+          </svg>
+        </button>
+      </div>
     </nav>
 
     <section class="qzq-about-hero" aria-label="关于">
