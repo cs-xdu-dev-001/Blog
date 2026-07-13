@@ -57,6 +57,8 @@ export function createWatchArchiveView(repository = watchRepository) {
         if (!items.length) return fallbackWithActivity;
 
         const mapped = items.map((item) => ({
+          id: item.id,
+          href: `/watch/${item.id}`,
           title: item.title,
           type: item.type,
           status: item.status,

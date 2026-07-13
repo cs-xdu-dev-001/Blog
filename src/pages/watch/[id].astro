@@ -1,0 +1,55 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { markdownToHtml } from '../../lib/server/markdownRenderer.mjs';
+import { watchRepository } from '../../lib/server/watchRepository.mjs';
+
+export const prerender = false;
+
+const rawId = String(Astro.params.id || '');
+const id = /^\d+$/.test(rawId) ? Number(rawId) : 0;
+const item = id > 0 ? watchRepository.get(id) : null;
+
+if (!item) {
+  return new Response('Not Found', { status: 404 });
+}
+
+const review = markdownToHtml(item.comment || '');
+const archiveNumber = String(item.id).padStart(3, '0');
+---
+
+<BaseLayout title={`${item.title} | Dev Notes`} description={`${item.title}的个人影评与影像档案`}>
+  <main class="watch-review-shell">
+    <a class="watch-review-back" href="/#watch">返回影像档案</a>
+
+    <article class="watch-review-paper">
+      <header class="watch-review-header">
+        <figure class={`watch-review-poster ${item.image_path ? 'has-image' : ''}`}>
+          {item.image_path ? <img src={item.image_path} alt={`${item.title}封面`} /> : <span aria-hidden="true"></span>}
+        </figure>
+
+        <div class="watch-review-identity">
+          <strong>影像档案 {archiveNumber}</strong>
+          <h1>{item.title}</h1>
+          <dl>
+            <div><dt>类型</dt><dd>{item.type}</dd></div>
+            <div><dt>状态</dt><dd>{item.status}</dd></div>
+            {item.rating && <div><dt>评分</dt><dd>{item.rating}</dd></div>}
+          </dl>
+        </div>
+      </header>
+
+      <div class="watch-review-rule"></div>
+
+      {item.quote && (
+        <figure class="watch-review-quote">
+          <blockquote>{item.quote}</blockquote>
+          {item.quote_source && <figcaption>{item.quote_source}</figcaption>}
+        </figure>
+      )}
+
+      {item.comment && (
+        <section class="watch-review-body article-prose" set:html={review.html}></section>
+      )}
+    </article>
+  </main>
+</BaseLayout>

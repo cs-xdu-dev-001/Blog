@@ -340,6 +340,8 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
             aria-expanded="false"
             aria-label={`查看《${watchArchive.activity.watching.title}》观看记录`}
             data-watch-activity-card
+            data-watch-detail
+            data-href={watchArchive.activity.watching.href}
           >
             <div class="qzq-watch-activity-copy">
               <span class="qzq-watch-activity-state"><i></i>近期在看</span>
@@ -369,6 +371,8 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
             aria-expanded="false"
             aria-label={`查看《${watchArchive.activity.finished.title}》观看记录`}
             data-watch-activity-card
+            data-watch-detail
+            data-href={watchArchive.activity.finished.href}
           >
             <div class="qzq-watch-activity-copy">
               <span class="qzq-watch-activity-state"><i></i>近期看完</span>
@@ -400,7 +404,15 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
             style={`--watch-duration: ${watchArchive.motion.durationSeconds * (10 / 9) * (10 / 9) * (10 / 9)}s`}
           >
             {[...row.items, ...row.items].map((item, index) => (
-              <article class={`qzq-watch-card qzq-work-card qzq-work-${index % 4}`} data-tilt-card>
+              <article
+                class={`qzq-watch-card qzq-work-card qzq-work-${index % 4}`}
+                tabindex="0"
+                role="link"
+                aria-label={`打开《${item.title}》影评`}
+                data-tilt-card
+                data-watch-detail
+                data-href={item.href}
+              >
                 {item.image ? (
                   <img class="qzq-work-image qzq-work-photo" src={item.image} alt={`${item.title}配图`} loading="lazy" />
                 ) : (
@@ -754,9 +766,22 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
       });
       card.addEventListener('click', () => toggleWatchActivity(card));
       card.addEventListener('keydown', (event) => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
+        if (event.key !== ' ') return;
         event.preventDefault();
         toggleWatchActivity(card);
+      });
+    });
+
+    document.querySelectorAll('[data-watch-detail]').forEach((card) => {
+      const openDetail = () => {
+        const href = card.getAttribute('data-href');
+        if (href) window.location.href = href;
+      };
+      card.addEventListener('dblclick', openDetail);
+      card.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        openDetail();
       });
     });
 

@@ -44,7 +44,7 @@ function renderStats() {
   statsEl.innerHTML = [
     ['总条目', state.stats.total, '全部影像档案'],
     ['缺图', state.stats.missingImage, '需要上传图片'],
-    ['缺评论', state.stats.missingComment, '等待个人评论'],
+    ['缺影评', state.stats.missingComment, '等待个人影评'],
     ['缺佳句', state.stats.missingQuote, '等待佳句摘录'],
   ].map(([label, value, hint]) => `
     <article class="cms-metric">
@@ -147,7 +147,7 @@ function renderEditor() {
       <label data-activity-field="watching">观看进度 <input name="progress_text" value="${escapeHtml(item.progress_text || '')}" placeholder="例如 第18集" /></label>
       <label data-activity-field="finished">完成日期 <input name="completed_at" type="date" value="${escapeHtml(item.completed_at || '')}" /></label>
       <label>评分 <input name="rating" value="${escapeHtml(item.rating || '')}" placeholder="例如 4" /></label>
-      <label>个人评论 <textarea name="comment" placeholder="写你自己的短评">${escapeHtml(item.comment || '')}</textarea></label>
+      <label>个人影评 <textarea name="comment" placeholder="支持Markdown">${escapeHtml(item.comment || '')}</textarea></label>
       <label>佳句 <textarea name="quote" placeholder="摘录一句适合放在卡片上的话">${escapeHtml(item.quote || '')}</textarea></label>
       <label>佳句来源 <input name="quote_source" value="${escapeHtml(item.quote_source || '')}" placeholder="例如 官方台词 / 豆瓣 / 自己整理" /></label>
       <label class="cms-check"><input type="checkbox" name="is_featured" ${item.is_featured ? 'checked' : ''} /> 精选展示</label>

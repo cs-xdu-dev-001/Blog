@@ -13,6 +13,11 @@ test('watch admin exposes activity status, fields, filters, and api payload', ()
   assert.match(adminClient, /name="progress_text"/);
   assert.match(adminClient, /name="completed_at"/);
   assert.match(adminClient, /name="is_activity_featured"/);
+  assert.match(adminClient, /个人影评/);
+  assert.match(adminClient, /支持Markdown/);
+  assert.match(adminClient, /comment: form\.get\('comment'\)/);
+  assert.match(adminPage, /缺影评/);
+  assert.doesNotMatch(adminClient, /个人评论|缺评论/);
   assert.match(adminClient, /progress_text: form\.get\('progress_text'\)/);
   assert.match(adminClient, /completed_at: form\.get\('completed_at'\)/);
   assert.match(adminClient, /is_activity_featured: form\.get\('is_activity_featured'\) === 'on'/);

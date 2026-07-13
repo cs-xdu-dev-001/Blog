@@ -5,10 +5,10 @@ const repo = {
   list() {
     return {
       items: [
-        { title: 'A', type: '剧集', status: '已看', rating: '', image_path: '', quote: '', comment: '', quote_source: '', progress_text: '', completed_at: '', is_activity_featured: 0 },
-        { title: '主角', type: '电影', status: '已看', rating: '', image_path: '/watch/主角.jpg', quote: 'quote', comment: '', quote_source: 'source', progress_text: '', completed_at: '', is_activity_featured: 1 },
-        { title: 'C', type: '剧集', status: '想看', rating: '', image_path: '', quote: '', comment: '', quote_source: '', progress_text: '', completed_at: '', is_activity_featured: 0 },
-        { title: '大江大河', type: '剧集', status: '在看', rating: '', image_path: '/watch/大江大河.jpg', quote: '', comment: '', quote_source: '', progress_text: '', completed_at: '', is_activity_featured: 1 },
+        { id: 1, title: 'A', type: '剧集', status: '已看', rating: '', image_path: '', quote: '', comment: '', quote_source: '', progress_text: '', completed_at: '', is_activity_featured: 0 },
+        { id: 2, title: '主角', type: '电影', status: '已看', rating: '', image_path: '/watch/主角.jpg', quote: 'quote', comment: '', quote_source: 'source', progress_text: '', completed_at: '', is_activity_featured: 1 },
+        { id: 3, title: 'C', type: '剧集', status: '想看', rating: '', image_path: '', quote: '', comment: '', quote_source: '', progress_text: '', completed_at: '', is_activity_featured: 0 },
+        { id: 4, title: '大江大河', type: '剧集', status: '在看', rating: '', image_path: '/watch/大江大河.jpg', quote: '', comment: '', quote_source: '', progress_text: '', completed_at: '', is_activity_featured: 1 },
       ],
     };
   },
@@ -26,6 +26,9 @@ assert.equal(archive.activity.watching.title, '大江大河');
 assert.equal(archive.activity.watching.image, '/watch/大江大河.jpg');
 assert.equal(archive.activity.finished.title, '主角');
 assert.equal(archive.activity.finished.image, '/watch/主角.jpg');
+assert.equal(archive.activity.finished.id, 2);
+assert.equal(archive.activity.finished.href, '/watch/2');
+assert.ok(archive.rows.flatMap((row) => row.items).some((item) => item.href === '/watch/2'));
 
 const incompleteArchive = createWatchArchiveView({
   list() {

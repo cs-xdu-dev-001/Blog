@@ -8110,6 +8110,219 @@ button:focus-visible {
   z-index: 9;
 }
 
+.watch-review-shell {
+  width: min(calc(100% - 96px), 1480px);
+  margin: 0 auto;
+  padding: 54px 0 120px;
+  color: #263548;
+}
+
+.watch-review-back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  border-bottom: 1px solid rgba(38, 53, 72, 0.44);
+  font-size: 16px;
+  font-weight: 700;
+  transition: border-color 180ms ease, opacity 180ms ease;
+}
+
+.watch-review-back:hover {
+  border-color: #ff7a1a;
+  opacity: 0.72;
+}
+
+.watch-review-paper {
+  margin-top: 76px;
+  border-top: 1px solid rgba(38, 53, 72, 0.22);
+  padding-top: 48px;
+}
+
+.watch-review-header {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+  gap: clamp(48px, 7vw, 112px);
+  align-items: end;
+}
+
+.watch-review-poster {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  margin: 0;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #e5e7eb;
+}
+
+.watch-review-poster img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.watch-review-poster > span {
+  position: absolute;
+  inset: 18px;
+  border: 1px solid rgba(38, 53, 72, 0.16);
+}
+
+.watch-review-identity {
+  padding-bottom: 14px;
+}
+
+.watch-review-identity > strong {
+  display: block;
+  margin-bottom: 24px;
+  color: #ff7a1a;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.watch-review-identity h1 {
+  max-width: 960px;
+  margin: 0;
+  color: #263548;
+  font-size: clamp(58px, 8vw, 112px);
+  font-weight: 800;
+  line-height: 0.94;
+  letter-spacing: 0;
+}
+
+.watch-review-identity dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 180px));
+  gap: 26px;
+  margin: 54px 0 0;
+}
+
+.watch-review-identity dl > div {
+  border-top: 1px solid rgba(38, 53, 72, 0.2);
+  padding-top: 14px;
+}
+
+.watch-review-identity dt,
+.watch-review-identity dd {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.watch-review-identity dt {
+  color: #ff7a1a;
+  font-weight: 800;
+}
+
+.watch-review-identity dd {
+  margin-top: 8px;
+  color: #263548;
+  font-weight: 700;
+}
+
+.watch-review-rule {
+  height: 1px;
+  margin: 72px 0 0;
+  background: rgba(38, 53, 72, 0.2);
+}
+
+.watch-review-quote,
+.watch-review-body {
+  width: min(100%, 860px);
+  margin-left: clamp(0px, 22vw, 360px);
+}
+
+.watch-review-quote {
+  margin-top: 64px;
+  margin-bottom: 0;
+  border-left: 4px solid #ff7a1a;
+  padding-left: 30px;
+}
+
+.watch-review-quote blockquote {
+  margin: 0;
+  color: #263548;
+  font-size: clamp(24px, 3vw, 38px);
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.watch-review-quote figcaption {
+  margin-top: 18px;
+  color: #64748b;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.watch-review-body {
+  margin-top: 72px;
+  color: #334155;
+  font-size: 18px;
+  line-height: 1.9;
+}
+
+.watch-review-body > :first-child {
+  margin-top: 0;
+}
+
+.watch-review-body > :last-child {
+  margin-bottom: 0;
+}
+
+.watch-review-body h1,
+.watch-review-body h2,
+.watch-review-body h3 {
+  margin: 64px 0 22px;
+  color: #263548;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+.watch-review-body h1 {
+  font-size: 40px;
+}
+
+.watch-review-body h2 {
+  font-size: 32px;
+}
+
+.watch-review-body h3 {
+  font-size: 25px;
+}
+
+.watch-review-body p,
+.watch-review-body ul,
+.watch-review-body blockquote,
+.watch-review-body pre {
+  margin: 0 0 28px;
+}
+
+.watch-review-body ul {
+  display: grid;
+  gap: 10px;
+  padding-left: 24px;
+}
+
+.watch-review-body blockquote {
+  border-left: 3px solid #ff7a1a;
+  padding-left: 22px;
+  color: #475569;
+}
+
+.watch-review-body pre {
+  max-width: 100%;
+  overflow-x: auto;
+  background: #263548;
+  color: #f8fafc;
+  padding: 22px 24px;
+}
+
+.watch-review-body code {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.9em;
+}
+
 .map-editor-surface.is-dragging,
 .map-editor-surface.is-dragging .qzq-travel-heat,
 .map-editor-surface.is-dragging .qzq-current-pin,
