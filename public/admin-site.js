@@ -88,7 +88,6 @@ function renderSections() {
         显示
       </label>
       <label><span>标题</span><input name="section.${section.key}.title" value="${escapeHtml(section.title)}" /></label>
-      <label><span>小字</span><input name="section.${section.key}.eyebrow" value="${escapeHtml(section.eyebrow)}" /></label>
       <label><span>导航</span><input name="section.${section.key}.navLabel" value="${escapeHtml(section.navLabel)}" /></label>
       <label><span>角标</span><input name="section.${section.key}.navSmall" value="${escapeHtml(section.navSmall)}" /></label>
       <label><span>排序</span><input name="section.${section.key}.sortOrder" type="number" value="${escapeHtml(section.sortOrder)}" /></label>
@@ -265,7 +264,6 @@ function readForm() {
     sections: state.sections.map((section) => ({
       key: section.key,
       title: form.get(`section.${section.key}.title`),
-      eyebrow: form.get(`section.${section.key}.eyebrow`),
       navLabel: form.get(`section.${section.key}.navLabel`),
       navSmall: form.get(`section.${section.key}.navSmall`),
       enabled: form.get(`section.${section.key}.enabled`) === 'on',

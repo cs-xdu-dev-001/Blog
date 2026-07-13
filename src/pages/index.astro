@@ -15,7 +15,6 @@ const sectionMap = Object.fromEntries(sectionList.map((section) => [section.key,
 const isSectionEnabled = (key) => sectionMap[key]?.enabled !== 0;
 const section = (key, fallback) => ({
   title: sectionMap[key]?.title || fallback.title,
-  eyebrow: sectionMap[key]?.eyebrow || fallback.eyebrow,
   navLabel: sectionMap[key]?.navLabel || fallback.navLabel,
   navSmall: sectionMap[key]?.navSmall || fallback.navSmall,
 });
@@ -266,7 +265,6 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
 
     {isSectionEnabled('topics') && <section id="topics" class="qzq-topic-section" aria-label="Topics" data-reveal-section>
       <div class="qzq-section-title">
-        <span>{section('topics', { eyebrow: 'Stories / Systems / Code' }).eyebrow}</span>
         <h2>{section('topics', { title: '主线' }).title}</h2>
       </div>
 
@@ -287,7 +285,6 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
 
     {isSectionEnabled('notes') && <section id="notes" class="qzq-notes-section" aria-label="近期笔记" data-reveal-section>
       <div class="qzq-section-title">
-        <span>{section('notes', { eyebrow: '写作索引' }).eyebrow}</span>
         <h2>{section('notes', { title: '近期笔记' }).title}</h2>
       </div>
 
@@ -319,15 +316,10 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
 
     {isSectionEnabled('watch') && <section id="watch" class="qzq-watch-section" aria-label="影像档案" data-reveal-section>
       <div class="qzq-section-title qzq-watch-title">
-        <span>{section('watch', { eyebrow: '影像轨道' }).eyebrow}</span>
         <h2>{section('watch', { title: '影像档案' }).title}</h2>
       </div>
 
       <div class="qzq-watch-summary">
-        <p>
-          影像档案不是片单打卡。它更像一组长期暴露的兴趣样本：有些作品提供叙事结构，
-          有些留下时代质感，有些只是提醒我，什么样的故事会被反复想起。
-        </p>
         <div>
           <strong>{watchArchive.stats.watched}</strong>
           <span>已看</span>
@@ -431,15 +423,10 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
 
     {isSectionEnabled('reading') && <section id="reading" class="qzq-reading-section" aria-label="阅读书架" data-reveal-section>
       <div class="qzq-section-title qzq-reading-title">
-        <span>{section('reading', { eyebrow: 'Reading shelf' }).eyebrow}</span>
         <h2>{section('reading', { title: '阅读书架' }).title}</h2>
       </div>
 
       <div class="qzq-reading-intro">
-        <p>
-          书架里放的是正在读、已经读完和准备回头再读的书。它们不只是列表，
-          也是我理解技术、组织、历史和叙事时反复借用的参照物。点击一本书会短暂高亮，双击可以进入书评页。
-        </p>
         <a href="/reading">查看完整书架</a>
       </div>
 
@@ -474,7 +461,6 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
 
     {isSectionEnabled('statistics') && <section id="statistics" class="qzq-statistics-section" aria-label="统计" data-reveal-section>
       <div class="qzq-section-title qzq-statistics-title">
-        <span>{section('statistics', { eyebrow: '个人坐标' }).eyebrow}</span>
         <h2>{section('statistics', { title: '统计' }).title}</h2>
       </div>
 
@@ -483,7 +469,6 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
           <div class="qzq-stat-card-head">
             <div>
               <span class="qzq-stat-display-title">时间</span>
-              <p>这不是精确计时，更像一张长期兴趣的地形图。</p>
             </div>
             <strong>0-25</strong>
           </div>
@@ -560,7 +545,6 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
             <div class="qzq-stat-card-head">
               <div>
                 <span>空间</span>
-                <p>这里放我去过的城市和现在所在的位置。地图只保留必要标记，其余参数在管理端调整。</p>
               </div>
             </div>
             <div
@@ -622,7 +606,6 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
         <article class="qzq-radar-card qzq-stat-card" data-tilt-card>
           <div class="qzq-radar-head">
             <h3>影像</h3>
-            <p>我看过的影视作品统计。</p>
           </div>
           <div class="qzq-radar-stage" data-radar-stage data-radar-metric="计数">
             <svg class="qzq-radar qzq-radar-movie" viewBox="0 0 560 500" role="img" aria-label="影像偏好雷达图">
@@ -664,7 +647,6 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
         <article class="qzq-radar-card qzq-stat-card" data-tilt-card>
           <div class="qzq-radar-head">
             <h3>技术</h3>
-            <p>当前博客主线和实践记录的权重。</p>
           </div>
           <div class="qzq-radar-stage qzq-radar-stage-code" data-radar-stage data-radar-metric="权重">
             <svg class="qzq-radar qzq-radar-code" viewBox="0 0 560 500" role="img" aria-label="技术主线雷达图">

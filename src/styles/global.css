@@ -2797,18 +2797,6 @@ button:focus-visible {
   text-transform: none;
 }
 
-.qzq-space-card .qzq-stat-card-head div::after {
-  display: block;
-  max-width: 560px;
-  color: #334155;
-  content: "这是我的旅行足迹。目前我在中国西安。";
-  font-size: 20px;
-  font-weight: 500;
-  line-height: 1.5;
-  letter-spacing: -0.03em;
-  white-space: pre-line;
-}
-
 .qzq-space-card .qzq-stat-card-head p {
   max-width: none;
 }
