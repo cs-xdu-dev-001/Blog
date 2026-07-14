@@ -144,6 +144,7 @@ function buildDocuments(config, deps = {}) {
         type: 'reading',
         title: book.title,
         url: `/reading/${book.slug}`,
+        status: book.statusLabel || book.status || '',
         text: textOf([book.title, book.author, book.statusLabel, book.summary, book.quote, book.review]),
       });
     });
@@ -173,21 +174,42 @@ function buildDocuments(config, deps = {}) {
 }
 
 function searchDocuments(question, config, deps = {}) {
+  const docs = buildDocuments(config, deps);
+  const asksForBookshelf = /书架|书单|藏书|(?:正在|目前|最近)?(?:在读|阅读中)|正在读|正在阅读|已读|读完|读过的书|待读|想读|计划读|准备读/.test(question);
+  if (asksForBookshelf) {
+    let readingDocs = docs.filter((doc) => doc.type === 'reading');
+    if (/(?:正在|目前|最近)?(?:在读|阅读中)|正在读|正在阅读/.test(question)) {
+      readingDocs = readingDocs.filter((doc) => doc.status === '在读' || doc.status === 'reading');
+    } else if (/已读|读完|读过的书/.test(question)) {
+      readingDocs = readingDocs.filter((doc) => doc.status === '已读' || doc.status === 'finished');
+    } else if (/待读|想读|计划读|准备读/.test(question)) {
+      readingDocs = readingDocs.filter((doc) => doc.status === '待读' || doc.status === 'planned');
+    }
+    return readingDocs.slice(0, 30).map((doc) => ({
+      type: doc.type,
+      typeLabel: sourceLabel(doc.type),
+      title: doc.title,
+      url: doc.url,
+      excerpt: excerpt(doc.text, []),
+      score: 100,
+    }));
+  }
+
   const tokens = tokenize(question);
   const weakTokens = new Set(['本站', '公开', '内容', '这个', '问题', '博客', '有关', '作业', '帮我', '什么', '电影']);
   const usefulTokens = tokens.filter((token) => !weakTokens.has(token));
   if (!usefulTokens.length) return [];
 
-  const docs = buildDocuments(config, deps)
+  const matches = docs
     .map((doc) => ({ ...doc, score: scoreDoc(doc, usefulTokens, question) }))
     .filter((doc) => doc.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, 5);
 
-  const topScore = docs[0]?.score || 0;
+  const topScore = matches[0]?.score || 0;
   if (topScore < 6) return [];
 
-  const filtered = topScore >= 40 ? docs.filter((doc) => doc.score >= Math.max(8, topScore * 0.18)) : docs;
+  const filtered = topScore >= 40 ? matches.filter((doc) => doc.score >= Math.max(8, topScore * 0.18)) : matches;
   return filtered.map((doc) => ({
     type: doc.type,
     typeLabel: sourceLabel(doc.type),

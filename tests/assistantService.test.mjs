@@ -304,6 +304,20 @@ test('assistant searches public blog content', () => {
   assert.equal(sources[0].typeLabel, 'note');
 });
 
+test('assistant retrieves the bookshelf for collection questions without a title keyword', () => {
+  const books = [
+    { title: '北平无战事', slug: 'all-quiet-in-peking', author: '刘和平', statusLabel: '在读', summary: '历史叙事' },
+    { title: '浪潮之巅', slug: 'wave-top', author: '吴军', statusLabel: '已读', summary: '科技产业史' },
+    { title: '三体', slug: 'three-body', author: '刘慈欣', statusLabel: '待读', summary: '科幻小说' },
+  ];
+  const { assistant } = createIsolatedAssistant(tempDbPath(), { getReading: () => books });
+
+  const sources = assistant.search('博主书架里有什么');
+
+  assert.deepEqual(sources.map((source) => source.title), ['北平无战事', '浪潮之巅', '三体']);
+  assert.equal(sources.every((source) => source.type === 'reading'), true);
+});
+
 test('assistant allows general chat fallback and still rate limits', async () => {
   const { site, assistant } = createIsolatedAssistant(tempDbPath());
 
