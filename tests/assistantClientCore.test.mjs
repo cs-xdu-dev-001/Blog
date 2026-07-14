@@ -2,11 +2,39 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 import {
+  consumeAssistantSse,
   createAssistantSession,
   renderAssistantMarkdown,
   safeAssistantUrl,
   trimConversation,
 } from '../public/assistant-core.mjs';
+
+test('assistant SSE parser preserves partial frames and emits complete events in order', () => {
+  const first = consumeAssistantSse('', 'event: start\ndata: {"requestId":"req-1"}\n\nevent: del');
+  assert.deepEqual(first.events, [
+    { event: 'start', data: { requestId: 'req-1' } },
+  ]);
+  assert.equal(first.buffer, 'event: del');
+
+  const second = consumeAssistantSse(first.buffer, 'ta\ndata: {"text":"你"}\n\nevent: done\ndata: {"requestId":"req-1"}\n\n');
+  assert.deepEqual(second.events, [
+    { event: 'delta', data: { text: '你' } },
+    { event: 'done', data: { requestId: 'req-1' } },
+  ]);
+  assert.equal(second.buffer, '');
+});
+
+test('assistant SSE parser converts malformed event JSON into a stable protocol error', () => {
+  const result = consumeAssistantSse('', 'event: delta\ndata: {broken}\n\n');
+  assert.deepEqual(result.events, [{
+    event: 'error',
+    data: {
+      code: 'STREAM_PROTOCOL_ERROR',
+      message: '响应格式异常',
+      retryable: true,
+    },
+  }]);
+});
 
 test('assistant initial shell keeps guidance in the composer instead of explanatory copy', () => {
   const layout = fs.readFileSync(new URL('../src/layouts/BaseLayout.astro', import.meta.url), 'utf8');
@@ -21,6 +49,23 @@ test('assistant client isolates compact viewport behavior from desktop window st
 
   assert.match(client, /matchMedia\('\(max-width: 640px\)'\)/);
   assert.match(client, /compactViewport\.matches/);
+});
+
+test('assistant client consumes streamed events and retries a failed turn in place', () => {
+  const client = fs.readFileSync(new URL('../public/assistant.js', import.meta.url), 'utf8');
+  const styles = fs.readFileSync(new URL('../src/styles/global.css', import.meta.url), 'utf8');
+
+  assert.match(client, /consumeAssistantSse/);
+  assert.match(client, /response\.body\.getReader\(\)/);
+  assert.match(client, /正在连接/);
+  assert.match(client, /正在生成/);
+  assert.match(client, /data-assistant-retry/);
+  assert.match(client, /historySnapshot/);
+  assert.match(client, /retryable/);
+  assert.match(client, /responseReader\?\.cancel/);
+  assert.match(client, /responseReader\?\.releaseLock/);
+  assert.match(client, /clearMessageRetries/);
+  assert.match(styles, /\.dn-assistant-retry/);
 });
 
 test('assistant session stores completed turns and clears them together', () => {

@@ -266,7 +266,7 @@ function assistantFetchOptions(config, options) {
   };
 }
 
-function assistantRequestBody(question, sources, config, historyInput = []) {
+function assistantRequestBody(question, sources, config, historyInput = [], options = {}) {
   const maxTokens = Math.max(120, Math.min(1600, Number(config.assistant.maxAnswerLength || 1200)));
   const history = normalizeConversation(historyInput);
   const sourceText = sources.length
@@ -281,11 +281,14 @@ function assistantRequestBody(question, sources, config, historyInput = []) {
   ].join('\n');
   const userText = `User question: ${question}\n\nPossible site context:\n${sourceText}`;
 
-  return assistantApiMode(config) === 'responses'
+  const mode = assistantApiMode(config);
+  const stream = options.stream ?? mode === 'responses';
+
+  return mode === 'responses'
     ? {
         model: assistantModel(config),
         max_output_tokens: maxTokens,
-        stream: true,
+        stream,
         input: [
           { role: 'system', content: [{ type: 'input_text', text: systemText }] },
           ...history.map((message) => ({
@@ -302,6 +305,7 @@ function assistantRequestBody(question, sources, config, historyInput = []) {
         model: assistantModel(config),
         max_tokens: maxTokens,
         temperature: 0.7,
+        ...(stream ? { stream: true } : {}),
         messages: [
           { role: 'system', content: systemText },
           ...history,
@@ -315,6 +319,79 @@ function parseModelAnswer(data, config) {
     return extractResponsesText(data);
   }
   return data.choices?.[0]?.message?.content?.trim() || '';
+}
+
+function streamError(code, message, retryable = true) {
+  return { code, message, retryable };
+}
+
+export function encodeAssistantSse(message) {
+  const event = String(message?.event || 'message').replace(/[\r\n]/g, '') || 'message';
+  return `event: ${event}\ndata: ${JSON.stringify(message?.data || {})}\n\n`;
+}
+
+function logAssistant(logger, level, event, fields = {}) {
+  const writer = logger?.[level] || logger?.info;
+  if (typeof writer !== 'function') return;
+  writer.call(logger, JSON.stringify({
+    event,
+    timestamp: new Date().toISOString(),
+    ...fields,
+  }));
+}
+
+function parseUpstreamSseFrame(frame) {
+  let event = '';
+  const dataLines = [];
+  String(frame || '').split(/\r?\n/).forEach((line) => {
+    if (line.startsWith('event:')) event = line.slice(6).trim();
+    if (line.startsWith('data:')) dataLines.push(line.slice(5).replace(/^ /, ''));
+  });
+  const raw = dataLines.join('\n').trim();
+  if (!raw) return null;
+  if (raw === '[DONE]') return { done: true };
+  try {
+    return { event, data: JSON.parse(raw) };
+  } catch {
+    return { error: streamError('STREAM_PROTOCOL_ERROR', '上游响应格式异常') };
+  }
+}
+
+function upstreamTextPart(frame, mode) {
+  if (!frame?.data) return null;
+  if (mode === 'chat') {
+    const text = frame.data.choices?.[0]?.delta?.content;
+    return text ? { text: String(text), cumulative: false } : null;
+  }
+
+  const type = String(frame.data.type || frame.event || '');
+  if (type.includes('output_text.delta') && frame.data.delta) {
+    return { text: String(frame.data.delta), cumulative: false };
+  }
+  if (type.includes('output_text.done') && frame.data.output_text) {
+    return { text: String(frame.data.output_text || frame.data.text), cumulative: true };
+  }
+  if (type.includes('output_text.done') && frame.data.text) {
+    return { text: String(frame.data.text), cumulative: true };
+  }
+  if (type.includes('response.completed')) {
+    const text = extractResponsesText(frame.data);
+    return text ? { text, cumulative: true } : null;
+  }
+  return null;
+}
+
+function appendStreamText(current, candidate, cumulative = false) {
+  const next = String(candidate || '');
+  if (!next) return { text: current, delta: '' };
+  if (!current) return { text: next, delta: next };
+  if (cumulative) {
+    if (next.startsWith(current)) {
+      return { text: next, delta: next.slice(current.length) };
+    }
+    return { text: current, delta: '' };
+  }
+  return { text: `${current}${next}`, delta: next };
 }
 
 function extractResponsesText(data) {
@@ -467,6 +544,9 @@ export function createAssistantService({
   siteConfig = siteConfigRepository,
   getReading = getAllReadingFromDb,
   getWatch = getWatchArchiveFromDb,
+  logger = console,
+  timeoutMs = 45000,
+  maxStreamChars = 2000000,
 } = {}) {
   const db = openDatabase(dbPath);
   const deps = { posts, getReading, getWatch };
@@ -520,6 +600,262 @@ export function createAssistantService({
     },
 
     checkRateLimit,
+
+    async streamAnswer(questionInput, request, historyInput = []) {
+      const config = siteConfig.getSiteConfig();
+      if (config.assistant?.enabled === false) {
+        return {
+          status: 403,
+          body: { error: 'AI助手已关闭', code: 'ASSISTANT_DISABLED', retryable: false },
+        };
+      }
+
+      const question = cleanQuestion(questionInput);
+      const maxQuestionLength = Math.max(20, Number(config.assistant.maxQuestionLength || 1000));
+      if (!question) {
+        return {
+          status: 400,
+          body: { error: '请输入问题', code: 'INVALID_REQUEST', retryable: false },
+        };
+      }
+      if (question.length > maxQuestionLength) {
+        return {
+          status: 400,
+          body: { error: `问题不能超过${maxQuestionLength}个字符`, code: 'INVALID_REQUEST', retryable: false },
+        };
+      }
+
+      const limit = checkRateLimit(request, config);
+      if (!limit.ok) {
+        return {
+          status: 429,
+          body: { error: limit.error, code: 'RATE_LIMITED', retryable: true, limited: true },
+        };
+      }
+
+      const sources = searchDocuments(question, config, deps);
+      const history = normalizeConversation(historyInput);
+      const requestId = crypto.randomUUID();
+      const mode = assistantApiMode(config);
+      const model = assistantModel(config);
+      const startedAt = Date.now();
+      const activityTimeout = Math.max(1, Number(timeoutMs) || 45000);
+      const streamLimit = Math.max(1, Number(maxStreamChars) || 2000000);
+      const controller = new AbortController();
+      let cancelled = false;
+
+      async function* events() {
+        let timeoutId;
+        let timedOut = false;
+        let output = '';
+        let failed = false;
+        let upstreamReader;
+
+        const stopTimer = () => clearTimeout(timeoutId);
+        const resetTimer = () => {
+          stopTimer();
+          timeoutId = setTimeout(() => {
+            timedOut = true;
+            controller.abort();
+          }, activityTimeout);
+        };
+        const abortFromClient = () => {
+          cancelled = true;
+          controller.abort();
+        };
+        const fail = (error, extra = {}) => {
+          failed = true;
+          logAssistant(logger, 'error', 'assistant.request.failed', {
+            requestId,
+            mode,
+            model,
+            durationMs: Date.now() - startedAt,
+            sourceCount: sources.length,
+            outputLength: output.length,
+            errorCode: error.code,
+            ...extra,
+          });
+          return { event: 'error', data: { requestId, ...error } };
+        };
+
+        request?.signal?.addEventListener('abort', abortFromClient, { once: true });
+        logAssistant(logger, 'info', 'assistant.request.started', {
+          requestId,
+          mode,
+          model,
+          questionLength: question.length,
+          historyCount: history.length,
+          sourceCount: sources.length,
+        });
+        yield { event: 'start', data: { requestId } };
+        yield { event: 'sources', data: { sources } };
+
+        try {
+          const apiKey = assistantApiKey(config);
+          if (!apiKey) {
+            const local = buildLocalAnswer(question, sources);
+            output = local.answer;
+            if (output) yield { event: 'delta', data: { text: output } };
+            yield { event: 'done', data: { requestId } };
+            return;
+          }
+
+          resetTimer();
+          const response = await fetch(assistantEndpoint(config), assistantFetchOptions(config, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(assistantRequestBody(question, sources, config, history, { stream: true })),
+            signal: controller.signal,
+          }));
+          resetTimer();
+
+          if (!response.ok) {
+            const error = response.status === 429
+              ? streamError('RATE_LIMITED', '模型服务请求过多，请稍后重试')
+              : streamError('UPSTREAM_HTTP_ERROR', `模型服务暂时不可用（HTTP ${response.status}）`);
+            yield fail(error, { upstreamStatus: response.status });
+            return;
+          }
+
+          logAssistant(logger, 'info', 'assistant.stream.started', {
+            requestId,
+            mode,
+            model,
+            upstreamStatus: response.status,
+          });
+
+          const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+          const isEventStream = contentType.includes('text/event-stream');
+          upstreamReader = response.body?.getReader();
+          if (!upstreamReader) {
+            yield fail(streamError('EMPTY_RESPONSE', '模型没有返回内容'));
+            return;
+          }
+
+          const decoder = new TextDecoder();
+          let buffer = '';
+          let plainText = '';
+          let upstreamDone = false;
+
+          const consumeFrame = (frame) => {
+            if (!frame) return null;
+            if (frame.error) return { error: frame.error };
+            if (frame.done) {
+              upstreamDone = true;
+              return null;
+            }
+            const part = upstreamTextPart(frame, mode);
+            if (!part) return null;
+            const appended = appendStreamText(output, part.text, part.cumulative);
+            output = appended.text;
+            if (output.length > streamLimit) {
+              return { error: streamError('STREAM_PROTOCOL_ERROR', '模型返回内容过长') };
+            }
+            return appended.delta ? { delta: appended.delta } : null;
+          };
+
+          while (!upstreamDone) {
+            const chunk = await upstreamReader.read();
+            if (chunk.done) break;
+            resetTimer();
+            const decoded = decoder.decode(chunk.value, { stream: true });
+            if (!isEventStream) {
+              plainText += decoded;
+              if (plainText.length > streamLimit) {
+                yield fail(streamError('STREAM_PROTOCOL_ERROR', '模型返回内容过长'));
+                return;
+              }
+              continue;
+            }
+
+            buffer += decoded;
+            if (buffer.length > streamLimit) {
+              yield fail(streamError('STREAM_PROTOCOL_ERROR', '模型返回内容过长'));
+              return;
+            }
+            const frames = buffer.split(/\r?\n\r?\n/);
+            buffer = frames.pop() || '';
+            for (const rawFrame of frames) {
+              const consumed = consumeFrame(parseUpstreamSseFrame(rawFrame));
+              if (consumed?.error) {
+                await upstreamReader.cancel().catch(() => {});
+                yield fail(consumed.error);
+                return;
+              }
+              if (consumed?.delta) yield { event: 'delta', data: { text: consumed.delta } };
+            }
+          }
+
+          plainText += decoder.decode();
+          if (isEventStream && buffer.trim() && !upstreamDone) {
+            const consumed = consumeFrame(parseUpstreamSseFrame(buffer));
+            if (consumed?.error) {
+              yield fail(consumed.error);
+              return;
+            }
+            if (consumed?.delta) yield { event: 'delta', data: { text: consumed.delta } };
+          }
+
+          if (!isEventStream && plainText.trim()) {
+            try {
+              const data = JSON.parse(plainText);
+              const text = parseModelAnswer(data, config);
+              const appended = appendStreamText(output, text, true);
+              output = appended.text;
+              if (appended.delta) yield { event: 'delta', data: { text: appended.delta } };
+            } catch {
+              yield fail(streamError('STREAM_PROTOCOL_ERROR', '上游响应格式异常'));
+              return;
+            }
+          }
+
+          if (!output.trim()) {
+            yield fail(streamError('EMPTY_RESPONSE', '模型没有返回内容'));
+            return;
+          }
+          yield { event: 'done', data: { requestId } };
+        } catch (error) {
+          if (cancelled && !timedOut) return;
+          if (timedOut) {
+            yield fail(streamError('UPSTREAM_TIMEOUT', '模型响应超时'));
+            return;
+          }
+          if (error?.name === 'AbortError') {
+            yield fail(streamError('UPSTREAM_ABORTED', '模型连接意外中断'));
+            return;
+          }
+          yield fail(streamError('INTERNAL_ERROR', 'AI助手暂时不可用'));
+        } finally {
+          stopTimer();
+          controller.abort();
+          await upstreamReader?.cancel().catch(() => {});
+          upstreamReader?.releaseLock();
+          request?.signal?.removeEventListener('abort', abortFromClient);
+          if (!failed && output.trim() && !cancelled) {
+            logAssistant(logger, 'info', 'assistant.request.completed', {
+              requestId,
+              mode,
+              model,
+              durationMs: Date.now() - startedAt,
+              sourceCount: sources.length,
+              outputLength: output.length,
+            });
+          }
+        }
+      }
+
+      return {
+        status: 200,
+        events: events(),
+        cancel() {
+          cancelled = true;
+          controller.abort();
+        },
+      };
+    },
 
     async answer(questionInput, request, historyInput = []) {
       const config = siteConfig.getSiteConfig();

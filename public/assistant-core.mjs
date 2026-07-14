@@ -1,5 +1,46 @@
 const CHAT_ROLES = new Set(['user', 'assistant']);
 
+function parseAssistantSseFrame(frame) {
+  let event = 'message';
+  const dataLines = [];
+
+  String(frame || '').split(/\r?\n/).forEach((line) => {
+    if (line.startsWith('event:')) event = line.slice(6).trim() || 'message';
+    if (line.startsWith('data:')) dataLines.push(line.slice(5).replace(/^ /, ''));
+  });
+
+  const payload = dataLines.join('\n').trim();
+  if (!payload) return null;
+  if (payload === '[DONE]') return { event: 'done', data: {} };
+
+  try {
+    return { event, data: JSON.parse(payload) };
+  } catch {
+    return {
+      event: 'error',
+      data: {
+        code: 'STREAM_PROTOCOL_ERROR',
+        message: '响应格式异常',
+        retryable: true,
+      },
+    };
+  }
+}
+
+export function consumeAssistantSse(buffer = '', chunk = '', { flush = false } = {}) {
+  const source = `${buffer || ''}${chunk || ''}`;
+  const frames = source.split(/\r?\n\r?\n/);
+  let remainder = frames.pop() || '';
+  if (flush && remainder.trim()) {
+    frames.push(remainder);
+    remainder = '';
+  }
+  return {
+    buffer: remainder,
+    events: frames.map(parseAssistantSseFrame).filter(Boolean),
+  };
+}
+
 function escapeHtml(value) {
   return String(value ?? '')
     .replaceAll('&', '&amp;')

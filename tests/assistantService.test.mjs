@@ -32,6 +32,262 @@ function createIsolatedAssistant(dbPath, overrides = {}) {
   return { posts, site, assistant };
 }
 
+async function collectAssistantEvents(result) {
+  const events = [];
+  for await (const event of result.events || []) events.push(event);
+  return events;
+}
+
+test('assistant streams chat completion deltas and requests upstream streaming', async () => {
+  const { site, assistant } = createIsolatedAssistant(tempDbPath());
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url: String(url), body: JSON.parse(options.body) });
+    return new Response([
+      'data: {"choices":[{"delta":{"content":"你"}}]}',
+      '',
+      'data: {"choices":[{"delta":{"content":"好"}}]}',
+      '',
+      'data: [DONE]',
+      '',
+    ].join('\n'), {
+      status: 200,
+      headers: { 'Content-Type': 'text/event-stream' },
+    });
+  };
+
+  try {
+    site.updateSiteConfig({ assistant: {
+      apiBaseUrl: 'https://example.com/v1',
+      apiKey: 'test-key',
+      model: 'test-model',
+      apiMode: 'chat',
+    } });
+    const result = await assistant.streamAnswer('hello', requestWithIp('10.0.1.1'));
+    const events = await collectAssistantEvents(result);
+    assert.equal(result.status, 200);
+    assert.equal(calls[0].body.stream, true);
+    assert.deepEqual(events.filter((event) => event.event === 'delta').map((event) => event.data.text), ['你', '好']);
+    assert.equal(events.at(-1).event, 'done');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('assistant preserves repeated incremental tokens', async () => {
+  const { site, assistant } = createIsolatedAssistant(tempDbPath());
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response([
+    'data: {"choices":[{"delta":{"content":"哈"}}]}',
+    '',
+    'data: {"choices":[{"delta":{"content":"哈"}}]}',
+    '',
+    'data: [DONE]',
+    '',
+  ].join('\n'), { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+
+  try {
+    site.updateSiteConfig({ assistant: { apiKey: 'test-key', apiMode: 'chat' } });
+    const result = await assistant.streamAnswer('hello', requestWithIp('10.0.1.5'));
+    const events = await collectAssistantEvents(result);
+    assert.equal(events.filter((event) => event.event === 'delta').map((event) => event.data.text).join(''), '哈哈');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('assistant cancels the active upstream request without reporting a timeout', async () => {
+  const { site, assistant } = createIsolatedAssistant(tempDbPath());
+  const originalFetch = globalThis.fetch;
+  let upstreamAborted = false;
+  globalThis.fetch = async (_url, options) => new Promise((_resolve, reject) => {
+    options.signal.addEventListener('abort', () => {
+      upstreamAborted = true;
+      reject(new DOMException('aborted', 'AbortError'));
+    }, { once: true });
+  });
+
+  try {
+    site.updateSiteConfig({ assistant: { apiKey: 'test-key', apiMode: 'chat' } });
+    const result = await assistant.streamAnswer('hello', requestWithIp('10.0.1.6'));
+    const iterator = result.events[Symbol.asyncIterator]();
+    await iterator.next();
+    await iterator.next();
+    const pending = iterator.next();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    result.cancel();
+    const terminal = await pending;
+    assert.equal(upstreamAborted, true);
+    assert.equal(terminal.done, true);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('assistant distinguishes an upstream abort from an activity timeout', async () => {
+  const { site, assistant } = createIsolatedAssistant(tempDbPath());
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    throw new DOMException('upstream aborted', 'AbortError');
+  };
+
+  try {
+    site.updateSiteConfig({ assistant: { apiKey: 'test-key', apiMode: 'chat' } });
+    const result = await assistant.streamAnswer('hello', requestWithIp('10.0.1.7'));
+    const events = await collectAssistantEvents(result);
+    assert.equal(events.at(-1).event, 'error');
+    assert.equal(events.at(-1).data.code, 'UPSTREAM_ABORTED');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('assistant accepts the standard text field in responses done events', async () => {
+  const { site, assistant } = createIsolatedAssistant(tempDbPath());
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response([
+    'event: response.output_text.done',
+    'data: {"type":"response.output_text.done","text":"完成"}',
+    '',
+    'data: [DONE]',
+    '',
+  ].join('\n'), { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+
+  try {
+    site.updateSiteConfig({ assistant: { apiKey: 'test-key', apiMode: 'responses' } });
+    const result = await assistant.streamAnswer('hello', requestWithIp('10.0.1.8'));
+    const events = await collectAssistantEvents(result);
+    assert.equal(events.filter((event) => event.event === 'delta').map((event) => event.data.text).join(''), '完成');
+    assert.equal(events.at(-1).event, 'done');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('assistant stops oversized upstream streams', async () => {
+  const { site, assistant } = createIsolatedAssistant(tempDbPath(), { maxStreamChars: 8 });
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response([
+    'data: {"choices":[{"delta":{"content":"123456789"}}]}',
+    '',
+    'data: [DONE]',
+    '',
+  ].join('\n'), { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+
+  try {
+    site.updateSiteConfig({ assistant: { apiKey: 'test-key', apiMode: 'chat' } });
+    const result = await assistant.streamAnswer('hello', requestWithIp('10.0.1.9'));
+    const events = await collectAssistantEvents(result);
+    assert.equal(events.at(-1).event, 'error');
+    assert.equal(events.at(-1).data.code, 'STREAM_PROTOCOL_ERROR');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('assistant streams responses deltas without duplicating the completed text', async () => {
+  const { site, assistant } = createIsolatedAssistant(tempDbPath());
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response([
+    'event: response.output_text.delta',
+    'data: {"type":"response.output_text.delta","delta":"你"}',
+    '',
+    'event: response.output_text.delta',
+    'data: {"type":"response.output_text.delta","delta":"好"}',
+    '',
+    'event: response.completed',
+    'data: {"type":"response.completed","response":{"output_text":"你好"}}',
+    '',
+  ].join('\n'), {
+    status: 200,
+    headers: { 'Content-Type': 'text/event-stream' },
+  });
+
+  try {
+    site.updateSiteConfig({ assistant: {
+      apiBaseUrl: 'https://example.com/v1',
+      apiKey: 'test-key',
+      model: 'test-model',
+      apiMode: 'responses',
+    } });
+    const result = await assistant.streamAnswer('hello', requestWithIp('10.0.1.2'));
+    const events = await collectAssistantEvents(result);
+    assert.equal(events.filter((event) => event.event === 'delta').map((event) => event.data.text).join(''), '你好');
+    assert.equal(events.at(-1).event, 'done');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('assistant reports empty upstream streams with a retryable error code', async () => {
+  const { site, assistant } = createIsolatedAssistant(tempDbPath());
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response('data: [DONE]\n\n', {
+    status: 200,
+    headers: { 'Content-Type': 'text/event-stream' },
+  });
+
+  try {
+    site.updateSiteConfig({ assistant: { apiKey: 'test-key', apiMode: 'chat' } });
+    const result = await assistant.streamAnswer('hello', requestWithIp('10.0.1.3'));
+    const events = await collectAssistantEvents(result);
+    assert.equal(events.at(-1).event, 'error');
+    assert.deepEqual(events.at(-1).data, {
+      requestId: events[0].data.requestId,
+      code: 'EMPTY_RESPONSE',
+      message: '模型没有返回内容',
+      retryable: true,
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('assistant exposes retryable upstream failures while logs stay free of secrets', async () => {
+  const logs = [];
+  const logger = {
+    info: (line) => logs.push(line),
+    error: (line) => logs.push(line),
+  };
+  const { site, assistant } = createIsolatedAssistant(tempDbPath(), { logger });
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response('private upstream body', { status: 503 });
+
+  try {
+    site.updateSiteConfig({ assistant: { apiKey: 'super-secret-key', apiMode: 'chat' } });
+    const result = await assistant.streamAnswer('PRIVATE QUESTION CONTENT', requestWithIp('203.0.113.9'));
+    const events = await collectAssistantEvents(result);
+    assert.equal(events.at(-1).event, 'error');
+    assert.equal(events.at(-1).data.code, 'UPSTREAM_HTTP_ERROR');
+    assert.equal(events.at(-1).data.retryable, true);
+    const serialized = logs.join('\n');
+    assert.doesNotMatch(serialized, /super-secret-key|PRIVATE QUESTION CONTENT|203\.0\.113\.9|private upstream body/);
+    assert.match(serialized, /assistant\.request\.failed/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('assistant aborts an inactive upstream request with a timeout error', async () => {
+  const { site, assistant } = createIsolatedAssistant(tempDbPath(), { timeoutMs: 25 });
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (_url, options) => new Promise((_resolve, reject) => {
+    options.signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')), { once: true });
+  });
+
+  try {
+    site.updateSiteConfig({ assistant: { apiKey: 'test-key', apiMode: 'chat' } });
+    const result = await assistant.streamAnswer('hello', requestWithIp('10.0.1.4'));
+    const events = await collectAssistantEvents(result);
+    assert.equal(events.at(-1).event, 'error');
+    assert.equal(events.at(-1).data.code, 'UPSTREAM_TIMEOUT');
+    assert.equal(events.at(-1).data.retryable, true);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('assistant searches public blog content', () => {
   const { posts, site, assistant } = createIsolatedAssistant(tempDbPath());
 

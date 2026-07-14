@@ -7848,6 +7848,31 @@ button:focus-visible {
   color: rgba(0, 0, 0, 0.48);
 }
 
+.dn-assistant-message-actions {
+  display: flex;
+  margin-top: 8px;
+}
+
+.dn-assistant-retry {
+  min-width: 64px;
+  height: 34px;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  border-radius: 999px;
+  background: transparent;
+  color: #151515;
+  padding: 0 16px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 680;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.dn-assistant-retry:hover {
+  border-color: rgba(0, 0, 0, 0.42);
+  background: rgba(0, 0, 0, 0.045);
+}
+
 .dn-assistant-message-sources {
   display: grid;
   gap: 8px;

@@ -1,4 +1,5 @@
 import {
+  consumeAssistantSse,
   createAssistantSession,
   renderAssistantMarkdown,
   safeAssistantUrl,
@@ -19,6 +20,7 @@ import {
   const input = root.querySelector('[data-assistant-input]');
   const submitButton = root.querySelector('[data-assistant-submit]');
   const session = createAssistantSession({ historyLimit: 12 });
+  const retryRequests = new WeakMap();
   let dragState = null;
   const storageKey = 'dev-notes-assistant-window';
   const minPanelSize = { width: 360, height: 430 };
@@ -204,11 +206,166 @@ import {
       else bubble.textContent = text || '';
     }
     item.querySelector('.dn-assistant-message-sources')?.remove();
+    item.querySelector('.dn-assistant-message-actions')?.remove();
+    retryRequests.delete(item);
     if (options.sources?.length) item.insertAdjacentHTML('beforeend', renderSources(options.sources));
+    if (options.retry) {
+      const actions = document.createElement('div');
+      actions.className = 'dn-assistant-message-actions';
+      const retryButton = document.createElement('button');
+      retryButton.type = 'button';
+      retryButton.className = 'dn-assistant-retry';
+      retryButton.dataset.assistantRetry = 'true';
+      retryButton.textContent = '重试';
+      actions.append(retryButton);
+      item.append(actions);
+      retryRequests.set(item, options.retry);
+    }
     scrollToBottom();
   };
 
+  const errorText = (payload = {}) => {
+    const message = String(payload.message || payload.error || 'AI助手暂时不可用').trim();
+    const code = String(payload.code || 'INTERNAL_ERROR').trim();
+    return `${message}（${code}）`;
+  };
+
+  const runAssistantRequest = async ({
+    question,
+    historySnapshot,
+    assistantMessage,
+  }) => {
+    if (session.isPending()) return;
+    const request = session.beginRequest();
+    setPendingState(true);
+    updateMessage(assistantMessage, '正在连接', { loading: true });
+
+    let answer = '';
+    let sources = [];
+    let completed = false;
+    let streamError = null;
+    let responseReader = null;
+
+    try {
+      const response = await fetch('/api/assistant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, messages: historySnapshot }),
+        signal: request.signal,
+      });
+      if (request.signal.aborted) throw new DOMException('Request aborted', 'AbortError');
+
+      const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+      if (!response.ok || !contentType.includes('text/event-stream')) {
+        const payload = await response.json().catch(() => ({}));
+        streamError = {
+          code: payload.code || (response.status === 429 ? 'RATE_LIMITED' : 'UPSTREAM_HTTP_ERROR'),
+          message: payload.error || `请求失败（HTTP ${response.status}）`,
+          retryable: payload.retryable !== false,
+        };
+      } else if (!response.body) {
+        streamError = {
+          code: 'EMPTY_RESPONSE',
+          message: '模型没有返回内容',
+          retryable: true,
+        };
+      } else {
+        responseReader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        const consumeEvents = (events) => {
+          for (const message of events) {
+            if (message.event === 'sources') {
+              sources = Array.isArray(message.data?.sources) ? message.data.sources : [];
+            } else if (message.event === 'delta') {
+              const delta = String(message.data?.text || '');
+              if (!delta) continue;
+              if (!answer) {
+                assistantMessage.dataset.status = '正在生成';
+                updateMessage(assistantMessage, '正在生成', { loading: true });
+              }
+              answer += delta;
+              updateMessage(assistantMessage, answer, { loading: true });
+            } else if (message.event === 'done') {
+              completed = true;
+            } else if (message.event === 'error') {
+              streamError = {
+                code: message.data?.code || 'INTERNAL_ERROR',
+                message: message.data?.message || 'AI助手暂时不可用',
+                retryable: message.data?.retryable !== false,
+              };
+            }
+          }
+        };
+
+        while (!completed && !streamError) {
+          const chunk = await responseReader.read();
+          if (chunk.done) break;
+          const parsed = consumeAssistantSse(buffer, decoder.decode(chunk.value, { stream: true }));
+          buffer = parsed.buffer;
+          consumeEvents(parsed.events);
+        }
+        const tail = consumeAssistantSse(buffer, decoder.decode(), { flush: true });
+        consumeEvents(tail.events);
+        if (!completed && !streamError) {
+          streamError = {
+            code: answer ? 'STREAM_PROTOCOL_ERROR' : 'EMPTY_RESPONSE',
+            message: answer ? '响应意外中断' : '模型没有返回内容',
+            retryable: true,
+          };
+        }
+      }
+
+      if (streamError) {
+        updateMessage(assistantMessage, errorText(streamError), {
+          error: true,
+          sources,
+          retry: streamError.retryable ? { question, historySnapshot } : null,
+        });
+      } else if (answer.trim()) {
+        updateMessage(assistantMessage, answer, { markdown: true, sources });
+        session.completeTurn(question, answer);
+      } else {
+        const empty = { code: 'EMPTY_RESPONSE', message: '模型没有返回内容', retryable: true };
+        updateMessage(assistantMessage, errorText(empty), {
+          error: true,
+          sources,
+          retry: { question, historySnapshot },
+        });
+      }
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        if (assistantMessage.isConnected) {
+          updateMessage(assistantMessage, '已停止生成', { cancelled: true });
+        }
+      } else {
+        const failure = { code: 'NETWORK_ERROR', message: '暂时无法连接AI助手', retryable: true };
+        updateMessage(assistantMessage, errorText(failure), {
+          error: true,
+          retry: { question, historySnapshot },
+        });
+      }
+    } finally {
+      await responseReader?.cancel().catch(() => {});
+      responseReader?.releaseLock();
+      delete assistantMessage.dataset.status;
+      if (session.finishRequest(request)) setPendingState(false);
+      updateClearState();
+      if (!session.isPending()) input?.focus();
+    }
+  };
+
+  const clearMessageRetries = () => {
+    chatEl.querySelectorAll('.dn-assistant-message-actions').forEach((actions) => {
+      const message = actions.closest('.dn-assistant-message-assistant');
+      if (message) retryRequests.delete(message);
+      actions.remove();
+    });
+  };
+
   const clearConversation = () => {
+    session.cancel();
     session.clear();
     setPendingState(false);
     chatEl.replaceChildren();
@@ -220,6 +377,18 @@ import {
   openButton?.addEventListener('click', () => setOpen(true));
   closeButton?.addEventListener('click', () => setOpen(false));
   clearButton?.addEventListener('click', clearConversation);
+  chatEl.addEventListener('click', (event) => {
+    const retryButton = event.target.closest('[data-assistant-retry]');
+    if (!retryButton || session.isPending()) return;
+    const assistantMessage = retryButton.closest('.dn-assistant-message-assistant');
+    const retry = assistantMessage ? retryRequests.get(assistantMessage) : null;
+    if (!retry) return;
+    runAssistantRequest({
+      question: retry.question,
+      historySnapshot: retry.historySnapshot,
+      assistantMessage,
+    });
+  });
 
   dragHandle?.addEventListener('pointerdown', (event) => {
     if (!panel || compactViewport.matches || event.target.closest('button')) return;
@@ -293,49 +462,15 @@ import {
       return;
     }
 
-    const history = session.history();
-    const request = session.beginRequest();
+    const historySnapshot = session.history();
     input.value = '';
-    setPendingState(true);
+    clearMessageRetries();
     appendMessage('user', question);
-    const assistantMessage = appendMessage('assistant', '正在思考...', { loading: true });
-
-    try {
-      const response = await fetch('/api/assistant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, messages: history }),
-        signal: request.signal,
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (request.signal.aborted) throw new DOMException('Request aborted', 'AbortError');
-
-      const answer = String(payload.answer || '').trim();
-      const failed = Boolean(payload.refused || payload.error || !response.ok || !answer);
-      if (failed) {
-        updateMessage(assistantMessage, answer || payload.error || '没有得到可用回答。', {
-          error: true,
-          sources: payload.sources,
-        });
-      } else {
-        updateMessage(assistantMessage, answer, {
-          markdown: true,
-          sources: payload.sources,
-        });
-        session.completeTurn(question, answer);
-      }
-    } catch (error) {
-      if (error?.name === 'AbortError') {
-        if (assistantMessage.isConnected) {
-          updateMessage(assistantMessage, '已停止生成', { cancelled: true });
-        }
-      } else {
-        updateMessage(assistantMessage, '暂时无法连接AI助手。', { error: true });
-      }
-    } finally {
-      if (session.finishRequest(request)) setPendingState(false);
-      updateClearState();
-      if (!session.isPending()) input.focus();
-    }
+    const assistantMessage = appendMessage('assistant', '正在连接', { loading: true });
+    await runAssistantRequest({
+      question,
+      historySnapshot,
+      assistantMessage,
+    });
   });
 })();
