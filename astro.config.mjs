@@ -6,7 +6,8 @@ export default defineConfig({
   output: 'server',
   security: {
     allowedDomains: [
-      { protocol: 'https', hostname: 'blog.kards.asia' },
+      { protocol: 'https', hostname: 'lajiyuming.tech' },
+      { protocol: 'https', hostname: 'blog.lajiyuming.tech' },
     ],
   },
   devToolbar: {
