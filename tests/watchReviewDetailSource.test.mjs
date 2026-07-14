@@ -15,6 +15,9 @@ test('watch detail page renders a markdown review from an existing archive item'
   assert.match(page, /href="\/#watch"/);
   assert.match(page, /item\.quote &&/);
   assert.match(page, /item\.comment &&/);
+  assert.match(page, /srcset=\{/);
+  assert.match(page, /item\.image_small_path/);
+  assert.match(page, /sizes=/);
   assert.match(page, /set:html=\{review\.html\}/);
   assert.doesNotMatch(page, /暂无影评|等待补充/);
   assert.match(styles, /\.watch-review-shell\s*\{/);

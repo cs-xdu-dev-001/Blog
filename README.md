@@ -126,14 +126,22 @@ tar -czf blog-data-backup.tgz data public/uploads
 npm run posts:import
 ```
 
-影像和阅读数据主要通过管理端维护。封面图片建议用条目标题命名，后续查找和替换会更省事。
+影像和阅读数据主要通过管理端维护。封面图片建议用条目标题命名，后续查找和替换会更省事。管理端上传图片时会保留原图，并生成480px和960px两张WebP缩略图；前台优先使用缩略图，降低移动端加载压力。
+
+历史图片补齐缩略图：
+
+```bash
+npm run images:backfill
+```
+
+脚本会扫描SQLite里的影像和阅读图片，给已有原图补生成480px和960px WebP，并回写数据库；已经补齐的条目会跳过。
 
 ## 测试
 
 当前主要测试命令：
 
 ```bash
-node --test tests/siteConfigRepository.test.mjs tests/postRepository.test.mjs
+node --test
 ```
 
 也可以运行单项文章仓库测试：

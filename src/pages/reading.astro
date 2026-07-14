@@ -36,7 +36,7 @@ const groupMeta = [
             <a
               class={`reading-book-card ${book.cover ? 'has-cover' : ''}`}
               href={`/reading/${book.slug}`}
-              style={`--book-spine: ${book.spineColor}; --book-accent: ${book.accentColor}; --book-index: ${index}; ${book.cover ? `--book-cover-image: url('${book.cover}');` : ''}`}
+              style={`--book-spine: ${book.spineColor}; --book-accent: ${book.accentColor}; --book-index: ${index}; ${book.cover ? `--book-cover-image: url('${book.coverSmall || book.cover}');` : ''}`}
             >
               <div class="reading-book-visual" aria-hidden="true">
                 <span>{book.statusLabel}</span>

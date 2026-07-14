@@ -34,6 +34,9 @@ const compactWatchItem = (item) => ({
   status: item.status,
   rating: item.rating,
   image: item.image,
+  imageSmall: item.imageSmall,
+  imageWidth: item.imageWidth,
+  imageHeight: item.imageHeight,
   line: item.line,
   lineSource: item.lineSource,
   href: item.href,
@@ -384,9 +387,14 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
             {watchArchive.activity.watching.image && (
               <img
                 class="qzq-watch-activity-poster"
-                src={watchArchive.activity.watching.image}
+                src={watchArchive.activity.watching.imageSmall || watchArchive.activity.watching.image}
+                srcset={watchArchive.activity.watching.imageSmall ? `${watchArchive.activity.watching.imageSmall} 480w, ${watchArchive.activity.watching.image} 960w` : undefined}
+                sizes="(max-width: 760px) 88vw, 460px"
+                width={watchArchive.activity.watching.imageWidth || 960}
+                height={watchArchive.activity.watching.imageHeight || 640}
                 alt=""
                 loading="lazy"
+                decoding="async"
                 data-depth-poster
               />
             )}
@@ -415,9 +423,14 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
             {watchArchive.activity.finished.image && (
               <img
                 class="qzq-watch-activity-poster"
-                src={watchArchive.activity.finished.image}
+                src={watchArchive.activity.finished.imageSmall || watchArchive.activity.finished.image}
+                srcset={watchArchive.activity.finished.imageSmall ? `${watchArchive.activity.finished.imageSmall} 480w, ${watchArchive.activity.finished.image} 960w` : undefined}
+                sizes="(max-width: 760px) 88vw, 460px"
+                width={watchArchive.activity.finished.imageWidth || 960}
+                height={watchArchive.activity.finished.imageHeight || 640}
                 alt=""
                 loading="lazy"
+                decoding="async"
                 data-depth-poster
               />
             )}
@@ -452,7 +465,9 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
                 {item.image ? (
                   <img
                     class="qzq-work-image qzq-work-photo"
-                    src={item.image}
+                    src={item.imageSmall || item.image}
+                    srcset={item.imageSmall ? `${item.imageSmall} 480w, ${item.image} 960w` : undefined}
+                    sizes="(max-width: 760px) 78vw, 360px"
                     alt={`${item.title}配图`}
                     width="600"
                     height="394"
@@ -496,7 +511,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
               class={`qzq-book ${book.cover ? 'has-cover' : ''} ${index === 0 ? 'is-active' : ''}`}
               data-reading-book
               data-href={`/reading/${book.slug}`}
-              style={`--book-spine: ${book.spineColor}; --book-accent: ${book.accentColor}; --book-index: ${index}; ${book.cover ? `--book-cover-image: url('${book.cover}');` : ''}`}
+              style={`--book-spine: ${book.spineColor}; --book-accent: ${book.accentColor}; --book-index: ${index}; ${book.cover ? `--book-cover-image: url('${book.coverSmall || book.cover}');` : ''}`}
               tabindex={index < readingShelf.length ? '0' : '-1'}
               aria-hidden={index >= readingShelf.length ? 'true' : 'false'}
             >
@@ -845,7 +860,11 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
       if (item.image) {
         const image = document.createElement('img');
         image.className = 'qzq-work-image qzq-work-photo';
-        image.src = item.image;
+        image.src = item.imageSmall || item.image;
+        if (item.imageSmall) {
+          image.srcset = `${item.imageSmall} 480w, ${item.image} 960w`;
+          image.sizes = '(max-width: 760px) 78vw, 360px';
+        }
         image.alt = `${item.title || '影像'}配图`;
         image.width = 600;
         image.height = 394;

@@ -49,7 +49,7 @@ function readingResult(item) {
     title: item.title,
     meta: [item.author, item.status_label || item.statusLabel || item.status].filter(Boolean).join(' · '),
     excerpt: cleanText(item.summary || item.quote || item.review),
-    image: item.image_path || item.cover || '',
+    image: item.image_small_path || item.image_path || item.coverSmall || item.cover || '',
     href: `/reading/${item.slug}`,
   };
 }
@@ -61,7 +61,7 @@ function watchResult(item) {
     title: item.title,
     meta: [item.type, item.status, item.rating ? `${item.rating}分` : ''].filter(Boolean).join(' · '),
     excerpt: cleanText(item.quote || item.comment),
-    image: item.image_path || item.image || '',
+    image: item.image_small_path || item.image_path || item.imageSmall || item.image || '',
     href: `/watch/${item.id}`,
   };
 }

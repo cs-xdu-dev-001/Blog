@@ -15,6 +15,9 @@ if (!item) {
 
 const review = markdownToHtml(item.comment || '');
 const archiveNumber = String(item.id).padStart(3, '0');
+const posterSrcset = item.image_small_path
+  ? `${item.image_small_path} 480w, ${item.image_path} 960w`
+  : undefined;
 ---
 
 <BaseLayout title={`${item.title} | Dev Notes`} description={`${item.title}的个人影评与影像档案`}>
@@ -24,7 +27,17 @@ const archiveNumber = String(item.id).padStart(3, '0');
     <article class="watch-review-paper">
       <header class="watch-review-header">
         <figure class={`watch-review-poster ${item.image_path ? 'has-image' : ''}`}>
-          {item.image_path ? <img src={item.image_path} alt={`${item.title}封面`} /> : <span aria-hidden="true"></span>}
+          {item.image_path ? (
+            <img
+              src={item.image_path}
+              srcset={posterSrcset}
+              sizes="(max-width: 760px) 88vw, 420px"
+              width={item.image_width || 960}
+              height={item.image_height || 640}
+              decoding="async"
+              alt={`${item.title}封面`}
+            />
+          ) : <span aria-hidden="true"></span>}
         </figure>
 
         <div class="watch-review-identity">

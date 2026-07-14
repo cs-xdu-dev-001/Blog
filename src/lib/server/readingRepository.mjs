@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { initializeSchema, openDatabase } from './db.mjs';
+import { safeImageBaseName, saveImageVariants } from './imageVariants.mjs';
 
 const allowedFilters = new Set([
   'all',
@@ -29,11 +30,7 @@ function slugify(value) {
 }
 
 export function safeReadingImageBaseName(title) {
-  return title
-    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '_')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 120) || 'reading-cover';
+  return safeImageBaseName(title, 'reading-cover');
 }
 
 export function createReadingRepository({ dbPath, uploadDir } = {}) {
@@ -255,17 +252,27 @@ export function createReadingRepository({ dbPath, uploadDir } = {}) {
       return result.changes > 0;
     },
 
-    saveImage(id, { originalName, buffer }) {
+    async saveImage(id, { originalName, buffer }) {
       initialize();
       const item = this.get(id);
       if (!item) return null;
-      const ext = path.extname(originalName).toLowerCase();
-      const safeExt = ['.jpg', '.jpeg', '.png', '.webp', '.avif'].includes(ext) ? ext : '.jpg';
-      const fileName = `${safeReadingImageBaseName(item.title)}${safeExt}`;
-      fs.mkdirSync(finalUploadDir, { recursive: true });
-      fs.writeFileSync(path.join(finalUploadDir, fileName), buffer);
-      const publicPath = `/uploads/reading/${encodeURIComponent(fileName).replaceAll('%2F', '/')}`;
-      db.prepare('UPDATE reading_items SET image_path = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(publicPath, id);
+      const variants = await saveImageVariants({
+        baseName: safeReadingImageBaseName(item.title),
+        originalName,
+        buffer,
+        uploadDir: finalUploadDir,
+        publicBase: '/uploads/reading',
+      });
+      db.prepare(`
+        UPDATE reading_items SET
+          image_path = @imagePath,
+          image_small_path = @smallPath,
+          image_original_path = @originalPath,
+          image_width = @width,
+          image_height = @height,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = @id
+      `).run({ id, ...variants });
       return this.get(id);
     },
   };

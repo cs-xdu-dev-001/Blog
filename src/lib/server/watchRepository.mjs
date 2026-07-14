@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { initializeSchema, openDatabase } from './db.mjs';
+import { safeImageBaseName as safeUploadImageBaseName, saveImageVariants } from './imageVariants.mjs';
 
 const allowedFilters = new Set([
   'all',
@@ -15,11 +16,7 @@ const allowedFilters = new Set([
 ]);
 
 export function safeImageBaseName(title) {
-  return title
-    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '_')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 120) || 'watch-image';
+  return safeUploadImageBaseName(title, 'watch-image');
 }
 
 export function createWatchRepository({ dbPath, uploadDir } = {}) {
@@ -198,17 +195,27 @@ export function createWatchRepository({ dbPath, uploadDir } = {}) {
       return result.changes > 0;
     },
 
-    saveImage(id, { originalName, buffer }) {
+    async saveImage(id, { originalName, buffer }) {
       initialize();
       const item = this.get(id);
       if (!item) return null;
-      const ext = path.extname(originalName).toLowerCase();
-      const safeExt = ['.jpg', '.jpeg', '.png', '.webp', '.avif'].includes(ext) ? ext : '.jpg';
-      const fileName = `${safeImageBaseName(item.title)}${safeExt}`;
-      fs.mkdirSync(finalUploadDir, { recursive: true });
-      fs.writeFileSync(path.join(finalUploadDir, fileName), buffer);
-      const publicPath = `/uploads/watch/${encodeURIComponent(fileName).replaceAll('%2F', '/')}`;
-      db.prepare("UPDATE watch_items SET image_path = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(publicPath, id);
+      const variants = await saveImageVariants({
+        baseName: safeImageBaseName(item.title),
+        originalName,
+        buffer,
+        uploadDir: finalUploadDir,
+        publicBase: '/uploads/watch',
+      });
+      db.prepare(`
+        UPDATE watch_items SET
+          image_path = @imagePath,
+          image_small_path = @smallPath,
+          image_original_path = @originalPath,
+          image_width = @width,
+          image_height = @height,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = @id
+      `).run({ id, ...variants });
       return this.get(id);
     },
   };

@@ -32,6 +32,10 @@ export function initializeSchema(db) {
       quote TEXT NOT NULL DEFAULT '',
       quote_source TEXT NOT NULL DEFAULT '',
       image_path TEXT NOT NULL DEFAULT '',
+      image_small_path TEXT NOT NULL DEFAULT '',
+      image_original_path TEXT NOT NULL DEFAULT '',
+      image_width INTEGER NOT NULL DEFAULT 0,
+      image_height INTEGER NOT NULL DEFAULT 0,
       is_featured INTEGER NOT NULL DEFAULT 0,
       progress_text TEXT NOT NULL DEFAULT '',
       completed_at TEXT NOT NULL DEFAULT '',
@@ -54,6 +58,10 @@ export function initializeSchema(db) {
       spine_color TEXT NOT NULL DEFAULT '#263548',
       accent_color TEXT NOT NULL DEFAULT '#ff9138',
       image_path TEXT NOT NULL DEFAULT '',
+      image_small_path TEXT NOT NULL DEFAULT '',
+      image_original_path TEXT NOT NULL DEFAULT '',
+      image_width INTEGER NOT NULL DEFAULT 0,
+      image_height INTEGER NOT NULL DEFAULT 0,
       is_featured INTEGER NOT NULL DEFAULT 0,
       sort_order INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -128,4 +136,12 @@ export function initializeSchema(db) {
   ensureColumn(db, 'watch_items', 'progress_text', "TEXT NOT NULL DEFAULT ''");
   ensureColumn(db, 'watch_items', 'completed_at', "TEXT NOT NULL DEFAULT ''");
   ensureColumn(db, 'watch_items', 'is_activity_featured', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn(db, 'watch_items', 'image_small_path', "TEXT NOT NULL DEFAULT ''");
+  ensureColumn(db, 'watch_items', 'image_original_path', "TEXT NOT NULL DEFAULT ''");
+  ensureColumn(db, 'watch_items', 'image_width', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn(db, 'watch_items', 'image_height', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn(db, 'reading_items', 'image_small_path', "TEXT NOT NULL DEFAULT ''");
+  ensureColumn(db, 'reading_items', 'image_original_path', "TEXT NOT NULL DEFAULT ''");
+  ensureColumn(db, 'reading_items', 'image_width', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn(db, 'reading_items', 'image_height', 'INTEGER NOT NULL DEFAULT 0');
 }

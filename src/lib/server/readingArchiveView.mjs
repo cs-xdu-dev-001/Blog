@@ -16,6 +16,10 @@ function fromDb(row) {
     quote: row.quote,
     review: row.review,
     cover: row.image_path || '',
+    coverSmall: row.image_small_path || row.image_path || '',
+    coverOriginal: row.image_original_path || row.image_path || '',
+    coverWidth: Number(row.image_width || 0),
+    coverHeight: Number(row.image_height || 0),
   };
 }
 

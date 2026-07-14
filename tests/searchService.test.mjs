@@ -19,12 +19,12 @@ function createService() {
     })),
   ];
   const readingItems = [
-    { id: 1, slug: 'wave-top', title: '浪潮之巅', author: '吴军', status: 'reading', status_label: '在读', summary: '科技产业史', quote: '', review: 'AI产业变化', image_path: '/reading/wave.jpg' },
+    { id: 1, slug: 'wave-top', title: '浪潮之巅', author: '吴军', status: 'reading', status_label: '在读', summary: '科技产业史', quote: '', review: 'AI产业变化', image_path: '/reading/wave-960.webp', image_small_path: '/reading/wave-480.webp' },
     { id: 2, slug: 'three-body', title: '三体', author: '刘慈欣', status: 'read', status_label: '已读', summary: '科幻小说', quote: '', review: '', image_path: '' },
   ];
   const watchItems = [
-    { id: 1, title: '主角', type: '剧集', status: '已看', rating: '4.5', quote: '台上繁华', comment: '人物命运', image_path: '/watch/protagonist.jpg', is_activity_featured: 1 },
-    { id: 2, title: '大江大河', type: '剧集', status: '在看', rating: '', quote: '', comment: '改革叙事', image_path: '/watch/river.jpg', is_activity_featured: 1 },
+    { id: 1, title: '主角', type: '剧集', status: '已看', rating: '4.5', quote: '台上繁华', comment: '人物命运', image_path: '/watch/protagonist-960.webp', image_small_path: '/watch/protagonist-480.webp', is_activity_featured: 1 },
+    { id: 2, title: '大江大河', type: '剧集', status: '在看', rating: '', quote: '', comment: '改革叙事', image_path: '/watch/river-960.webp', image_small_path: '/watch/river-480.webp', is_activity_featured: 1 },
   ];
 
   return createSearchService({
@@ -44,7 +44,9 @@ test('search service groups public posts, reading, watch, and expandable tags', 
 
   assert.deepEqual(result.groups.map((group) => group.key), ['posts', 'reading', 'watch', 'tags']);
   assert.equal(result.groups.find((group) => group.key === 'posts').items[0].href, '/posts/ai-note');
-  assert.equal(result.groups.find((group) => group.key === 'reading').items[0].href, '/reading/wave-top');
+  const reading = result.groups.find((group) => group.key === 'reading').items[0];
+  assert.equal(reading.href, '/reading/wave-top');
+  assert.equal(reading.image, '/reading/wave-480.webp');
   const tag = result.groups.find((group) => group.key === 'tags').items[0];
   assert.equal(tag.title, 'AI Knowledge');
   assert.equal(tag.children.length, 2);
@@ -66,5 +68,6 @@ test('search service matches watch metadata and caps each result group', () => {
   const posts = service.search('自动化').groups.find((group) => group.key === 'posts');
 
   assert.deepEqual(watch.items.map((item) => item.title), ['主角', '大江大河']);
+  assert.equal(watch.items[0].image, '/watch/protagonist-480.webp');
   assert.equal(posts.items.length, 6);
 });

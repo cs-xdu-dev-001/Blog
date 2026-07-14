@@ -11,6 +11,7 @@
     "preview": "astro preview",
     "start": "node ./dist/server/entry.mjs",
     "db:init": "node scripts/init-watch-db.mjs",
+    "images:backfill": "node scripts/backfill-image-variants.mjs",
     "posts:import": "node scripts/import-posts.mjs",
     "test:posts": "node --test tests/postRepository.test.mjs",
     "astro": "astro"
@@ -25,6 +26,7 @@
     "@tailwindcss/typography": "^0.5.20",
     "astro": "^5.18.2",
     "better-sqlite3": "^12.11.1",
+    "sharp": "^0.35.3",
     "tailwindcss": "^3.4.19",
     "typescript": "^6.0.3",
     "undici": "^7.28.0"

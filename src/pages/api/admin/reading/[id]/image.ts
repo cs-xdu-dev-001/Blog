@@ -18,7 +18,7 @@ export const POST: APIRoute = async (context) => {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const updated = readingRepository.saveImage(id, { originalName: file.name, buffer });
+  const updated = await readingRepository.saveImage(id, { originalName: file.name, buffer });
   if (!updated) return new Response('Not found', { status: 404 });
 
   return Response.json({ item: updated, stats: readingRepository.stats() });

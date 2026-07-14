@@ -4,6 +4,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { createReadingRepository, safeReadingImageBaseName } from '../src/lib/server/readingRepository.mjs';
 
+const tinyPng = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAGUlEQVR4nGP8z8DAwMDAxMDAwMDAAAANHQEDK+mmyQAAAABJRU5ErkJggg==',
+  'base64',
+);
+
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'reading-repo-'));
 const dbPath = path.join(tmp, 'reading.sqlite');
 const uploadDir = path.join(tmp, 'uploads');
@@ -71,11 +76,15 @@ assert.equal(updated.status, 'read');
 assert.equal(updated.review, '这是一段由管理端保存的书评内容，用来验证前台可以读取。');
 assert.equal(updated.is_featured, 1);
 
-const imageUpdated = repo.saveImage(item.id, {
-  originalName: 'cover.webp',
-  buffer: Buffer.from('fake-image'),
+const imageUpdated = await repo.saveImage(item.id, {
+  originalName: 'cover.png',
+  buffer: tinyPng,
 });
 
-assert.equal(imageUpdated.image_path, '/uploads/reading/%E5%8C%97%E5%B9%B3%E6%97%A0%E6%88%98%E4%BA%8B.webp');
-assert.ok(fs.existsSync(path.join(uploadDir, '北平无战事.webp')));
+assert.equal(imageUpdated.image_path, '/uploads/reading/%E5%8C%97%E5%B9%B3%E6%97%A0%E6%88%98%E4%BA%8B-960.webp');
+assert.equal(imageUpdated.image_small_path, '/uploads/reading/%E5%8C%97%E5%B9%B3%E6%97%A0%E6%88%98%E4%BA%8B-480.webp');
+assert.equal(imageUpdated.image_original_path, '/uploads/reading/original/%E5%8C%97%E5%B9%B3%E6%97%A0%E6%88%98%E4%BA%8B.png');
+assert.ok(fs.existsSync(path.join(uploadDir, '北平无战事-960.webp')));
+assert.ok(fs.existsSync(path.join(uploadDir, '北平无战事-480.webp')));
+assert.ok(fs.existsSync(path.join(uploadDir, 'original', '北平无战事.png')));
 assert.equal(safeReadingImageBaseName('六经责我开生面——刘和平谈艺录'), '六经责我开生面——刘和平谈艺录');
