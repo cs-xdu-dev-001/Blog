@@ -3,6 +3,7 @@ import node from '@astrojs/node';
 import tailwind from '@astrojs/tailwind';
 
 export default defineConfig({
+  site: 'https://blog.lajiyuming.tech',
   output: 'server',
   security: {
     allowedDomains: [

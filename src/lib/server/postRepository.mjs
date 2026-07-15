@@ -117,15 +117,55 @@ export function createPostRepository({ dbPath } = {}) {
   function setPostTopics(postId, topicSlugs = []) {
     const slugs = normalizeTopicSlugs(topicSlugs);
     const tx = db.transaction((items) => {
+      const existingOrders = new Map(db.prepare(`
+        SELECT topic_slug, sort_order
+        FROM post_topic_links
+        WHERE post_id = ?
+      `).all(postId).map((row) => [row.topic_slug, Number(row.sort_order || 0)]));
       db.prepare('DELETE FROM post_topic_links WHERE post_id = ?').run(postId);
       const stmt = db.prepare(`
-        INSERT OR IGNORE INTO post_topic_links (post_id, topic_slug)
-        VALUES (@postId, @topicSlug)
+        INSERT OR IGNORE INTO post_topic_links (post_id, topic_slug, sort_order)
+        VALUES (@postId, @topicSlug, @sortOrder)
       `);
-      items.forEach((topicSlug) => stmt.run({ postId, topicSlug }));
+      const maxOrder = db.prepare(`
+        SELECT COALESCE(MAX(sort_order), 0) AS value
+        FROM post_topic_links
+        WHERE topic_slug = ?
+      `);
+      items.forEach((topicSlug) => {
+        const currentMax = Number(maxOrder.get(topicSlug).value || 0);
+        const sortOrder = existingOrders.has(topicSlug)
+          ? existingOrders.get(topicSlug)
+          : currentMax > 0 ? currentMax + 10 : 0;
+        stmt.run({ postId, topicSlug, sortOrder });
+      });
     });
     tx(slugs);
     return slugs;
+  }
+
+  function setTopicPostOrder(topicSlug, postIds = []) {
+    const slug = normalizeTopicSlugs([topicSlug])[0];
+    if (!slug) throw new Error('topic slug is required');
+    const ids = [...new Set((Array.isArray(postIds) ? postIds : [])
+      .map((value) => Number(value))
+      .filter((value) => Number.isInteger(value) && value > 0))];
+    const exists = db.prepare('SELECT id FROM blog_posts WHERE id = ?');
+    const validIds = ids.filter((id) => Boolean(exists.get(id)));
+    const tx = db.transaction((orderedIds) => {
+      db.prepare('DELETE FROM post_topic_links WHERE topic_slug = ?').run(slug);
+      const insert = db.prepare(`
+        INSERT INTO post_topic_links (post_id, topic_slug, sort_order)
+        VALUES (@postId, @topicSlug, @sortOrder)
+      `);
+      orderedIds.forEach((postId, index) => insert.run({
+        postId,
+        topicSlug: slug,
+        sortOrder: (index + 1) * 10,
+      }));
+    });
+    tx(validIds);
+    return validIds;
   }
 
   return {
@@ -251,11 +291,13 @@ export function createPostRepository({ dbPath } = {}) {
         SELECT p.* FROM blog_posts p
         ${normalizedTopicSlug ? 'JOIN post_topic_links pt ON pt.post_id = p.id' : ''}
         ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
-        ORDER BY p.date DESC, p.id DESC
+        ORDER BY ${normalizedTopicSlug ? 'pt.sort_order ASC, p.date DESC, p.id DESC' : 'p.date DESC, p.id DESC'}
         LIMIT @limit
       `).all(params).map(normalizeWithTopics);
       return { items, stats: this.stats() };
     },
+
+    setTopicPostOrder,
 
     stats() {
       initialize();

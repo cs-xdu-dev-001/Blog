@@ -40,5 +40,45 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   </div>
   <div class="topic-admin-board" data-topic-list></div>
 
+  <dialog class="topic-post-drawer" data-topic-post-drawer aria-labelledby="topic-post-drawer-title">
+    <div class="topic-post-drawer-shell">
+      <header class="topic-post-drawer-head">
+        <div>
+          <span>主线笔记</span>
+          <h2 id="topic-post-drawer-title" data-topic-post-title>关联笔记</h2>
+        </div>
+        <button type="button" data-topic-post-close aria-label="关闭关联管理" title="关闭">×</button>
+      </header>
+
+      <div class="topic-post-drawer-state">
+        <span data-topic-post-count>0篇</span>
+        <strong data-topic-post-status>READY</strong>
+      </div>
+
+      <div class="topic-post-workspace">
+        <section class="topic-post-column topic-post-linked-column">
+          <header>
+            <strong>已关联</strong>
+            <span>拖动排序</span>
+          </header>
+          <div class="topic-post-list" data-topic-post-linked></div>
+        </section>
+
+        <section class="topic-post-column topic-post-available-column">
+          <header>
+            <strong>全部笔记</strong>
+            <input type="search" placeholder="搜索标题、分类或摘要" data-topic-post-search />
+          </header>
+          <div class="topic-post-list" data-topic-post-available></div>
+        </section>
+      </div>
+
+      <footer class="topic-post-drawer-actions">
+        <button type="button" data-topic-post-close>取消</button>
+        <button type="button" class="cms-primary-action" data-topic-post-save>保存关联</button>
+      </footer>
+    </div>
+  </dialog>
+
   <script is:inline src="/admin-topics.js"></script>
 </AdminLayout>

@@ -20,7 +20,14 @@ const posterSrcset = item.image_small_path
   : undefined;
 ---
 
-<BaseLayout title={`${item.title} | Dev Notes`} description={`${item.title}的个人影评与影像档案`}>
+<BaseLayout
+  title={`${item.title} | Dev Notes`}
+  description={`${item.title}的个人影评与影像档案`}
+  type="article"
+  image={item.image_path || undefined}
+  imageWidth={item.image_width || undefined}
+  imageHeight={item.image_height || undefined}
+>
   <main class="watch-review-shell">
     <a class="watch-review-back" href="/#watch">返回影像档案</a>
 

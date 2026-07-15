@@ -4,6 +4,8 @@ import { test } from 'node:test';
 
 const styles = fs.readFileSync(new URL('../src/styles/global.css', import.meta.url), 'utf8');
 const header = fs.readFileSync(new URL('../src/components/Header.astro', import.meta.url), 'utf8');
+const writingPage = fs.readFileSync(new URL('../src/pages/writing.astro', import.meta.url), 'utf8');
+const articleLayout = fs.readFileSync(new URL('../src/layouts/ArticleLayout.astro', import.meta.url), 'utf8');
 
 test('shared public header stays readable and hands off to content without oversized gaps', () => {
   assert.doesNotMatch(header, /\bmb-24\b/);
@@ -11,13 +13,24 @@ test('shared public header stays readable and hands off to content without overs
   assert.match(styles, /\.site-header\s*\{[^}]*margin-bottom:\s*32px[^}]*font-size:\s*16px/);
   assert.match(styles, /\.topic-page\s*\{[^}]*padding:\s*24px 0 112px/);
   assert.match(styles, /\.topic-page-heading\s*\{[^}]*margin-top:\s*36px/);
-  assert.match(styles, /\.writing-hero\s*\{[^}]*margin:\s*56px 0 72px/);
+  assert.match(styles, /\.writing-hero\s*\{[^}]*padding:\s*24px 0 34px/);
+});
+
+test('writing index and article pages use compact editorial headings', () => {
+  assert.match(writingPage, /writing-heading/);
+  assert.match(writingPage, /writing-index-head/);
+  assert.match(writingPage, /writing-row-main/);
+  assert.match(writingPage, /writing-row-arrow/);
+  assert.doesNotMatch(writingPage, /writing-hero-label/);
+  assert.doesNotMatch(articleLayout, /post-kicker/);
+  assert.match(styles, /\.writing-heading h1\s*\{[^}]*font-size:\s*clamp\(40px, 3\.5vw, 52px\)/);
+  assert.match(styles, /\.post-header h1\s*\{[^}]*font-size:\s*clamp\(40px, 4\.5vw, 56px\)/);
 });
 
 test('public pages define tablet and mobile reflow contracts', () => {
   assert.match(styles, /@media\s*\(max-width:\s*900px\)[\s\S]*\.qzq-nav/);
   assert.match(styles, /@media\s*\(max-width:\s*900px\)[\s\S]*\.qzq-socials\s*\{[^}]*display:\s*flex/);
-  assert.match(styles, /@media\s*\(max-width:\s*900px\)[\s\S]*\.writing-row\s*\{[^}]*grid-template-columns:\s*40px minmax\(0, 1fr\)/);
+  assert.match(styles, /@media\s*\(max-width:\s*900px\)[\s\S]*\.writing-row\s*\{[^}]*grid-template-columns:\s*34px minmax\(0, 1fr\)/);
   assert.match(styles, /@media\s*\(max-width:\s*900px\)[\s\S]*\.site-nav\s*\{[^}]*flex-wrap:\s*nowrap/);
   assert.match(styles, /@media\s*\(max-width:\s*900px\)[\s\S]*\.global-search-trigger-minimal\s*\{[^}]*order:\s*-1/);
   assert.match(styles, /@media\s*\(max-width:\s*640px\)[\s\S]*\.qzq-nav-links[\s\S]*overflow-x:\s*auto/);

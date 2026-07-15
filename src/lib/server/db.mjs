@@ -88,6 +88,7 @@ export function initializeSchema(db) {
     CREATE TABLE IF NOT EXISTS post_topic_links (
       post_id INTEGER NOT NULL,
       topic_slug TEXT NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY(post_id, topic_slug)
     );
@@ -154,4 +155,9 @@ export function initializeSchema(db) {
   ensureColumn(db, 'reading_items', 'image_original_path', "TEXT NOT NULL DEFAULT ''");
   ensureColumn(db, 'reading_items', 'image_width', 'INTEGER NOT NULL DEFAULT 0');
   ensureColumn(db, 'reading_items', 'image_height', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn(db, 'post_topic_links', 'sort_order', 'INTEGER NOT NULL DEFAULT 0');
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_post_topic_links_topic_order
+      ON post_topic_links(topic_slug, sort_order, post_id);
+  `);
 }

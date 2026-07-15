@@ -53,6 +53,39 @@ test('post repository creates, lists, updates, and deletes markdown posts', () =
   assert.equal(repo.list({ topicSlug: 'frontend-interaction', filter: 'all' }).items.length, 0);
 });
 
+test('topic post order is independent and replacing links does not delete posts', () => {
+  const repo = createPostRepository({ dbPath: tempDbPath() });
+  const first = repo.create({
+    title: '第一篇',
+    date: '2026-07-01',
+    topicSlugs: ['agent-system', 'rag-knowledge'],
+  });
+  const second = repo.create({
+    title: '第二篇',
+    date: '2026-07-02',
+    topicSlugs: ['agent-system', 'rag-knowledge'],
+  });
+  const third = repo.create({
+    title: '第三篇',
+    date: '2026-07-03',
+    topicSlugs: ['agent-system'],
+  });
+
+  const orderedIds = repo.setTopicPostOrder('agent-system', [third.id, 999999, third.id, first.id]);
+
+  assert.deepEqual(orderedIds, [third.id, first.id]);
+  assert.deepEqual(
+    repo.list({ topicSlug: 'agent-system', filter: 'all' }).items.map((post) => post.id),
+    [third.id, first.id],
+  );
+  assert.deepEqual(repo.get(second.id).topicSlugs, ['rag-knowledge']);
+  assert.deepEqual(
+    repo.list({ topicSlug: 'rag-knowledge', filter: 'all' }).items.map((post) => post.id),
+    [second.id, first.id],
+  );
+  assert.equal(repo.stats().total, 3);
+});
+
 test('post repository imports markdown files without duplicating slugs', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dev-notes-md-'));
   fs.writeFileSync(path.join(root, 'hello-world.md'), `---

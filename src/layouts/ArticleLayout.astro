@@ -18,7 +18,12 @@ const formattedDate = new Intl.DateTimeFormat('zh-CN', {
 }).format(date);
 ---
 
-<BaseLayout title={`${title} | Dev Notes`} description={description}>
+<BaseLayout
+  title={`${title} | Dev Notes`}
+  description={description}
+  type="article"
+  publishedTime={date}
+>
   <article class="post-shell">
     <aside class="post-side" aria-label="文章信息">
       <a class="post-side-back" href="/writing">返回文章索引</a>
@@ -48,7 +53,6 @@ const formattedDate = new Intl.DateTimeFormat('zh-CN', {
 
     <div class="post-paper">
       <header class="post-header">
-        <p class="post-kicker">{category} / {formattedDate}</p>
         <h1>{title}</h1>
         <p>{description}</p>
       </header>

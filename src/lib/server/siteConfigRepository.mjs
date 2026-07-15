@@ -277,8 +277,8 @@ export function createSiteConfigRepository({ dbPath } = {}) {
     if (!fromSlug || !toSlug || fromSlug === toSlug) return;
     const tx = db.transaction(() => {
       db.prepare(`
-        INSERT OR IGNORE INTO post_topic_links (post_id, topic_slug)
-        SELECT post_id, @toSlug
+        INSERT OR IGNORE INTO post_topic_links (post_id, topic_slug, sort_order)
+        SELECT post_id, @toSlug, sort_order
         FROM post_topic_links
         WHERE topic_slug = @fromSlug
       `).run({ fromSlug, toSlug });

@@ -107,6 +107,8 @@ test('topic detail pages and post editor expose topic-post links', () => {
   const updateApi = fs.readFileSync(new URL('../src/pages/api/admin/posts/[id].ts', import.meta.url), 'utf8');
   const topicsApi = fs.readFileSync(new URL('../src/pages/api/admin/topics/index.ts', import.meta.url), 'utf8');
   const topicApi = fs.readFileSync(new URL('../src/pages/api/admin/topics/[slug].ts', import.meta.url), 'utf8');
+  const topicPostsApiUrl = new URL('../src/pages/api/admin/topics/[slug]/posts.ts', import.meta.url);
+  const topicPostsApi = fs.existsSync(topicPostsApiUrl) ? fs.readFileSync(topicPostsApiUrl, 'utf8') : '';
 
   assert.match(topicPage, /Astro\.params\.slug/);
   assert.match(topicPage, /topicSlug:\s*slug/);
@@ -117,11 +119,22 @@ test('topic detail pages and post editor expose topic-post links', () => {
   assert.match(adminLayout, /href: '\/admin\/topics'/);
   assert.match(adminTopicsPage, /data-topics-admin/);
   assert.match(adminTopicsPage, /data-add-topic/);
+  assert.match(adminTopicsPage, /data-topic-post-drawer/);
+  assert.match(adminTopicsPage, /data-topic-post-search/);
+  assert.match(adminTopicsPage, /data-topic-post-linked/);
+  assert.match(adminTopicsPage, /data-topic-post-available/);
   assert.match(adminTopicsPage, /\/admin-topics\.js/);
   assert.match(adminTopicsScript, /\/api\/admin\/site/);
   assert.match(adminTopicsScript, /\/api\/admin\/topics/);
   assert.match(adminTopicsScript, /focusTopicCard/);
   assert.match(adminTopicsScript, /data-add-topic-inline/);
+  assert.match(adminTopicsScript, /openTopicPosts/);
+  assert.match(adminTopicsScript, /data-manage-topic-posts/);
+  assert.match(adminTopicsScript, /data-topic-post-add/);
+  assert.match(adminTopicsScript, /data-topic-post-remove/);
+  assert.match(adminTopicsScript, /data-topic-post-move/);
+  assert.match(adminTopicsScript, /dragstart/);
+  assert.match(adminTopicsScript, /method:\s*'PUT'/);
   assert.match(adminTopicsScript, /method:\s*'POST'/);
   assert.match(adminTopicsScript, /method:\s*'PUT'/);
   assert.match(adminTopicsScript, /method:\s*'DELETE'/);
@@ -138,6 +151,10 @@ test('topic detail pages and post editor expose topic-post links', () => {
   assert.match(topicsApi, /createTopic/);
   assert.match(topicApi, /updateTopic/);
   assert.match(topicApi, /deleteTopic/);
+  assert.equal(fs.existsSync(topicPostsApiUrl), true);
+  assert.match(topicPostsApi, /export const GET/);
+  assert.match(topicPostsApi, /export const PUT/);
+  assert.match(topicPostsApi, /setTopicPostOrder/);
 });
 
 test('site config repository performs topic CRUD and keeps post links consistent', () => {
@@ -158,9 +175,18 @@ test('site config repository performs topic CRUD and keeps post links consistent
   const post = postRepo.create({
     title: '模型评测笔记',
     body: '# 模型评测',
+    date: '2026-07-10',
     published: true,
     topicSlugs: ['model-eval'],
   });
+  const earlierPost = postRepo.create({
+    title: '评测集准备',
+    body: '# 评测集准备',
+    date: '2026-07-01',
+    published: true,
+    topicSlugs: ['model-eval'],
+  });
+  postRepo.setTopicPostOrder('model-eval', [earlierPost.id, post.id]);
   assert.deepEqual(post.topicSlugs, ['model-eval']);
 
   const renamed = siteRepo.updateTopic('model-eval', {
@@ -173,7 +199,10 @@ test('site config repository performs topic CRUD and keeps post links consistent
   assert.equal(renamed.slug, 'model-evaluation');
   assert.deepEqual(postRepo.get(post.id).topicSlugs, ['model-evaluation']);
   assert.equal(postRepo.list({ topicSlug: 'model-eval' }).items.length, 0);
-  assert.equal(postRepo.list({ topicSlug: 'model-evaluation' }).items.length, 1);
+  assert.deepEqual(
+    postRepo.list({ topicSlug: 'model-evaluation' }).items.map((item) => item.id),
+    [earlierPost.id, post.id],
+  );
 
   assert.equal(siteRepo.deleteTopic('model-evaluation'), true);
   assert.equal(siteRepo.getSiteConfig().topics.cards.some((card) => card.slug === 'model-evaluation'), false);

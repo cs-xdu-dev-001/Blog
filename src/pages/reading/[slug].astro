@@ -11,7 +11,14 @@ if (!book) {
 }
 ---
 
-<BaseLayout title={`${book.title} | Dev Notes`} description={book.summary}>
+<BaseLayout
+  title={`${book.title} | Dev Notes`}
+  description={book.summary}
+  type="article"
+  image={book.cover || undefined}
+  imageWidth={book.coverWidth || undefined}
+  imageHeight={book.coverHeight || undefined}
+>
   <article class="book-review-shell">
     <aside class="book-review-side">
       <a href="/reading">返回书架</a>
