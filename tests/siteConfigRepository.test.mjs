@@ -110,6 +110,9 @@ test('topic detail pages and post editor expose topic-post links', () => {
 
   assert.match(topicPage, /Astro\.params\.slug/);
   assert.match(topicPage, /topicSlug:\s*slug/);
+  assert.match(topicPage, /topic-page-meta/);
+  assert.match(topicPage, /topic-page-index-head/);
+  assert.match(topicPage, /topic-page-arrow/);
   assert.match(topicPage, /\/posts\/\$\{post\.slug\}/);
   assert.match(adminLayout, /href: '\/admin\/topics'/);
   assert.match(adminTopicsPage, /data-topics-admin/);

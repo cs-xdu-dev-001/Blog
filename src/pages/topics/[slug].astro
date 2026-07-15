@@ -15,6 +15,11 @@ if (!topic) {
 }
 
 const posts = postRepository.list({ filter: 'published', topicSlug: slug, limit: 500 }).items;
+const topicTags = String(topic.meta || '')
+  .split('/')
+  .map((item) => item.trim())
+  .filter(Boolean);
+const latestPost = posts[0];
 const formatDate = (date) =>
   new Intl.DateTimeFormat('zh-CN', {
     year: 'numeric',
@@ -26,31 +31,47 @@ const formatDate = (date) =>
 <BaseLayout title={`${topic.title} | Dev Notes`} description={topic.text || `${topic.title}主线笔记`}>
   <section class="topic-page">
     <header class="topic-page-hero">
-      <a class="topic-page-back" href="/#topics">← 回到主线</a>
-      <div class="topic-page-label">
-        <span>{topic.meta}</span>
+      <a class="topic-page-back" href="/#topics">← 返回主线</a>
+
+      <div class="topic-page-heading">
+        <h1>{topic.title}</h1>
         <span>{posts.length}篇笔记</span>
       </div>
-      <h1>{topic.title}</h1>
-      {topic.text && <p>{topic.text}</p>}
+
+      {topic.text && <p class="topic-page-lead">{topic.text}</p>}
+
+      <div class="topic-page-meta" aria-label={`${topic.title}主线信息`}>
+        {topicTags.length > 0 && <span>{topicTags.join(' · ')}</span>}
+        <span>{latestPost ? `更新于 ${formatDate(latestPost.data.date)}` : '尚未关联笔记'}</span>
+      </div>
     </header>
+
+    <div class="topic-page-index-head">
+      <strong>关联笔记</strong>
+      <span>{String(posts.length).padStart(2, '0')}</span>
+    </div>
 
     {posts.length > 0 ? (
       <section class="topic-page-list" aria-label={`${topic.title}关联笔记`}>
         {posts.map((post, index) => (
-          <a class="topic-page-row" href={`/posts/${post.slug}`}>
+          <a class="topic-page-row" href={`/posts/${post.slug}`} style={`--row-index: ${index};`}>
             <span class="topic-page-number">{String(index + 1).padStart(2, '0')}</span>
-            <span class="topic-page-date">{formatDate(post.data.date)}</span>
-            <span class="topic-page-category">{post.data.category}</span>
-            <strong>{post.data.title}</strong>
-            <span class="topic-page-summary">{post.data.description}</span>
+            <span class="topic-page-post-main">
+              <strong>{post.data.title}</strong>
+              <span>{post.data.description || '这篇笔记还没有摘要。'}</span>
+            </span>
+            <span class="topic-page-post-meta">
+              <b>{formatDate(post.data.date)}</b>
+              <i>{post.data.category}</i>
+            </span>
+            <span class="topic-page-arrow" aria-hidden="true">↗</span>
           </a>
         ))}
       </section>
     ) : (
       <section class="topic-page-empty">
-        <strong>这条主线还没有关联笔记。</strong>
-        <a href="/admin/posts">去管理端关联</a>
+        <span>还没有关联笔记</span>
+        <a href="/admin/posts">管理关联 ↗</a>
       </section>
     )}
   </section>
