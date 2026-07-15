@@ -133,32 +133,13 @@ const radarHitPoints = (items, item, index) => {
   const midNext = `${item.cx + (next.outerX - item.cx) * 0.54},${item.cy + (next.outerY - item.cy) * 0.54}`;
   return `${item.cx},${item.cy} ${midPrev} ${item.outerX},${item.outerY} ${midNext}`;
 };
-const topicCards = [
-  {
-    title: 'AI Knowledge',
-    meta: 'Notion / RAG / Agent',
-    text: '把Notion、Markdown、RAG和Agent放进同一条工作流，让笔记能被检索、引用，也能继续长成文章。',
-    tone: 'magenta',
-  },
-  {
-    title: 'Deployment',
-    meta: 'Nginx / HTTPS / CI',
-    text: '从域名、Nginx、HTTPS到自动部署，把上线过程中容易忘的命令和判断留下来。',
-    tone: 'blue',
-  },
-  {
-    title: 'Frontend',
-    meta: 'Layout / UI / Screenshot',
-    text: '用截图检查真实页面，盯住中文断行、移动端溢出、动效节奏和第一眼的视觉秩序。',
-    tone: 'green',
-  },
-  {
-    title: 'Automation',
-    meta: 'Scripts / Workflow',
-    text: '把重复的整理、构建、校验和发布动作收束成工具，让个人站点可以长期维护。',
-    tone: 'orange',
-  },
-];
+const topicConfig = siteConfig.topics || {};
+const topicCards = Array.isArray(topicConfig.cards) ? topicConfig.cards : [];
+const topicRows = Array.from(
+  { length: Math.ceil(topicCards.length / 5) || 1 },
+  (_, rowIndex) => topicCards.slice(rowIndex * 5, rowIndex * 5 + 5),
+).filter((row) => row.length);
+const topicLevel = (card) => Math.min(8, Math.max(1, Number(card.level || 5)));
 
 const orbitTags = [
   { label: 'CINEMA', rx: 386, ry: 186, speed: 0.27, phase: 5.28 },
@@ -313,23 +294,44 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
       </div>
     </section>
 
-    {isSectionEnabled('topics') && <section id="topics" class="qzq-topic-section" aria-label="Topics" data-reveal-section>
-      <div class="qzq-section-title">
-        <h2>{section('topics', { title: '主线' }).title}</h2>
+    {isSectionEnabled('topics') && <section id="topics" class="qzq-topic-section" aria-label="主线" data-reveal-section>
+      <div class="qzq-topic-intro">
+        <div class="qzq-topic-brand">
+          <strong>{topicConfig.title || section('topics', { title: '主线' }).title}</strong>
+        </div>
       </div>
 
-      <div class="qzq-card-marquee" aria-label="主题频道">
-        <div class="qzq-card-track">
-          {[...topicCards, ...topicCards].map((card) => (
-            <article class={`qzq-topic-card qzq-${card.tone}`} data-tilt-card>
-              <div>
-                <h3>{card.title}</h3>
-                <span>{card.meta}</span>
-              </div>
-              <p>{card.text}</p>
-            </article>
-          ))}
-        </div>
+      <div class="qzq-topic-grid" aria-label="主线频道">
+        {topicRows.map((row, rowIndex) => (
+          <div
+            class={`qzq-topic-row ${rowIndex === 0 ? 'is-top' : 'is-bottom'}`}
+            style={`--topic-cols: ${row.length}; --topic-row-width: ${Math.min(100, row.length * 20)}%;`}
+          >
+            {row.map((card, cardIndex) => (
+              <article
+                class={`qzq-topic-card ${topicCards.length % 2 === 1 && rowIndex === topicRows.length - 1 && cardIndex === row.length - 1 ? 'is-responsive-center' : ''}`}
+                style={`--topic-delay: ${(rowIndex * 5 + cardIndex) * 45}ms;`}
+                tabindex={card.slug ? '0' : undefined}
+                role={card.slug ? 'link' : undefined}
+                data-topic-href={`/topics/${card.slug}`}
+                aria-label={card.slug ? `打开${card.title}主线` : undefined}
+              >
+                <div class="qzq-topic-face">
+                  <h3>{card.title}</h3>
+                  <span>{card.meta}</span>
+                  <div class="qzq-topic-meter" aria-hidden="true">
+                    {Array.from({ length: 8 }, (_, meterIndex) => (
+                      <i class={meterIndex < topicLevel(card) ? '' : 'is-off'}></i>
+                    ))}
+                  </div>
+                </div>
+                <div class="qzq-topic-detail">
+                  <p>{card.text}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        ))}
       </div>
     </section>}
 
@@ -781,6 +783,46 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
     const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
     const cards = document.querySelectorAll('[data-tilt-card]:not([data-watch-detail])');
     const magneticLinks = document.querySelectorAll('.qzq-nav a, .qzq-feature-link');
+    const topicSection = document.querySelector('#topics');
+    const topicCardFromEvent = (event) => {
+      const card = event.target instanceof Element ? event.target.closest('[data-topic-href]') : null;
+      return card && topicSection?.contains(card) ? card : null;
+    };
+    let lastTopicCard = null;
+    let lastTopicClickAt = 0;
+    const openTopicHref = (card) => {
+      const href = card?.getAttribute('data-topic-href') || '';
+      if (!href) return;
+      try {
+        const url = new URL(href, window.location.origin);
+        if (!['http:', 'https:'].includes(url.protocol)) return;
+        window.location.href = url.href;
+      } catch {
+        // Ignore malformed admin-configured links.
+      }
+    };
+    topicSection?.addEventListener('click', (event) => {
+      const card = topicCardFromEvent(event);
+      if (!card) return;
+      const now = Date.now();
+      if (card === lastTopicCard && now - lastTopicClickAt < 420) {
+        openTopicHref(card);
+        lastTopicCard = null;
+        lastTopicClickAt = 0;
+        return;
+      }
+      lastTopicCard = card;
+      lastTopicClickAt = now;
+    });
+    topicSection?.addEventListener('dblclick', (event) => openTopicHref(topicCardFromEvent(event)));
+    topicSection?.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      const card = topicCardFromEvent(event);
+      if (!card) return;
+      event.preventDefault();
+      openTopicHref(card);
+    });
+
     if (finePointer.matches && !prefersReducedMotion.matches) {
       cards.forEach((card) => {
         card.addEventListener('pointermove', (event) => {

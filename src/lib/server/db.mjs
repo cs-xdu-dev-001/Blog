@@ -85,6 +85,16 @@ export function initializeSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_blog_posts_published_date
       ON blog_posts(published, date DESC, id DESC);
 
+    CREATE TABLE IF NOT EXISTS post_topic_links (
+      post_id INTEGER NOT NULL,
+      topic_slug TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY(post_id, topic_slug)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_post_topic_links_topic
+      ON post_topic_links(topic_slug, post_id);
+
     CREATE TABLE IF NOT EXISTS radar_tags (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       scope TEXT NOT NULL,

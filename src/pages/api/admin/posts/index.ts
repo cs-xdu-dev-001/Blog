@@ -10,7 +10,11 @@ export const GET: APIRoute = async (context) => {
   const query = url.searchParams.get('query') || '';
   const filter = url.searchParams.get('filter') || 'all';
 
-  return Response.json(postRepository.list({ query, filter }));
+  return Response.json(postRepository.list({
+    query,
+    filter,
+    topicSlug: url.searchParams.get('topicSlug') || '',
+  }));
 };
 
 export const POST: APIRoute = async (context) => {
@@ -28,6 +32,7 @@ export const POST: APIRoute = async (context) => {
     featured: Boolean(input.featured),
     published: input.published !== false,
     date: input.date,
+    topicSlugs: input.topicSlugs || [],
   });
 
   return Response.json({ item, stats: postRepository.stats() }, { status: 201 });

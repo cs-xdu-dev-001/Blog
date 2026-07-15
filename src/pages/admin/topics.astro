@@ -1,0 +1,44 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout
+  title="Dev Notes CMS | 主线管理"
+  active="topics"
+  pageClass="topic-admin-page"
+  layoutClass="cms-layout-topic-admin"
+  dataAttr="data-topics-admin"
+>
+  <input slot="search" class="cms-search" type="search" placeholder="搜索主线名、标签、详情..." data-topic-search />
+  <Fragment slot="actions">
+    <a href="/#topics" target="_blank" rel="noreferrer">预览主线</a>
+    <button type="button" data-add-topic>新增主线</button>
+    <button type="button" class="cms-primary-action" data-save-topics>保存主线</button>
+  </Fragment>
+
+  <Fragment slot="sidebar-actions">
+    <span>快速操作</span>
+    <button type="button" data-add-topic>新增主线</button>
+    <button type="button" data-save-topics>保存主线</button>
+    <button type="button" data-reset-topics>重新加载</button>
+  </Fragment>
+
+  <div class="cms-hero cms-hero-topics">
+    <div>
+      <span>Topic Desk</span>
+      <h1>主线管理</h1>
+    </div>
+    <strong data-topic-save-state>READY</strong>
+  </div>
+
+  <div class="cms-metrics" data-topic-stats></div>
+  <div class="topic-admin-toolbar">
+    <label>
+      <span>首页标题</span>
+      <input name="topics.title" value="主线" data-topics-title />
+    </label>
+  </div>
+  <div class="topic-admin-board" data-topic-list></div>
+
+  <script is:inline src="/admin-topics.js"></script>
+</AdminLayout>

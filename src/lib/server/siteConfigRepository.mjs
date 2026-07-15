@@ -1,5 +1,86 @@
 ﻿import { initializeSchema, openDatabase } from './db.mjs';
 
+export const defaultTopicCards = [
+  {
+    title: 'LLM微调',
+    slug: 'llm-finetune',
+    meta: 'Dataset / LoRA / Eval',
+    text: '数据构造、边界负样本、评测集和二次微调。',
+    level: 6,
+    href: '/topics/llm-finetune',
+  },
+  {
+    title: '前端交互',
+    slug: 'frontend-interaction',
+    meta: 'Layout / Motion / Taste',
+    text: '比例、排版、信息密度和微交互，比单纯炫更重要。',
+    level: 5,
+    href: '/topics/frontend-interaction',
+  },
+  {
+    title: 'Agent系统',
+    slug: 'agent-system',
+    meta: 'Memory / Tools / Context',
+    text: '记忆、工具调用、任务拆解和长期上下文。',
+    level: 5,
+    href: '/topics/agent-system',
+  },
+  {
+    title: 'AI Infra',
+    slug: 'ai-infra',
+    meta: 'API / Stream / Cost',
+    text: '模型中转、流式输出、日志、限额和成本控制。',
+    level: 6,
+    href: '/topics/ai-infra',
+  },
+  {
+    title: 'HTTP抓包',
+    slug: 'http-capture',
+    meta: 'Proxy / TLS / Replay',
+    text: '看请求、证书、代理和重放，理解真实通信路径。',
+    level: 5,
+    href: '/topics/http-capture',
+  },
+  {
+    title: '个人知识系统',
+    slug: 'knowledge-system',
+    meta: 'Notion / Markdown / Search',
+    text: '把笔记、博客、阅读和影像变成可检索资料层。',
+    level: 7,
+    href: '/topics/knowledge-system',
+  },
+  {
+    title: 'RAG知识库',
+    slug: 'rag-knowledge',
+    meta: 'Vector / Citation / Recall',
+    text: '回答能回到原文、能引用、能验证，比接入向量库更关键。',
+    level: 6,
+    href: '/topics/rag-knowledge',
+  },
+  {
+    title: '自动化工作流',
+    slug: 'automation-workflow',
+    meta: 'Scripts / Sync / Deploy',
+    text: '把整理、构建、同步和发布动作收成脚本。',
+    level: 5,
+    href: '/topics/automation-workflow',
+  },
+  {
+    title: '影像分析',
+    slug: 'cinema-analysis',
+    meta: 'Narrative / Character / Taste',
+    text: '看叙事、人物和镜头，也看作品如何影响判断与表达。',
+    level: 4,
+    href: '/topics/cinema-analysis',
+  },
+];
+
+export const defaultTopics = {
+  title: '主线',
+  body: '',
+  cards: defaultTopicCards,
+};
+
 export const defaultSiteConfig = {
   brandName: 'Dev Notes',
   pageTitle: 'Dev Notes | 技术实践与个人知识系统',
@@ -22,6 +103,7 @@ export const defaultSiteConfig = {
     monitor: 'https://pulseboard.academicedu.me/',
     ai: 'https://ai.academicedu.me/',
   },
+  topics: defaultTopics,
   assistant: {
     enabled: true,
     title: 'Ask Dev Notes',
@@ -76,6 +158,57 @@ function normalizeSection(row) {
   };
 }
 
+const defaultTopicSlugMap = new Map(defaultTopicCards.map((card) => [card.title, card.slug]));
+
+function slugifyTopic(value, fallback = 'topic') {
+  const text = String(value || '').trim();
+  if (defaultTopicSlugMap.has(text)) return defaultTopicSlugMap.get(text);
+  const ascii = text
+    .normalize('NFKD')
+    .toLowerCase()
+    .replace(/['’]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return ascii || fallback;
+}
+
+function normalizeTopicCard(card = {}, index = 0) {
+  const level = Number(card.level);
+  const title = String(card.title || '').trim();
+  const slug = slugifyTopic(card.slug || title, `topic-${index + 1}`);
+  return {
+    title,
+    slug,
+    meta: String(card.meta || '').trim(),
+    text: String(card.text || '').trim(),
+    level: Number.isFinite(level) ? Math.min(8, Math.max(1, Math.round(level))) : 5,
+    href: `/topics/${slug}`,
+  };
+}
+
+function normalizeTopics(input = {}) {
+  const rawCards = Array.isArray(input.cards) ? input.cards : defaultTopicCards;
+  const seen = new Map();
+  const cards = rawCards
+    .map((card, index) => normalizeTopicCard(card, index))
+    .filter((card) => card.title || card.meta || card.text);
+  const dedupedCards = cards.map((card) => {
+    const count = seen.get(card.slug) || 0;
+    seen.set(card.slug, count + 1);
+    if (!count) return card;
+    const slug = `${card.slug}-${count + 1}`;
+    return { ...card, slug, href: `/topics/${slug}` };
+  });
+
+  return {
+    ...defaultTopics,
+    ...input,
+    title: String(input.title || defaultTopics.title).trim(),
+    body: '',
+    cards: dedupedCards.length ? dedupedCards : defaultTopicCards,
+  };
+}
+
 function normalizeSiteConfig(value) {
   const parsed = parseJson(value, defaultSiteConfig);
   return {
@@ -85,6 +218,7 @@ function normalizeSiteConfig(value) {
       ...defaultSiteConfig.social,
       ...(parsed.social || {}),
     },
+    topics: normalizeTopics(parsed.topics || defaultTopics),
     assistant: {
       ...defaultSiteConfig.assistant,
       ...(parsed.assistant || {}),
@@ -118,6 +252,41 @@ export function createSiteConfigRepository({ dbPath } = {}) {
     tx(defaultSections);
   }
 
+  function saveNormalizedSiteConfig(config) {
+    const normalized = normalizeSiteConfig(JSON.stringify(config));
+    db.prepare(`
+      INSERT INTO site_settings (key, value, updated_at)
+      VALUES ('site', @value, CURRENT_TIMESTAMP)
+      ON CONFLICT(key) DO UPDATE SET
+        value = excluded.value,
+        updated_at = CURRENT_TIMESTAMP
+    `).run({ value: JSON.stringify(normalized) });
+    return normalized;
+  }
+
+  function uniqueTopicSlug(base, cards, currentSlug = '') {
+    const desired = slugifyTopic(base, 'topic');
+    const used = new Set(cards.map((card) => card.slug).filter((slug) => slug && slug !== currentSlug));
+    if (!used.has(desired)) return desired;
+    let index = 2;
+    while (used.has(`${desired}-${index}`)) index += 1;
+    return `${desired}-${index}`;
+  }
+
+  function migrateTopicLinks(fromSlug, toSlug) {
+    if (!fromSlug || !toSlug || fromSlug === toSlug) return;
+    const tx = db.transaction(() => {
+      db.prepare(`
+        INSERT OR IGNORE INTO post_topic_links (post_id, topic_slug)
+        SELECT post_id, @toSlug
+        FROM post_topic_links
+        WHERE topic_slug = @fromSlug
+      `).run({ fromSlug, toSlug });
+      db.prepare('DELETE FROM post_topic_links WHERE topic_slug = ?').run(fromSlug);
+    });
+    tx();
+  }
+
   return {
     initialize,
 
@@ -137,6 +306,10 @@ export function createSiteConfigRepository({ dbPath } = {}) {
           ...current.social,
           ...(input.social || {}),
         },
+        topics: {
+          ...current.topics,
+          ...(input.topics || {}),
+        },
         assistant: {
           ...current.assistant,
           ...(input.assistant || {}),
@@ -146,14 +319,74 @@ export function createSiteConfigRepository({ dbPath } = {}) {
           },
         },
       }));
-      db.prepare(`
-        INSERT INTO site_settings (key, value, updated_at)
-        VALUES ('site', @value, CURRENT_TIMESTAMP)
-        ON CONFLICT(key) DO UPDATE SET
-          value = excluded.value,
-          updated_at = CURRENT_TIMESTAMP
-      `).run({ value: JSON.stringify(merged) });
+      saveNormalizedSiteConfig(merged);
       return this.getSiteConfig();
+    },
+
+    listTopics() {
+      return this.getSiteConfig().topics.cards;
+    },
+
+    createTopic(input = {}) {
+      initialize();
+      const current = this.getSiteConfig();
+      const title = String(input.title || '新主线').trim();
+      const cards = current.topics.cards || [];
+      const slug = uniqueTopicSlug(input.slug || title, cards);
+      const nextCard = normalizeTopicCard({ ...input, title, slug }, cards.length);
+      const next = saveNormalizedSiteConfig({
+        ...current,
+        topics: {
+          ...current.topics,
+          cards: [...cards, nextCard],
+        },
+      });
+      return next.topics.cards.find((card) => card.slug === nextCard.slug);
+    },
+
+    updateTopic(slug, input = {}) {
+      initialize();
+      const current = this.getSiteConfig();
+      const cards = current.topics.cards || [];
+      const index = cards.findIndex((card) => card.slug === slug);
+      if (index < 0) return null;
+      const existing = cards[index];
+      const title = String(input.title ?? existing.title).trim();
+      if (!title) throw new Error('title is required');
+      const nextSlug = uniqueTopicSlug(input.slug || existing.slug || title, cards, existing.slug);
+      const nextCards = [...cards];
+      nextCards[index] = normalizeTopicCard({
+        ...existing,
+        ...input,
+        title,
+        slug: nextSlug,
+      }, index);
+      const next = saveNormalizedSiteConfig({
+        ...current,
+        topics: {
+          ...current.topics,
+          cards: nextCards,
+        },
+      });
+      const saved = next.topics.cards[index];
+      migrateTopicLinks(existing.slug, saved.slug);
+      return saved;
+    },
+
+    deleteTopic(slug) {
+      initialize();
+      const current = this.getSiteConfig();
+      const cards = current.topics.cards || [];
+      if (!cards.some((card) => card.slug === slug)) return false;
+      saveNormalizedSiteConfig({
+        ...current,
+        topics: {
+          ...current.topics,
+          cards: cards.filter((card) => card.slug !== slug),
+        },
+      });
+      db.prepare('DELETE FROM post_topic_links WHERE topic_slug = ?').run(slug);
+      return true;
     },
 
     listSections() {

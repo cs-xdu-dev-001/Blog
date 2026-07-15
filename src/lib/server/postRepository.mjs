@@ -32,12 +32,26 @@ function normalizeDate(value) {
   return date.toISOString().slice(0, 10);
 }
 
-function normalize(row) {
+function normalizeTopicSlugs(value) {
+  const items = Array.isArray(value) ? value : String(value || '').split(',');
+  return [...new Set(items
+    .map((item) => String(item || '')
+      .trim()
+      .toLowerCase()
+      .replace(/['’]/g, '')
+      .replace(/[^a-z0-9-]+/g, '-')
+      .replace(/^-+|-+$/g, ''))
+    .filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
+}
+
+function normalize(row, topicSlugs = []) {
   if (!row) return null;
   return {
     ...row,
     featured: Number(row.featured || 0),
     published: Number(row.published || 0),
+    topicSlugs,
     data: {
       title: row.title,
       description: row.description,
@@ -87,6 +101,33 @@ export function createPostRepository({ dbPath } = {}) {
     }
   }
 
+  function topicSlugsForPost(postId) {
+    return db.prepare(`
+      SELECT topic_slug
+      FROM post_topic_links
+      WHERE post_id = ?
+      ORDER BY topic_slug ASC
+    `).all(postId).map((row) => row.topic_slug);
+  }
+
+  function normalizeWithTopics(row) {
+    return normalize(row, row ? topicSlugsForPost(row.id) : []);
+  }
+
+  function setPostTopics(postId, topicSlugs = []) {
+    const slugs = normalizeTopicSlugs(topicSlugs);
+    const tx = db.transaction((items) => {
+      db.prepare('DELETE FROM post_topic_links WHERE post_id = ?').run(postId);
+      const stmt = db.prepare(`
+        INSERT OR IGNORE INTO post_topic_links (post_id, topic_slug)
+        VALUES (@postId, @topicSlug)
+      `);
+      items.forEach((topicSlug) => stmt.run({ postId, topicSlug }));
+    });
+    tx(slugs);
+    return slugs;
+  }
+
   return {
     initialize,
 
@@ -110,6 +151,7 @@ export function createPostRepository({ dbPath } = {}) {
         featured: input.featured ? 1 : 0,
         published: input.published === false ? 0 : 1,
       });
+      setPostTopics(result.lastInsertRowid, input.topicSlugs || []);
       return this.get(result.lastInsertRowid);
     },
 
@@ -142,6 +184,8 @@ export function createPostRepository({ dbPath } = {}) {
         featured: input.featured ? 1 : 0,
         published: input.published === false ? 0 : 1,
       });
+      const saved = this.getBySlug(slug, { includeDraft: true });
+      if (Object.hasOwn(input, 'topicSlugs')) setPostTopics(saved.id, input.topicSlugs);
       return this.getBySlug(slug);
     },
 
@@ -174,7 +218,7 @@ export function createPostRepository({ dbPath } = {}) {
 
     get(id) {
       initialize();
-      return normalize(db.prepare('SELECT * FROM blog_posts WHERE id = ?').get(id));
+      return normalizeWithTopics(db.prepare('SELECT * FROM blog_posts WHERE id = ?').get(id));
     },
 
     getBySlug(slug, { includeDraft = false } = {}) {
@@ -182,28 +226,34 @@ export function createPostRepository({ dbPath } = {}) {
       const row = includeDraft
         ? db.prepare('SELECT * FROM blog_posts WHERE slug = ?').get(slug)
         : db.prepare('SELECT * FROM blog_posts WHERE slug = ? AND published = 1').get(slug);
-      return normalize(row);
+      return normalizeWithTopics(row);
     },
 
-    list({ query = '', filter = 'published', limit = 500 } = {}) {
+    list({ query = '', filter = 'published', limit = 500, topicSlug = '' } = {}) {
       initialize();
       const safeFilter = allowedFilters.has(filter) ? filter : 'published';
       const where = [];
       const params = { limit };
+      const normalizedTopicSlug = normalizeTopicSlugs([topicSlug])[0];
       const trimmedQuery = String(query || '').trim();
       if (trimmedQuery) {
-        where.push('(title LIKE @query OR description LIKE @query OR category LIKE @query OR body LIKE @query)');
+        where.push('(p.title LIKE @query OR p.description LIKE @query OR p.category LIKE @query OR p.body LIKE @query)');
         params.query = `%${trimmedQuery}%`;
       }
-      if (safeFilter === 'published') where.push('published = 1');
-      if (safeFilter === 'draft') where.push('published = 0');
-      if (safeFilter === 'featured') where.push('featured = 1');
+      if (normalizedTopicSlug) {
+        where.push('pt.topic_slug = @topicSlug');
+        params.topicSlug = normalizedTopicSlug;
+      }
+      if (safeFilter === 'published') where.push('p.published = 1');
+      if (safeFilter === 'draft') where.push('p.published = 0');
+      if (safeFilter === 'featured') where.push('p.featured = 1');
       const items = db.prepare(`
-        SELECT * FROM blog_posts
+        SELECT p.* FROM blog_posts p
+        ${normalizedTopicSlug ? 'JOIN post_topic_links pt ON pt.post_id = p.id' : ''}
         ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
-        ORDER BY date DESC, id DESC
+        ORDER BY p.date DESC, p.id DESC
         LIMIT @limit
-      `).all(params).map(normalize);
+      `).all(params).map(normalizeWithTopics);
       return { items, stats: this.stats() };
     },
 
@@ -247,12 +297,17 @@ export function createPostRepository({ dbPath } = {}) {
         featured: input.featured ? 1 : 0,
         published: input.published ? 1 : 0,
       });
+      if (Object.hasOwn(input, 'topicSlugs')) setPostTopics(id, input.topicSlugs);
       return this.get(id);
     },
 
     remove(id) {
       initialize();
-      return db.prepare('DELETE FROM blog_posts WHERE id = ?').run(id).changes > 0;
+      const tx = db.transaction((postId) => {
+        db.prepare('DELETE FROM post_topic_links WHERE post_id = ?').run(postId);
+        return db.prepare('DELETE FROM blog_posts WHERE id = ?').run(postId).changes > 0;
+      });
+      return tx(id);
     },
   };
 }

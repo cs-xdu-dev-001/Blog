@@ -1,6 +1,5 @@
 ---
 import BaseLayout from './BaseLayout.astro';
-import { requireAdmin } from '../lib/server/auth.mjs';
 
 const {
   title = 'Dev Notes CMS',
@@ -10,10 +9,6 @@ const {
   dataAttr = '',
 } = Astro.props;
 
-if (!requireAdmin(Astro)) {
-  return Astro.redirect('/admin/login');
-}
-
 const pageAttrs = dataAttr ? { [dataAttr]: true } : {};
 
 const navGroups = [
@@ -21,6 +16,7 @@ const navGroups = [
     label: '内容',
     items: [
       { key: 'posts', label: '近期笔记', href: '/admin/posts' },
+      { key: 'topics', label: '主线管理', href: '/admin/topics' },
       { key: 'watch', label: '影像档案', href: '/admin/watch' },
       { key: 'reading', label: '阅读书架', href: '/admin/reading' },
     ],

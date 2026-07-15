@@ -16,6 +16,7 @@ export const PUT: APIRoute = async (context) => {
     date: String(body.date || ''),
     featured: Boolean(body.featured),
     published: Boolean(body.published),
+    topicSlugs: body.topicSlugs,
   });
 
   if (!updated) return new Response('Not found', { status: 404 });

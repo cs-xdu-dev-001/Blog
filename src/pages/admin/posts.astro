@@ -10,11 +10,15 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   dataAttr="data-posts-admin"
 >
   <input slot="search" class="cms-search" type="search" placeholder="搜索标题、分类、摘要和正文..." data-post-search />
-  <a slot="actions" href="/writing" target="_blank" rel="noreferrer">预览笔记</a>
+  <Fragment slot="actions">
+    <a href="/writing" target="_blank" rel="noreferrer">预览笔记</a>
+    <a href="/admin/topics">主线管理</a>
+  </Fragment>
 
   <Fragment slot="sidebar-actions">
     <span>快速操作</span>
     <button type="button" data-create-post>新增笔记</button>
+    <a href="/admin/topics">管理主线</a>
     <button type="button" data-post-filter="all" class="active">全部笔记</button>
     <button type="button" data-post-filter="published">已发布</button>
     <button type="button" data-post-filter="draft">草稿</button>
@@ -37,6 +41,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     <button type="button" data-post-filter="draft">草稿</button>
     <button type="button" data-post-filter="featured">重点笔记</button>
   </div>
+  <div class="cms-filters cms-topic-filters" data-post-topic-filters></div>
   <div class="cms-list cms-post-list" data-post-list></div>
 
   <script is:inline src="/admin-posts.js"></script>

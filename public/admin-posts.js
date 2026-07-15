@@ -1,12 +1,15 @@
 const state = {
   items: [],
   stats: null,
+  topics: [],
   filter: 'all',
+  topicSlug: '',
   query: '',
 };
 
 const listEl = document.querySelector('[data-post-list]');
 const statsEl = document.querySelector('[data-post-stats]');
+const topicFiltersEl = document.querySelector('[data-post-topic-filters]');
 const searchEl = document.querySelector('[data-post-search]');
 const saveStateEl = document.querySelector('[data-post-save-state]');
 const createButton = document.querySelector('[data-create-post]');
@@ -26,12 +29,25 @@ function setStatus(text) {
 
 async function loadItems() {
   const params = new URLSearchParams({ filter: state.filter, query: state.query });
+  if (state.topicSlug) params.set('topicSlug', state.topicSlug);
   const res = await fetch(`/api/admin/posts?${params}`);
   if (!res.ok) throw new Error('Failed to load posts');
   const data = await res.json();
   state.items = data.items;
   state.stats = data.stats;
   render();
+}
+
+async function loadTopics() {
+  const res = await fetch('/api/admin/site');
+  if (!res.ok) return;
+  const data = await res.json();
+  state.topics = Array.isArray(data.config?.topics?.cards) ? data.config.topics.cards : [];
+  renderTopicFilters();
+}
+
+function topicTitle(slug) {
+  return state.topics.find((topic) => topic.slug === slug)?.title || slug;
 }
 
 function renderStats() {
@@ -50,6 +66,18 @@ function renderStats() {
   `).join('');
 }
 
+function renderTopicFilters() {
+  if (!topicFiltersEl) return;
+  topicFiltersEl.innerHTML = [
+    `<button type="button" data-post-topic-filter="" class="${state.topicSlug ? '' : 'active'}">全部主线</button>`,
+    ...state.topics.map((topic) => `
+      <button type="button" data-post-topic-filter="${escapeHtml(topic.slug)}" class="${state.topicSlug === topic.slug ? 'active' : ''}">
+        ${escapeHtml(topic.title)}
+      </button>
+    `),
+  ].join('');
+}
+
 function renderList() {
   if (!listEl) return;
   if (!state.items.length) {
@@ -64,6 +92,7 @@ function renderList() {
         <small>${escapeHtml(item.category)} / ${escapeHtml(item.date)}</small>
         <strong>${escapeHtml(item.title)}</strong>
         <em>${escapeHtml(item.description || '等待补充摘要')}</em>
+        <i>${(item.topicSlugs || []).length ? item.topicSlugs.map((slug) => escapeHtml(topicTitle(slug))).join(' / ') : '未关联主线'}</i>
       </span>
       <b>${item.featured ? '重点' : item.published ? '发布' : '草稿'}</b>
     </a>
@@ -72,6 +101,7 @@ function renderList() {
 
 function render() {
   renderStats();
+  renderTopicFilters();
   renderList();
 }
 
@@ -107,10 +137,18 @@ document.querySelectorAll('[data-post-filter]').forEach((button) => {
   });
 });
 
+topicFiltersEl?.addEventListener('click', (event) => {
+  const button = event.target instanceof Element ? event.target.closest('[data-post-topic-filter]') : null;
+  if (!button) return;
+  state.topicSlug = button.dataset.postTopicFilter || '';
+  renderTopicFilters();
+  loadItems();
+});
+
 searchEl?.addEventListener('input', () => {
   state.query = searchEl.value;
   window.clearTimeout(searchEl._timer);
   searchEl._timer = window.setTimeout(loadItems, 180);
 });
 
-loadItems().catch(() => setStatus('LOAD FAILED'));
+Promise.all([loadTopics(), loadItems()]).catch(() => setStatus('LOAD FAILED'));

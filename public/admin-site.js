@@ -80,6 +80,16 @@ function select(name, label, value, options) {
   `;
 }
 
+function slugifyTopic(value, fallback = 'new-topic') {
+  const slug = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/['’]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || fallback;
+}
+
 function renderSections() {
   return state.sections.map((section) => `
     <article class="site-section-row" data-section-key="${escapeHtml(section.key)}">
@@ -95,16 +105,71 @@ function renderSections() {
   `).join('');
 }
 
+function renderTopicCard(card = {}, index = 0) {
+  return `
+    <article class="site-topic-row" data-topic-card>
+      <div class="site-topic-row-head">
+        <strong>${String(index + 1).padStart(2, '0')}</strong>
+        <button type="button" data-remove-topic-card>删除</button>
+      </div>
+      <div class="site-config-fields four">
+        <label>
+          <span>主线名</span>
+          <input name="topics.card.title" value="${escapeHtml(card.title)}" data-topic-title />
+        </label>
+        <label>
+          <span>标签</span>
+          <input name="topics.card.meta" value="${escapeHtml(card.meta)}" data-topic-meta />
+        </label>
+        <label>
+          <span>强度</span>
+          <input name="topics.card.level" type="number" min="1" max="8" value="${escapeHtml(card.level ?? 5)}" data-topic-level />
+        </label>
+        <label>
+          <span>Slug</span>
+          <input name="topics.card.slug" value="${escapeHtml(card.slug || slugifyTopic(card.title, `topic-${index + 1}`))}" data-topic-slug />
+        </label>
+      </div>
+      <label>
+        <span>详情层文字</span>
+        <textarea name="topics.card.text" rows="2" data-topic-text>${escapeHtml(card.text)}</textarea>
+      </label>
+    </article>
+  `;
+}
+
+function renderTopicCards(cards = []) {
+  const safeCards = Array.isArray(cards) && cards.length ? cards : [
+    { title: '新主线', slug: 'new-topic', meta: 'Tag / Tag / Tag', text: '写下这条主线正在研究什么。', level: 5 },
+  ];
+  return safeCards.map(renderTopicCard).join('');
+}
+
+function readTopicCards() {
+  return [...formEl.querySelectorAll('[data-topic-card]')]
+    .map((row) => ({
+      title: row.querySelector('[data-topic-title]')?.value.trim() || '',
+      meta: row.querySelector('[data-topic-meta]')?.value.trim() || '',
+      text: row.querySelector('[data-topic-text]')?.value.trim() || '',
+      level: Number(row.querySelector('[data-topic-level]')?.value || 5),
+      slug: row.querySelector('[data-topic-slug]')?.value.trim() || slugifyTopic(row.querySelector('[data-topic-title]')?.value, 'new-topic'),
+    }))
+    .filter((card) => card.title || card.meta || card.text);
+}
+
 function render() {
   const config = state.config;
   if (!formEl || !config) return;
   const assistant = config.assistant || {};
   const modules = assistant.modules || {};
+  const topics = config.topics || {};
+  const topicCards = Array.isArray(topics.cards) ? topics.cards : [];
 
   formEl.innerHTML = `
     <nav class="site-config-tabs" aria-label="站点设置分区">
       <a href="#site-basic">站点信息</a>
       <a href="#home-copy">首页文案</a>
+      <a href="#topics-config">主线</a>
       <a href="#social-links">社交链接</a>
       <a href="#assistant-config">AI助手</a>
       <a href="#about-config">About</a>
@@ -130,6 +195,19 @@ function render() {
         ${textarea('heroSubline', '第二句', config.heroSubline, 2)}
         ${textarea('heroHighlight', '高亮句', config.heroHighlight, 2)}
         ${input('orbitTags', '动态标签，用/分隔', config.orbitTags)}
+      </section>
+
+      <section class="site-config-card site-topic-config" id="topics-config" data-site-section>
+        <div class="site-config-card-head">
+          <span>主线</span>
+          <button type="button" data-add-topic-card>增加卡片</button>
+        </div>
+        <div class="site-config-fields">
+          ${input('topics.title', '标题', topics.title || '主线')}
+        </div>
+        <div class="site-topic-list" data-topic-list>
+          ${renderTopicCards(topicCards)}
+        </div>
       </section>
 
       <section class="site-config-card" id="social-links" data-site-section>
@@ -214,6 +292,28 @@ function render() {
 
   formEl.querySelector('[data-site-form]').addEventListener('input', () => setStatus('UNSAVED'));
   formEl.querySelectorAll('[data-test-assistant]').forEach((button) => button.addEventListener('click', testAssistant));
+  formEl.querySelector('[data-add-topic-card]')?.addEventListener('click', () => {
+    const list = formEl.querySelector('[data-topic-list]');
+    if (!list) return;
+    list.insertAdjacentHTML('beforeend', renderTopicCard({
+      title: '新主线',
+      slug: `new-topic-${list.querySelectorAll('[data-topic-card]').length + 1}`,
+      meta: 'Tag / Tag / Tag',
+      text: '写下这条主线正在研究什么。',
+      level: 5,
+    }, list.querySelectorAll('[data-topic-card]').length));
+    setStatus('UNSAVED');
+  });
+  formEl.querySelector('[data-topic-list]')?.addEventListener('click', (event) => {
+    const button = event.target instanceof Element ? event.target.closest('[data-remove-topic-card]') : null;
+    if (!button) return;
+    const row = button.closest('[data-topic-card]');
+    row?.remove();
+    formEl.querySelectorAll('[data-topic-card] .site-topic-row-head strong').forEach((item, index) => {
+      item.textContent = String(index + 1).padStart(2, '0');
+    });
+    setStatus('UNSAVED');
+  });
 }
 
 function readForm() {
@@ -229,6 +329,10 @@ function readForm() {
       heroSubline: form.get('heroSubline'),
       heroHighlight: form.get('heroHighlight'),
       orbitTags: form.get('orbitTags'),
+      topics: {
+        title: form.get('topics.title'),
+        cards: readTopicCards(),
+      },
       aboutTitle: form.get('aboutTitle'),
       aboutBody: form.get('aboutBody'),
       aboutNow: form.get('aboutNow'),

@@ -2,6 +2,7 @@
 import BaseLayout from '../../../../layouts/BaseLayout.astro';
 import { requireAdmin } from '../../../../lib/server/auth.mjs';
 import { postRepository } from '../../../../lib/server/postRepository.mjs';
+import { siteConfigRepository } from '../../../../lib/server/siteConfigRepository.mjs';
 
 if (!requireAdmin(Astro)) {
   return Astro.redirect('/admin/login');
@@ -15,6 +16,9 @@ if (!post) {
 }
 
 const postJson = JSON.stringify(post).replaceAll('<', '\\u003c');
+const topicCards = (siteConfigRepository.getSiteConfig().topics?.cards || [])
+  .filter((card) => card.slug && card.title);
+const selectedTopicSlugs = new Set(post.topicSlugs || []);
 const categoryOptions = Array.from(new Set([
   post.category,
   ...postRepository.list({ filter: 'all' }).items.map((item) => item.category),
@@ -65,6 +69,26 @@ const categoryOptions = Array.from(new Set([
           <label class="post-editor-check"><input type="checkbox" name="published" checked={Boolean(post.published)} /> 发布</label>
           <label class="post-editor-check"><input type="checkbox" name="featured" checked={Boolean(post.featured)} /> 重点</label>
         </div>
+        <fieldset class="post-topic-picker">
+          <legend>
+            <span>关联主线</span>
+            <a href="/admin/topics" target="_blank" rel="noreferrer">管理/新增主线</a>
+          </legend>
+          {topicCards.length > 0 ? (
+            <div>
+              {topicCards.map((card) => (
+                <label>
+                  <input type="checkbox" name="topicSlugs" value={card.slug} checked={selectedTopicSlugs.has(card.slug)} />
+                  <span>{card.title}</span>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <div class="post-topic-empty">
+              <a href="/admin/topics" target="_blank" rel="noreferrer">新增第一条主线</a>
+            </div>
+          )}
+        </fieldset>
         <textarea class="post-description-input" name="description" rows="2" placeholder="一句话摘要，会显示在首页和笔记列表。">{post.description || ''}</textarea>
       </form>
 

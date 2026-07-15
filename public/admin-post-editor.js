@@ -144,6 +144,7 @@ function collectPayload() {
     body: input.value,
     published: data.get('published') === 'on',
     featured: data.get('featured') === 'on',
+    topicSlugs: data.getAll('topicSlugs'),
   };
 }
 

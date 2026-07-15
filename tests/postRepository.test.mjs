@@ -21,11 +21,14 @@ test('post repository creates, lists, updates, and deletes markdown posts', () =
     featured: true,
     published: true,
     date: '2026-07-05',
+    topicSlugs: ['llm-finetune', 'agent-system'],
   });
 
   assert.equal(created.slug, 'recent-note-test');
+  assert.deepEqual(created.topicSlugs, ['agent-system', 'llm-finetune']);
   assert.equal(repo.getBySlug('recent-note-test').title, '近期笔记测试');
   assert.equal(repo.list().items[0].description, '一条可管理的Markdown笔记');
+  assert.equal(repo.list({ topicSlug: 'agent-system' }).items[0].slug, 'recent-note-test');
 
   const updated = repo.update(created.id, {
     title: '近期笔记测试更新',
@@ -36,13 +39,18 @@ test('post repository creates, lists, updates, and deletes markdown posts', () =
     featured: false,
     published: true,
     date: '2026-07-06',
+    topicSlugs: ['frontend-interaction'],
   });
 
   assert.equal(updated.title, '近期笔记测试更新');
   assert.equal(updated.category, 'Frontend');
+  assert.deepEqual(updated.topicSlugs, ['frontend-interaction']);
+  assert.equal(repo.list({ topicSlug: 'agent-system' }).items.length, 0);
+  assert.equal(repo.list({ topicSlug: 'frontend-interaction' }).items[0].slug, 'recent-note-test');
   assert.equal(repo.stats().published, 1);
   assert.equal(repo.remove(created.id), true);
   assert.equal(repo.stats().total, 0);
+  assert.equal(repo.list({ topicSlug: 'frontend-interaction', filter: 'all' }).items.length, 0);
 });
 
 test('post repository imports markdown files without duplicating slugs', () => {
