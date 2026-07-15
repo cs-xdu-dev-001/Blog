@@ -139,6 +139,7 @@ function render() {
           ${input('social.bilibili', 'B站', config.social?.bilibili)}
           ${input('social.qq', 'QQ号', config.social?.qq)}
           ${input('social.monitor', '监控仪表盘', config.social?.monitor)}
+          ${input('social.ai', 'AI站点', config.social?.ai)}
         </div>
       </section>
 
@@ -238,6 +239,7 @@ function readForm() {
         bilibili: form.get('social.bilibili'),
         qq: form.get('social.qq'),
         monitor: form.get('social.monitor'),
+        ai: form.get('social.ai'),
       },
       assistant: {
         enabled: form.get('assistant.enabled') === 'on',

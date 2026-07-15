@@ -655,6 +655,12 @@ button:focus-visible {
   stroke-linejoin: round;
 }
 
+.qzq-socials .qzq-ai-link svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
 .qzq-socials .global-search-trigger svg {
   fill: none;
   stroke: currentColor;

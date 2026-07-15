@@ -20,6 +20,7 @@ export const defaultSiteConfig = {
     bilibili: 'https://b23.tv/9JF4Xho',
     qq: '2986934180',
     monitor: 'https://pulseboard.academicedu.me/',
+    ai: 'https://ai.academicedu.me/',
   },
   assistant: {
     enabled: true,
