@@ -12,7 +12,7 @@ const statsEl = document.querySelector('[data-post-stats]');
 const topicFiltersEl = document.querySelector('[data-post-topic-filters]');
 const searchEl = document.querySelector('[data-post-search]');
 const saveStateEl = document.querySelector('[data-post-save-state]');
-const createButton = document.querySelector('[data-create-post]');
+const createButtons = document.querySelectorAll('[data-create-post]');
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -105,15 +105,16 @@ function render() {
   renderList();
 }
 
-async function createPost() {
+async function createPost(category = 'Notes') {
   setStatus('CREATING');
-  const title = `未命名笔记 ${new Date().toLocaleDateString('zh-CN').replaceAll('/', '-')}`;
+  const titlePrefix = category === '随记' ? '未命名随记' : '未命名笔记';
+  const title = `${titlePrefix} ${new Date().toLocaleDateString('zh-CN').replaceAll('/', '-')}`;
   const res = await fetch('/api/admin/posts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       title,
-      category: 'Notes',
+      category,
       description: '',
       body: `# ${title}\n\n`,
       published: false,
@@ -127,7 +128,9 @@ async function createPost() {
   window.location.href = `/admin/posts/${data.item.id}/edit`;
 }
 
-createButton?.addEventListener('click', createPost);
+createButtons.forEach((button) => {
+  button.addEventListener('click', () => createPost(button.dataset.postCategory || 'Notes'));
+});
 
 document.querySelectorAll('[data-post-filter]').forEach((button) => {
   button.addEventListener('click', () => {

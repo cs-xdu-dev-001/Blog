@@ -17,7 +17,8 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 
   <Fragment slot="sidebar-actions">
     <span>快速操作</span>
-    <button type="button" data-create-post>新增笔记</button>
+    <button type="button" data-create-post data-post-category="Notes">新增笔记</button>
+    <button type="button" data-create-post data-post-category="随记">新增随记</button>
     <a href="/admin/topics">管理主线</a>
     <button type="button" data-post-filter="all" class="active">全部笔记</button>
     <button type="button" data-post-filter="published">已发布</button>

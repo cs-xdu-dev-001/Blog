@@ -4,6 +4,19 @@ import { postRepository } from '../lib/server/postRepository.mjs';
 
 postRepository.ensureSeededFromContent();
 const posts = postRepository.list({ filter: 'published', limit: 500 }).items;
+const writingFilters = [
+  { key: 'all', label: '全部' },
+  { key: 'technical', label: '技术' },
+  { key: 'reflection', label: '随记' },
+];
+const requestedFilter = Astro.url.searchParams.get('type') || 'all';
+const initialFilter = writingFilters.some((item) => item.key === requestedFilter)
+  ? requestedFilter
+  : 'all';
+const writingKind = (category) => String(category || '').trim() === '随记' ? 'reflection' : 'technical';
+const initialCount = posts.filter((post) => (
+  initialFilter === 'all' || writingKind(post.data.category) === initialFilter
+)).length;
 
 const formatDate = (date) =>
   new Intl.DateTimeFormat('zh-CN', {
@@ -23,24 +36,123 @@ const formatDate = (date) =>
   </header>
 
   <div class="writing-index-head">
-    <strong>全部笔记</strong>
-    <span>{String(posts.length).padStart(2, '0')}</span>
+    <nav class="writing-filter" aria-label="笔记分类">
+      <button
+        type="button"
+        class:list={['writing-filter-button', { 'is-active': initialFilter === 'all' }]}
+        data-writing-filter="all"
+        aria-pressed={initialFilter === 'all' ? 'true' : 'false'}
+      >全部</button>
+      <button
+        type="button"
+        class:list={['writing-filter-button', { 'is-active': initialFilter === 'technical' }]}
+        data-writing-filter="technical"
+        aria-pressed={initialFilter === 'technical' ? 'true' : 'false'}
+      >技术</button>
+      <button
+        type="button"
+        class:list={['writing-filter-button', { 'is-active': initialFilter === 'reflection' }]}
+        data-writing-filter="reflection"
+        aria-pressed={initialFilter === 'reflection' ? 'true' : 'false'}
+      >随记</button>
+    </nav>
+    <span data-writing-count>{String(initialCount).padStart(2, '0')}</span>
   </div>
 
   <section class="writing-list" aria-label="全部笔记">
-    {posts.map((post, index) => (
-      <a class="writing-row" href={`/posts/${post.slug}`} style={`--row-index: ${index};`}>
-        <span class="writing-row-number">{String(index + 1).padStart(2, '0')}</span>
-        <span class="writing-row-main">
-          <strong>{post.data.title}</strong>
-          {post.data.description && <span>{post.data.description}</span>}
-        </span>
-        <span class="writing-row-meta">
-          <b>{formatDate(post.data.date)}</b>
-          <i>{post.data.category}</i>
-        </span>
-        <span class="writing-row-arrow" aria-hidden="true">↗</span>
-      </a>
-    ))}
+    {posts.map((post, index) => {
+      const kind = writingKind(post.data.category);
+      const isHidden = initialFilter !== 'all' && kind !== initialFilter;
+      return (
+        <a
+          class="writing-row"
+          href={`/posts/${post.slug}`}
+          style={`--row-index: ${index};`}
+          data-writing-kind={kind}
+          hidden={isHidden}
+        >
+          <span class="writing-row-number" data-writing-number>{String(index + 1).padStart(2, '0')}</span>
+          <span class="writing-row-main">
+            <strong>{post.data.title}</strong>
+            {post.data.description && <span>{post.data.description}</span>}
+          </span>
+          <span class="writing-row-meta">
+            <b>{formatDate(post.data.date)}</b>
+            <i>{post.data.category}</i>
+          </span>
+          <span class="writing-row-arrow" aria-hidden="true">↗</span>
+        </a>
+      );
+    })}
+    <p class="writing-empty" data-writing-empty hidden={initialCount > 0}>
+      {initialFilter === 'reflection' ? '还没有随记。' : '还没有这一类笔记。'}
+    </p>
   </section>
+
+  <script>
+    const filterButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-writing-filter]')];
+    const writingRows = [...document.querySelectorAll<HTMLElement>('[data-writing-kind]')];
+    const countElement = document.querySelector<HTMLElement>('[data-writing-count]');
+    const emptyElement = document.querySelector<HTMLElement>('[data-writing-empty]');
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const validFilters = new Set(['all', 'technical', 'reflection']);
+
+    function filterFromUrl() {
+      const value = new URL(window.location.href).searchParams.get('type') || 'all';
+      return validFilters.has(value) ? value : 'all';
+    }
+
+    function applyWritingFilter(filter, { updateUrl = true, animate = true } = {}) {
+      const selected = validFilters.has(filter) ? filter : 'all';
+      let visibleIndex = 0;
+
+      filterButtons.forEach((button) => {
+        const active = button.dataset.writingFilter === selected;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-pressed', String(active));
+      });
+
+      writingRows.forEach((row) => {
+        const visible = selected === 'all' || row.dataset.writingKind === selected;
+        row.hidden = !visible;
+        if (!visible) return;
+        visibleIndex += 1;
+        const number = row.querySelector<HTMLElement>('[data-writing-number]');
+        if (number) number.textContent = String(visibleIndex).padStart(2, '0');
+        if (animate && !reducedMotion.matches) {
+          row.animate(
+            [
+              { opacity: 0.25, transform: 'translateY(7px)' },
+              { opacity: 1, transform: 'translateY(0)' },
+            ],
+            {
+              duration: 220,
+              delay: Math.min(visibleIndex - 1, 7) * 18,
+              easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+              fill: 'both',
+            },
+          );
+        }
+      });
+
+      if (countElement) countElement.textContent = String(visibleIndex).padStart(2, '0');
+      if (emptyElement) {
+        emptyElement.hidden = visibleIndex > 0;
+        emptyElement.textContent = selected === 'reflection' ? '还没有随记。' : '还没有这一类笔记。';
+      }
+
+      if (updateUrl) {
+        const url = new URL(window.location.href);
+        if (selected === 'all') url.searchParams.delete('type');
+        else url.searchParams.set('type', selected);
+        history.replaceState({ writingFilter: selected }, '', url);
+      }
+    }
+
+    filterButtons.forEach((button) => {
+      button.addEventListener('click', () => applyWritingFilter(button.dataset.writingFilter || 'all'));
+    });
+    window.addEventListener('popstate', () => applyWritingFilter(filterFromUrl(), { updateUrl: false }));
+    applyWritingFilter(filterFromUrl(), { updateUrl: false, animate: false });
+  </script>
 </BaseLayout>
