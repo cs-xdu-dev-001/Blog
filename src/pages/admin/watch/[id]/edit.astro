@@ -1,0 +1,56 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import { requireAdmin } from '../../../../lib/server/auth.mjs';
+import { watchRepository } from '../../../../lib/server/watchRepository.mjs';
+
+if (!requireAdmin(Astro)) return Astro.redirect('/admin/login');
+const id = Number(Astro.params.id);
+const item = Number.isFinite(id) ? watchRepository.get(id) : null;
+if (!item) return Astro.redirect('/admin/watch');
+const editorJson = JSON.stringify({ mode: 'edit', item }).replaceAll('<', '\\u003c');
+const imagePath = item.image_path || '';
+---
+
+<AdminLayout title={`Dev Notes CMS | ${item.title}`} active="watch" dataAttr="data-watch-editor-page">
+  <div slot="search" class="cms-admin-breadcrumb"><strong>影像档案</strong><span>/</span>{item.title}</div>
+  <a slot="actions" href={`/watch/${item.id}`} target="_blank" rel="noreferrer">前台查看</a>
+
+  <section class="cms-editor-page" data-watch-editor-page>
+    <header class="cms-editor-topbar">
+      <h1>{item.title}</h1>
+      <div class="cms-editor-actions">
+        <a class="cms-button" href="/admin/watch">返回</a>
+        <button class="cms-danger-action" type="button" data-delete-watch>删除</button>
+        <button class="cms-primary-action" type="submit" form="watch-editor-form">保存</button>
+      </div>
+    </header>
+    <form id="watch-editor-form" class="cms-editor-form" data-watch-editor-form>
+      <div class="cms-editor-media">
+        <label class="cms-cover-upload" style={imagePath ? `background-image:url('${imagePath}')` : ''}>
+          <span>{imagePath ? '更换图片' : '上传图片'}</span>
+          <input type="file" accept="image/jpeg,image/png,image/webp,image/avif" data-watch-image />
+        </label>
+        <div class="cms-field-grid">
+          <label class="cms-field full"><span>名称</span><input name="title" value={item.title} required /></label>
+          <label class="cms-field"><span>类型</span><select name="type"><option selected={item.type === '电影'}>电影</option><option selected={item.type === '剧集'}>剧集</option><option selected={item.type === '纪录片'}>纪录片</option><option selected={item.type === '动画'}>动画</option><option selected={item.type === '综艺'}>综艺</option></select></label>
+          <label class="cms-field"><span>状态</span><select name="status"><option selected={item.status === '在看'}>在看</option><option selected={item.status === '已看'}>已看</option><option selected={item.status === '想看'}>想看</option></select></label>
+          <label class="cms-field"><span>评分</span><input name="rating" value={item.rating || ''} /></label>
+          <label class="cms-field"><span>观看进度</span><input name="progress_text" value={item.progress_text || ''} placeholder="例如第18集" /></label>
+          <label class="cms-field"><span>完成日期</span><input name="completed_at" type="date" value={item.completed_at || ''} /></label>
+        </div>
+      </div>
+      <div class="cms-field-grid">
+        <label class="cms-field full"><span>个人影评</span><textarea name="comment" class="cms-long-text" placeholder="支持Markdown">{item.comment || ''}</textarea></label>
+        <label class="cms-field full"><span>佳句</span><textarea name="quote">{item.quote || ''}</textarea></label>
+        <label class="cms-field full"><span>佳句来源</span><input name="quote_source" value={item.quote_source || ''} /></label>
+      </div>
+      <div class="cms-check-row">
+        <label><input type="checkbox" name="is_featured" checked={Boolean(item.is_featured)} />精选</label>
+        <label><input type="checkbox" name="is_activity_featured" checked={Boolean(item.is_activity_featured)} />观看近况</label>
+      </div>
+      <span class="cms-save-state" data-watch-editor-state></span>
+    </form>
+  </section>
+  <script type="application/json" id="watch-editor-data" set:html={editorJson}></script>
+  <script is:inline src="/admin-watch-editor.js"></script>
+</AdminLayout>

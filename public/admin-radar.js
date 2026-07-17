@@ -1,23 +1,11 @@
-const state = {
-  items: [],
-  stats: null,
-  selected: null,
-  mode: 'edit',
-  filter: 'all',
-  query: '',
-};
-
+const state = { items: [], stats: {}, selected: null, filter: 'all', query: '' };
 const listEl = document.querySelector('[data-radar-list]');
-const statsEl = document.querySelector('[data-radar-stats]');
-const editorEl = document.querySelector('[data-radar-editor]');
+const summaryEl = document.querySelector('[data-radar-summary]');
 const searchEl = document.querySelector('[data-radar-search]');
-const saveStateEl = document.querySelector('[data-save-state]');
-const createButton = document.querySelector('[data-create-radar]');
-
-const scopeLabels = {
-  movie: 'Movie 电影',
-  code: 'Code 技术',
-};
+const drawer = document.querySelector('[data-radar-drawer]');
+const drawerTitle = document.querySelector('[data-radar-drawer-title]');
+const form = document.querySelector('[data-radar-form]');
+const deleteButton = document.querySelector('[data-delete-radar]');
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -29,230 +17,94 @@ function escapeHtml(value) {
 }
 
 function visibleItems() {
-  const query = state.query.trim().toLowerCase();
-  return state.items.filter((item) => {
-    const matchQuery = !query
-      || item.label.toLowerCase().includes(query)
-      || item.zh.toLowerCase().includes(query)
-      || item.scope.toLowerCase().includes(query);
-    return matchQuery;
-  });
-}
-
-async function loadItems() {
-  const params = new URLSearchParams({ scope: state.filter });
-  const res = await fetch(`/api/admin/radar?${params}`);
-  if (!res.ok) throw new Error('Failed to load radar tags');
-  const data = await res.json();
-  state.items = data.items;
-  state.stats = data.stats;
-  if (state.mode !== 'create') {
-    if (!state.selected || !state.items.some((item) => item.id === state.selected.id)) {
-      state.selected = state.items[0] || null;
-    } else {
-      state.selected = state.items.find((item) => item.id === state.selected.id);
-    }
-  }
-  render();
-}
-
-function renderStats() {
-  statsEl.innerHTML = [
-    ['总标签', state.stats.total, '首页雷达配置项'],
-    ['Movie', state.stats.movie, '影像类型标签'],
-    ['Code', state.stats.code, '技术主线标签'],
-    ['停用', state.stats.disabled, '暂不显示在前台'],
-  ].map(([label, value, hint]) => `
-    <article class="cms-metric">
-      <span>${label}</span>
-      <strong>${value}</strong>
-      <p>${hint}</p>
-    </article>
-  `).join('');
-}
-
-function renderList() {
-  const items = visibleItems();
-  if (!items.length) {
-    listEl.innerHTML = '<p class="cms-empty">没有匹配的统计标签。</p>';
-    return;
-  }
-
-  listEl.innerHTML = items.map((item) => `
-    <button class="cms-item ${state.mode === 'edit' && state.selected?.id === item.id ? 'active' : ''}" data-id="${item.id}">
-      <span class="cms-thumb cms-thumb-radar ${item.scope}">${item.scope.toUpperCase()}</span>
-      <span>
-        <small>${scopeLabels[item.scope] || item.scope} / sort ${item.sort_order}</small>
-        <strong>${escapeHtml(item.label)} ${escapeHtml(item.zh)}</strong>
-        <em>count ${item.count} · value ${item.value}% · ${item.is_enabled ? '前台显示' : '已停用'}</em>
-      </span>
-      <b>${item.value}%</b>
-    </button>
-  `).join('');
-
-  listEl.querySelectorAll('[data-id]').forEach((button) => {
-    button.addEventListener('click', () => {
-      state.mode = 'edit';
-      state.selected = state.items.find((item) => item.id === Number(button.dataset.id));
-      render();
-    });
-  });
-}
-
-function editorForm(item, mode) {
-  return `
-    <span>${mode === 'create' ? 'New Radar Tag' : 'Radar Tag Editor'}</span>
-    <form data-radar-form>
-      <label>所属雷达
-        <select name="scope">
-          <option value="movie" ${item.scope === 'movie' ? 'selected' : ''}>Movie 电影</option>
-          <option value="code" ${item.scope === 'code' ? 'selected' : ''}>Code 技术</option>
-        </select>
-      </label>
-      <label>英文标签 <input name="label" required value="${escapeHtml(item.label || '')}" placeholder="Drama" /></label>
-      <label>中文标签 <input name="zh" value="${escapeHtml(item.zh || '')}" placeholder="剧情" /></label>
-      <label>计数 <input name="count" type="number" min="0" step="1" value="${escapeHtml(item.count ?? 0)}" /></label>
-      <label>雷达权重 0-100 <input name="value" type="number" min="0" max="100" step="1" value="${escapeHtml(item.value ?? 0)}" /></label>
-      <label>排序 <input name="sort_order" type="number" min="0" step="1" value="${escapeHtml(item.sort_order ?? 0)}" /></label>
-      <label class="cms-check"><input type="checkbox" name="is_enabled" ${item.is_enabled ? 'checked' : ''} /> 前台显示</label>
-      <button type="submit">${mode === 'create' ? '创建标签' : '保存标签'}</button>
-    </form>
-    ${mode === 'edit' ? `
-      <form data-delete-form class="cms-danger-zone">
-        <p>删除后首页雷达会立即移除该标签。</p>
-        <button type="submit">删除当前标签</button>
-      </form>
-    ` : ''}
-  `;
-}
-
-function renderCreateForm() {
-  editorEl.innerHTML = editorForm({
-    scope: state.filter === 'code' ? 'code' : 'movie',
-    label: '',
-    zh: '',
-    count: 0,
-    value: 50,
-    sort_order: 100,
-    is_enabled: 1,
-  }, 'create');
-  editorEl.querySelector('[data-radar-form]').addEventListener('submit', createItem);
-}
-
-function renderEditor() {
-  if (state.mode === 'create') {
-    renderCreateForm();
-    return;
-  }
-
-  const item = state.selected;
-  if (!item) {
-    editorEl.innerHTML = '<p>从左侧选择一个标签开始编辑，或点击“新增标签”。</p>';
-    return;
-  }
-
-  editorEl.innerHTML = editorForm(item, 'edit');
-  editorEl.querySelector('[data-radar-form]').addEventListener('submit', saveSelected);
-  editorEl.querySelector('[data-delete-form]').addEventListener('submit', deleteSelected);
-}
-
-function readForm(form) {
-  return {
-    scope: form.get('scope'),
-    label: form.get('label'),
-    zh: form.get('zh'),
-    count: Number(form.get('count') || 0),
-    value: Number(form.get('value') || 0),
-    sort_order: Number(form.get('sort_order') || 0),
-    is_enabled: form.get('is_enabled') === 'on',
-  };
+  const query = state.query.toLowerCase();
+  return query ? state.items.filter((item) => [item.label, item.zh].some((value) => String(value || '').toLowerCase().includes(query))) : state.items;
 }
 
 function render() {
-  renderStats();
-  renderList();
-  renderEditor();
-}
-
-async function createItem(event) {
-  event.preventDefault();
-  saveStateEl.textContent = 'CREATING';
-  const form = new FormData(event.currentTarget);
-  const res = await fetch('/api/admin/radar', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(readForm(form)),
-  });
-  if (!res.ok) {
-    saveStateEl.textContent = 'CREATE FAILED';
+  summaryEl.textContent = `${state.stats.total || 0}个标签`;
+  const items = visibleItems();
+  if (!items.length) {
+    listEl.innerHTML = '<div class="cms-index-empty">没有匹配的标签</div>';
     return;
   }
-  const data = await res.json();
-  state.mode = 'edit';
-  state.filter = data.item.scope;
-  state.selected = data.item;
-  document.querySelectorAll('[data-filter]').forEach((el) => el.classList.toggle('active', el.dataset.filter === state.filter));
-  saveStateEl.textContent = 'CREATED';
-  await loadItems();
+  listEl.innerHTML = items.map((item) => `
+    <button class="cms-index-row" type="button" data-radar-id="${item.id}">
+      <span class="cms-index-row-main no-media"><span><strong class="cms-index-title">${escapeHtml(item.zh || item.label)}</strong><span class="cms-index-meta">${escapeHtml(item.label)}</span></span></span>
+      <span class="cms-index-cell">${item.scope === 'movie' ? '影视' : '技术'}</span>
+      <span class="cms-index-badge">${item.value}% · ${item.count}</span>
+      <span class="cms-index-action">编辑</span>
+    </button>
+  `).join('');
 }
 
-async function saveSelected(event) {
-  event.preventDefault();
-  if (!state.selected) return;
-  saveStateEl.textContent = 'SAVING';
-  const form = new FormData(event.currentTarget);
-  const res = await fetch(`/api/admin/radar/${state.selected.id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(readForm(form)),
-  });
-  if (!res.ok) {
-    saveStateEl.textContent = 'SAVE FAILED';
-    return;
-  }
-  const data = await res.json();
-  state.selected = data.item;
-  saveStateEl.textContent = 'SAVED';
-  await loadItems();
-}
-
-async function deleteSelected(event) {
-  event.preventDefault();
-  const item = state.selected;
-  if (!item) return;
-  if (!window.confirm(`确认删除 ${item.label} ${item.zh}？`)) return;
-
-  saveStateEl.textContent = 'DELETING';
-  const res = await fetch(`/api/admin/radar/${item.id}`, { method: 'DELETE' });
-  if (!res.ok) {
-    saveStateEl.textContent = 'DELETE FAILED';
-    return;
-  }
-  state.selected = null;
-  saveStateEl.textContent = 'DELETED';
-  await loadItems();
-}
-
-createButton?.addEventListener('click', () => {
-  state.mode = 'create';
-  state.selected = null;
+async function loadItems() {
+  const response = await fetch(`/api/admin/radar?scope=${encodeURIComponent(state.filter)}`);
+  if (!response.ok) throw new Error('读取标签失败');
+  const data = await response.json();
+  state.items = data.items || [];
+  state.stats = data.stats || {};
   render();
-});
+}
 
-document.querySelectorAll('[data-filter]').forEach((button) => {
-  button.addEventListener('click', () => {
-    state.mode = 'edit';
-    state.filter = button.dataset.filter;
-    document.querySelectorAll('[data-filter]').forEach((el) => el.classList.toggle('active', el === button));
-    loadItems();
+function openEditor(item = null) {
+  state.selected = item;
+  drawerTitle.textContent = item ? '编辑标签' : '新增标签';
+  deleteButton.hidden = !item;
+  const value = item || { scope: state.filter === 'code' ? 'code' : 'movie', label: '', zh: '', count: 0, value: 50, sort_order: 100, is_enabled: 1 };
+  form.innerHTML = `
+    <div class="cms-field-grid">
+      <label class="cms-field"><span>类型</span><select name="scope"><option value="movie" ${value.scope === 'movie' ? 'selected' : ''}>影视</option><option value="code" ${value.scope === 'code' ? 'selected' : ''}>技术</option></select></label>
+      <label class="cms-field"><span>排序</span><input name="sort_order" type="number" min="0" value="${Number(value.sort_order || 0)}" /></label>
+      <label class="cms-field"><span>英文标签</span><input name="label" required value="${escapeHtml(value.label)}" /></label>
+      <label class="cms-field"><span>中文标签</span><input name="zh" value="${escapeHtml(value.zh)}" /></label>
+      <label class="cms-field"><span>计数</span><input name="count" type="number" min="0" value="${Number(value.count || 0)}" /></label>
+      <label class="cms-field"><span>雷达权重</span><input name="value" type="number" min="0" max="100" value="${Number(value.value || 0)}" /></label>
+    </div>
+    <label class="cms-switch"><input type="checkbox" name="is_enabled" ${value.is_enabled ? 'checked' : ''} />前台显示</label>
+  `;
+  drawer.showModal();
+}
+
+function payload() {
+  const values = new FormData(form);
+  return {
+    scope: values.get('scope'), label: values.get('label'), zh: values.get('zh'),
+    count: Number(values.get('count') || 0), value: Number(values.get('value') || 0),
+    sort_order: Number(values.get('sort_order') || 0), is_enabled: values.get('is_enabled') === 'on',
+  };
+}
+
+form?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const response = await fetch(state.selected ? `/api/admin/radar/${state.selected.id}` : '/api/admin/radar', {
+    method: state.selected ? 'PUT' : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload()),
   });
+  if (!response.ok) return;
+  drawer.close();
+  await loadItems();
 });
 
-searchEl.addEventListener('input', () => {
-  state.query = searchEl.value;
-  render();
+deleteButton?.addEventListener('click', async () => {
+  if (!state.selected || !window.confirm(`确认删除“${state.selected.zh || state.selected.label}”？`)) return;
+  const response = await fetch(`/api/admin/radar/${state.selected.id}`, { method: 'DELETE' });
+  if (!response.ok) return;
+  drawer.close();
+  await loadItems();
 });
 
-loadItems().catch(() => {
-  saveStateEl.textContent = 'LOAD FAILED';
+listEl?.addEventListener('click', (event) => {
+  const row = event.target instanceof Element ? event.target.closest('[data-radar-id]') : null;
+  if (row) openEditor(state.items.find((item) => item.id === Number(row.dataset.radarId)));
 });
+document.querySelector('[data-create-radar]')?.addEventListener('click', () => openEditor());
+document.querySelector('[data-close-radar]')?.addEventListener('click', () => drawer.close());
+document.querySelectorAll('[data-filter]').forEach((button) => button.addEventListener('click', () => {
+  state.filter = button.dataset.filter || 'all';
+  document.querySelectorAll('[data-filter]').forEach((item) => item.classList.toggle('active', item === button));
+  loadItems().catch((error) => { summaryEl.textContent = error.message; });
+}));
+searchEl?.addEventListener('input', () => { state.query = searchEl.value; render(); });
+loadItems().catch((error) => { summaryEl.textContent = error.message; });

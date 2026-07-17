@@ -88,3 +88,6 @@ assert.ok(fs.existsSync(path.join(uploadDir, '北平无战事-960.webp')));
 assert.ok(fs.existsSync(path.join(uploadDir, '北平无战事-480.webp')));
 assert.ok(fs.existsSync(path.join(uploadDir, 'original', '北平无战事.png')));
 assert.equal(safeReadingImageBaseName('六经责我开生面——刘和平谈艺录'), '六经责我开生面——刘和平谈艺录');
+
+const renamed = repo.update(item.id, { title: '北平无战事（重读）' });
+assert.equal(renamed.title, '北平无战事（重读）');

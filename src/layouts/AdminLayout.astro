@@ -15,25 +15,21 @@ const navGroups = [
   {
     label: '内容',
     items: [
-      { key: 'posts', label: '近期笔记', href: '/admin/posts' },
-      { key: 'topics', label: '主线管理', href: '/admin/topics' },
+      { key: 'posts', label: '笔记', href: '/admin/posts' },
+      { key: 'topics', label: '主线', href: '/admin/topics' },
       { key: 'watch', label: '影像档案', href: '/admin/watch' },
       { key: 'reading', label: '阅读书架', href: '/admin/reading' },
     ],
   },
   {
-    label: '视觉',
+    label: '站点',
     items: [
+      { key: 'home', label: '首页模块', href: '/admin/home' },
       { key: 'radar', label: '统计标签', href: '/admin/radar' },
       { key: 'map', label: '地图校准', href: '/admin/map' },
-    ],
-  },
-  {
-    label: '系统',
-    items: [
-      { key: 'site', label: '站点信息', href: '/admin/site#site-basic' },
-      { key: 'assistant', label: 'AI助手', href: '/admin/site#assistant-config' },
-      { key: 'about', label: '社交/About', href: '/admin/site#about-config' },
+      { key: 'assistant', label: 'AI助手', href: '/admin/assistant' },
+      { key: 'about', label: '关于', href: '/admin/about' },
+      { key: 'site', label: '站点信息', href: '/admin/site' },
     ],
   },
 ];
@@ -67,7 +63,6 @@ const navGroups = [
           </>
         ))}
 
-        <slot name="sidebar-actions" />
       </aside>
 
       <section class="cms-main">

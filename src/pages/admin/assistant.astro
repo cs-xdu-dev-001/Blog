@@ -1,0 +1,44 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Dev Notes CMS | AI助手" active="assistant" dataAttr="data-site-admin">
+  <div slot="search" class="cms-admin-breadcrumb"><strong>站点</strong><span>/</span>AI助手</div>
+  <Fragment slot="actions"><button type="button" data-test-assistant>测试接口</button><button class="cms-primary-action" type="submit" form="site-settings-form">保存</button></Fragment>
+  <section class="cms-settings-page" data-site-section="assistant">
+    <header><h1>AI助手</h1><span class="cms-save-state" data-save-state>正在读取</span></header>
+    <nav class="cms-settings-tabs"><a href="/admin/site">站点信息</a><a href="/admin/home">首页模块</a><a class="active" href="/admin/assistant">AI助手</a><a href="/admin/about">关于</a></nav>
+    <form id="site-settings-form" class="cms-settings-form" data-site-form>
+      <section class="cms-settings-section">
+        <div class="cms-check-row"><label><input type="checkbox" name="assistant.enabled" />开启AI助手</label></div>
+        <div class="cms-settings-grid">
+          <label class="cms-setting-field"><span>面板标题</span><input name="assistant.title" /></label>
+          <label class="cms-setting-field"><span>输入框提示</span><input name="assistant.placeholder" /></label>
+          <label class="cms-setting-field full"><span>欢迎语</span><textarea name="assistant.welcome"></textarea></label>
+        </div>
+      </section>
+      <section class="cms-settings-section">
+        <h2>模型接口</h2>
+        <div class="cms-settings-grid">
+          <label class="cms-setting-field full"><span>API Base URL</span><input name="assistant.apiBaseUrl" type="url" /></label>
+          <label class="cms-setting-field"><span>模型名</span><input name="assistant.model" /></label>
+          <label class="cms-setting-field"><span>API Key</span><input name="assistant.apiKey" type="password" /></label>
+          <label class="cms-setting-field"><span>接口类型</span><select name="assistant.apiMode"><option value="chat">Chat Completions</option><option value="responses">Responses</option></select></label>
+          <label class="cms-setting-field"><span>服务端代理</span><input name="assistant.proxyUrl" /></label>
+        </div>
+      </section>
+      <section class="cms-settings-section">
+        <h2>额度</h2>
+        <div class="cms-settings-grid">
+          <label class="cms-setting-field"><span>每日次数</span><input name="assistant.dailyLimit" type="number" min="1" /></label>
+          <label class="cms-setting-field"><span>每分钟次数</span><input name="assistant.minuteLimit" type="number" min="1" /></label>
+          <label class="cms-setting-field"><span>问题字数</span><input name="assistant.maxQuestionLength" type="number" min="1" /></label>
+          <label class="cms-setting-field"><span>回答token</span><input name="assistant.maxAnswerLength" type="number" min="1" /></label>
+        </div>
+        <div class="cms-check-row"><label><input type="checkbox" name="assistant.modules.posts" />笔记</label><label><input type="checkbox" name="assistant.modules.reading" />阅读</label><label><input type="checkbox" name="assistant.modules.watch" />影像</label><label><input type="checkbox" name="assistant.modules.about" />关于</label></div>
+        <div class="cms-assistant-test" data-assistant-test-result hidden></div>
+      </section>
+    </form>
+  </section>
+  <script is:inline src="/admin-site.js"></script>
+</AdminLayout>

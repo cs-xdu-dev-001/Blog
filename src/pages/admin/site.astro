@@ -2,36 +2,32 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 ---
 
-<AdminLayout
-  title="Dev Notes CMS | 站点设置"
-  active="site"
-  pageClass="site-admin-page"
-  layoutClass="cms-layout-site"
-  dataAttr="data-site-admin"
-  status="ONLINE / CONFIG DB"
->
-  <input slot="search" class="cms-search" type="search" value="站点设置 / 首页文案 / AI助手 / About" readonly />
-  <button slot="actions" type="button" data-test-assistant>测试AI接口</button>
-  <button slot="actions" class="cms-primary-action" type="button" data-save-site>保存配置</button>
-  <a slot="actions" href="/" target="_blank" rel="noreferrer">预览首页</a>
-
-  <Fragment slot="sidebar-actions">
-    <span>快速操作</span>
-    <button type="button" data-save-site>保存配置</button>
-    <button type="button" data-test-assistant>测试AI接口</button>
-    <button type="button" data-reset-site>重新载入</button>
-  </Fragment>
-
-  <div class="cms-hero">
-    <div>
-      <span>Site Control</span>
-      <h1>站点设置中心</h1>
-      <p>管理首页文案、社交链接、About内容、AI助手和首页模块开关。保存后前台读取数据库配置，不需要改首页源码。</p>
-    </div>
-    <strong data-save-state>ONLINE / CONFIG DB</strong>
-  </div>
-
-  <div class="site-config-grid" data-site-config-form></div>
-
+<AdminLayout title="Dev Notes CMS | 站点信息" active="site" dataAttr="data-site-admin">
+  <div slot="search" class="cms-admin-breadcrumb"><strong>站点</strong><span>/</span>站点信息</div>
+  <Fragment slot="actions"><a href="/" target="_blank" rel="noreferrer">预览首页</a><button class="cms-primary-action" type="submit" form="site-settings-form">保存</button></Fragment>
+  <section class="cms-settings-page" data-site-section="site">
+    <header><h1>站点信息</h1><span class="cms-save-state" data-save-state>正在读取</span></header>
+    <nav class="cms-settings-tabs"><a class="active" href="/admin/site">站点信息</a><a href="/admin/home">首页模块</a><a href="/admin/assistant">AI助手</a><a href="/admin/about">关于</a></nav>
+    <form id="site-settings-form" class="cms-settings-form" data-site-form>
+      <section class="cms-settings-section">
+        <h2>基础信息</h2>
+        <div class="cms-settings-grid">
+          <label class="cms-setting-field"><span>站点名</span><input name="brandName" /></label>
+          <label class="cms-setting-field"><span>浏览器标题</span><input name="pageTitle" /></label>
+          <label class="cms-setting-field full"><span>页面描述</span><textarea name="pageDescription"></textarea></label>
+        </div>
+      </section>
+      <section class="cms-settings-section">
+        <h2>社交链接</h2>
+        <div class="cms-settings-grid">
+          <label class="cms-setting-field"><span>GitHub</span><input name="social.github" type="url" /></label>
+          <label class="cms-setting-field"><span>B站</span><input name="social.bilibili" type="url" /></label>
+          <label class="cms-setting-field"><span>QQ号</span><input name="social.qq" /></label>
+          <label class="cms-setting-field"><span>监控仪表盘</span><input name="social.monitor" type="url" /></label>
+          <label class="cms-setting-field full"><span>AI站点</span><input name="social.ai" type="url" /></label>
+        </div>
+      </section>
+    </form>
+  </section>
   <script is:inline src="/admin-site.js"></script>
 </AdminLayout>

@@ -1,0 +1,27 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+const editorJson = JSON.stringify({ mode: 'create' });
+---
+
+<AdminLayout title="Dev Notes CMS | 新增书籍" active="reading" dataAttr="data-reading-create-page">
+  <div slot="search" class="cms-admin-breadcrumb"><strong>阅读书架</strong><span>/</span>新增</div>
+  <section class="cms-editor-page" data-reading-create-page>
+    <header class="cms-editor-topbar">
+      <h1>新增书籍</h1>
+      <div class="cms-editor-actions">
+        <a class="cms-button" href="/admin/reading">取消</a>
+        <button class="cms-primary-action" type="submit" form="reading-create-form">创建</button>
+      </div>
+    </header>
+    <form id="reading-create-form" class="cms-editor-form" data-reading-create-form>
+      <div class="cms-field-grid">
+        <label class="cms-field full"><span>书名</span><input name="title" required autofocus /></label>
+        <label class="cms-field"><span>作者</span><input name="author" /></label>
+        <label class="cms-field"><span>状态</span><select name="status"><option value="reading">在读</option><option value="read">已读</option><option value="planned">待读</option></select></label>
+      </div>
+      <span class="cms-save-state" data-reading-editor-state></span>
+    </form>
+  </section>
+  <script type="application/json" id="reading-editor-data" set:html={editorJson}></script>
+  <script is:inline src="/admin-reading-editor.js"></script>
+</AdminLayout>

@@ -1,0 +1,53 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import { requireAdmin } from '../../../../lib/server/auth.mjs';
+import { readingRepository } from '../../../../lib/server/readingRepository.mjs';
+
+if (!requireAdmin(Astro)) return Astro.redirect('/admin/login');
+const id = Number(Astro.params.id);
+const item = Number.isFinite(id) ? readingRepository.get(id) : null;
+if (!item) return Astro.redirect('/admin/reading');
+const editorJson = JSON.stringify({ mode: 'edit', item }).replaceAll('<', '\\u003c');
+const imagePath = item.image_path || '';
+---
+
+<AdminLayout title={`Dev Notes CMS | ${item.title}`} active="reading" dataAttr="data-reading-editor-page">
+  <div slot="search" class="cms-admin-breadcrumb"><strong>阅读书架</strong><span>/</span>{item.title}</div>
+  <a slot="actions" href={`/reading/${item.slug}`} target="_blank" rel="noreferrer">前台查看</a>
+
+  <section class="cms-editor-page" data-reading-editor-page>
+    <header class="cms-editor-topbar">
+      <h1>{item.title}</h1>
+      <div class="cms-editor-actions">
+        <a class="cms-button" href="/admin/reading">返回</a>
+        <button class="cms-danger-action" type="button" data-delete-reading>删除</button>
+        <button class="cms-primary-action" type="submit" form="reading-editor-form">保存</button>
+      </div>
+    </header>
+    <form id="reading-editor-form" class="cms-editor-form" data-reading-editor-form>
+      <div class="cms-editor-media">
+        <label class="cms-cover-upload" style={imagePath ? `background-image:url('${imagePath}')` : ''}>
+          <span>{imagePath ? '更换封面' : '上传封面'}</span>
+          <input type="file" accept="image/jpeg,image/png,image/webp,image/avif" data-reading-image />
+        </label>
+        <div class="cms-field-grid">
+          <label class="cms-field full"><span>书名</span><input name="title" value={item.title} required /></label>
+          <label class="cms-field"><span>作者</span><input name="author" value={item.author || ''} /></label>
+          <label class="cms-field"><span>状态</span><select name="status"><option value="reading" selected={item.status === 'reading'}>在读</option><option value="read" selected={item.status === 'read'}>已读</option><option value="planned" selected={item.status === 'planned'}>待读</option></select></label>
+          <label class="cms-field full"><span>阅读进度</span><input name="progress" value={item.progress || ''} /></label>
+          <label class="cms-field"><span>书脊颜色</span><input name="spine_color" type="color" value={item.spine_color || '#263548'} /></label>
+          <label class="cms-field"><span>强调色</span><input name="accent_color" type="color" value={item.accent_color || '#ff9138'} /></label>
+        </div>
+      </div>
+      <div class="cms-field-grid">
+        <label class="cms-field full"><span>简介</span><textarea name="summary">{item.summary || ''}</textarea></label>
+        <label class="cms-field full"><span>摘句</span><textarea name="quote">{item.quote || ''}</textarea></label>
+        <label class="cms-field full"><span>书评</span><textarea name="review" class="cms-long-text">{item.review || ''}</textarea></label>
+      </div>
+      <div class="cms-check-row"><label><input type="checkbox" name="is_featured" checked={Boolean(item.is_featured)} />精选</label></div>
+      <span class="cms-save-state" data-reading-editor-state></span>
+    </form>
+  </section>
+  <script type="application/json" id="reading-editor-data" set:html={editorJson}></script>
+  <script is:inline src="/admin-reading-editor.js"></script>
+</AdminLayout>

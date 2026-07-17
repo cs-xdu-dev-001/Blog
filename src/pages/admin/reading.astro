@@ -3,42 +3,32 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 ---
 
 <AdminLayout title="Dev Notes CMS | 阅读书架" active="reading" dataAttr="data-reading-admin">
-  <input slot="search" class="cms-search" type="search" placeholder="搜索书名、作者、书评、摘句..." data-reading-search />
+  <div slot="search" class="cms-admin-breadcrumb"><strong>内容</strong><span>/</span>阅读书架</div>
   <a slot="actions" href="/#reading" target="_blank" rel="noreferrer">预览书架</a>
 
-  <Fragment slot="sidebar-actions">
-    <span>快速操作</span>
-    <button type="button" data-create-reading>新增书籍</button>
-    <button type="button" data-filter="missing_image">扫描缺封面</button>
-    <button type="button" data-filter="missing_review">扫描缺书评</button>
-    <button type="button" data-filter="missing_quote">扫描缺摘句</button>
-  </Fragment>
-
-  <div class="cms-hero">
-    <div>
-      <span>Reading Shelf</span>
-      <h1>阅读内容控制台</h1>
-      <p>维护书籍状态、简介、摘句、书评和封面。保存后前台阅读书架即时读取数据库内容。</p>
+  <section class="cms-index-shell">
+    <header class="cms-index-head">
+      <h1>阅读书架</h1>
+      <span class="cms-index-summary" data-reading-stats>正在读取</span>
+    </header>
+    <div class="cms-index-toolbar">
+      <input type="search" placeholder="搜索书名、作者、书评和摘句" data-reading-search />
+      <div class="cms-filter-group" aria-label="书籍筛选">
+        <button type="button" data-reading-filter="all" class="active">全部</button>
+        <button type="button" data-reading-filter="reading">在读</button>
+        <button type="button" data-reading-filter="read">已读</button>
+        <button type="button" data-reading-filter="planned">待读</button>
+        <button type="button" data-reading-filter="featured">精选</button>
+      </div>
+      <a class="cms-primary-action" href="/admin/reading/new">新增书籍</a>
     </div>
-    <strong data-save-state>ONLINE / DB CONNECTED</strong>
-  </div>
-
-  <div class="cms-metrics" data-reading-stats></div>
-  <div class="cms-filters">
-    <button type="button" data-filter="all" class="active">全部</button>
-    <button type="button" data-filter="missing_image">缺封面</button>
-    <button type="button" data-filter="missing_review">缺书评</button>
-    <button type="button" data-filter="missing_quote">缺摘句</button>
-    <button type="button" data-filter="reading">在读</button>
-    <button type="button" data-filter="read">已读</button>
-    <button type="button" data-filter="planned">待读</button>
-    <button type="button" data-filter="featured">首页展示</button>
-  </div>
-  <div class="cms-list" data-reading-list></div>
-
-  <aside slot="editor" class="cms-editor" data-reading-editor>
-    <p>从左侧选择一本书开始编辑。</p>
-  </aside>
-
+    <div class="cms-index-list">
+      <div class="cms-index-list-head"><span>书籍</span><span>作者</span><span>状态</span><span></span></div>
+      <div class="cms-index-error" data-reading-error hidden>
+        <button class="cms-button" type="button" data-reading-retry>重新读取</button>
+      </div>
+      <div data-reading-list></div>
+    </div>
+  </section>
   <script is:inline src="/admin-reading.js"></script>
 </AdminLayout>

@@ -65,19 +65,21 @@ test('site config repository reads defaults and updates site settings', () => {
 
 test('homepage exposes the monitor dashboard as a configurable external icon link', () => {
   const homepage = fs.readFileSync(new URL('../src/pages/index.astro', import.meta.url), 'utf8');
+  const adminPage = fs.readFileSync(new URL('../src/pages/admin/site.astro', import.meta.url), 'utf8');
   const admin = fs.readFileSync(new URL('../public/admin-site.js', import.meta.url), 'utf8');
 
   assert.match(homepage, /href=\{siteConfig\.social\.monitor\}/);
   assert.match(homepage, /aria-label="监控仪表盘"/);
   assert.match(homepage, /target="_blank"/);
   assert.match(homepage, /rel="noopener noreferrer"/);
-  assert.match(admin, /input\('social\.monitor', '监控仪表盘'/);
-  assert.match(admin, /monitor: form\.get\('social\.monitor'\)/);
+  assert.match(adminPage, /name="social\.monitor"/);
+  assert.match(admin, /monitor: values\.get\('social\.monitor'\)/);
 });
 
-test('homepage topics are configurable from the admin site form', () => {
+test('homepage topics are configurable from the dedicated topic editor', () => {
   const homepage = fs.readFileSync(new URL('../src/pages/index.astro', import.meta.url), 'utf8');
-  const admin = fs.readFileSync(new URL('../public/admin-site.js', import.meta.url), 'utf8');
+  const adminPage = fs.readFileSync(new URL('../src/pages/admin/topics.astro', import.meta.url), 'utf8');
+  const editor = fs.readFileSync(new URL('../public/admin-topic-editor.js', import.meta.url), 'utf8');
 
   assert.match(homepage, /siteConfig\.topics/);
   assert.match(homepage, /qzq-topic-row/);
@@ -86,12 +88,10 @@ test('homepage topics are configurable from the admin site form', () => {
   assert.match(homepage, /\/topics\/\$\{card\.slug\}/);
   assert.match(homepage, /openTopicHref/);
   assert.doesNotMatch(homepage, /qzq-topic-statement/);
-  assert.match(admin, /id="topics-config"/);
-  assert.match(admin, /data-topic-card/);
-  assert.match(admin, /data-topic-slug/);
-  assert.match(admin, /topics: \{/);
-  assert.match(admin, /cards: readTopicCards\(\)/);
-  assert.doesNotMatch(admin, /topics\.body/);
+  assert.match(adminPage, /href="\/admin\/topics\/new"/);
+  assert.match(editor, /\/api\/admin\/topics/);
+  assert.match(editor, /formPayload/);
+  assert.match(editor, /method: data\.mode === 'create' \? 'POST' : 'PUT'/);
 });
 
 test('topic detail pages and post editor expose topic-post links', () => {
@@ -99,6 +99,8 @@ test('topic detail pages and post editor expose topic-post links', () => {
   const adminLayout = fs.readFileSync(new URL('../src/layouts/AdminLayout.astro', import.meta.url), 'utf8');
   const adminTopicsPage = fs.readFileSync(new URL('../src/pages/admin/topics.astro', import.meta.url), 'utf8');
   const adminTopicsScript = fs.readFileSync(new URL('../public/admin-topics.js', import.meta.url), 'utf8');
+  const adminTopicEditorPage = fs.readFileSync(new URL('../src/pages/admin/topics/[slug]/edit.astro', import.meta.url), 'utf8');
+  const adminTopicEditorScript = fs.readFileSync(new URL('../public/admin-topic-editor.js', import.meta.url), 'utf8');
   const adminPostsPage = fs.readFileSync(new URL('../src/pages/admin/posts.astro', import.meta.url), 'utf8');
   const adminPostsScript = fs.readFileSync(new URL('../public/admin-posts.js', import.meta.url), 'utf8');
   const postsApi = fs.readFileSync(new URL('../src/pages/api/admin/posts/index.ts', import.meta.url), 'utf8');
@@ -118,28 +120,23 @@ test('topic detail pages and post editor expose topic-post links', () => {
   assert.match(topicPage, /\/posts\/\$\{post\.slug\}/);
   assert.match(adminLayout, /href: '\/admin\/topics'/);
   assert.match(adminTopicsPage, /data-topics-admin/);
-  assert.match(adminTopicsPage, /data-add-topic/);
-  assert.match(adminTopicsPage, /data-topic-post-drawer/);
-  assert.match(adminTopicsPage, /data-topic-post-search/);
-  assert.match(adminTopicsPage, /data-topic-post-linked/);
-  assert.match(adminTopicsPage, /data-topic-post-available/);
+  assert.match(adminTopicsPage, /href="\/admin\/topics\/new"/);
+  assert.match(adminTopicEditorPage, /data-topic-editor-page/);
+  assert.match(adminTopicEditorPage, /data-linked-posts/);
+  assert.match(adminTopicEditorPage, /data-available-posts/);
   assert.match(adminTopicsPage, /\/admin-topics\.js/);
   assert.match(adminTopicsScript, /\/api\/admin\/site/);
   assert.match(adminTopicsScript, /\/api\/admin\/topics/);
-  assert.match(adminTopicsScript, /focusTopicCard/);
-  assert.match(adminTopicsScript, /data-add-topic-inline/);
-  assert.match(adminTopicsScript, /openTopicPosts/);
-  assert.match(adminTopicsScript, /data-manage-topic-posts/);
-  assert.match(adminTopicsScript, /data-topic-post-add/);
-  assert.match(adminTopicsScript, /data-topic-post-remove/);
-  assert.match(adminTopicsScript, /data-topic-post-move/);
-  assert.match(adminTopicsScript, /dragstart/);
-  assert.match(adminTopicsScript, /method:\s*'PUT'/);
-  assert.match(adminTopicsScript, /method:\s*'POST'/);
-  assert.match(adminTopicsScript, /method:\s*'PUT'/);
-  assert.match(adminTopicsScript, /method:\s*'DELETE'/);
-  assert.match(adminPostsPage, /data-post-topic-filters/);
-  assert.match(adminPostsScript, /data-post-topic-filter/);
+  assert.match(adminTopicsScript, /data-topic-move/);
+  assert.match(adminTopicEditorScript, /\/posts/);
+  assert.match(adminTopicEditorScript, /data-add-post/);
+  assert.match(adminTopicEditorScript, /data-remove-post/);
+  assert.match(adminTopicEditorScript, /data-move-post/);
+  assert.match(adminTopicEditorScript, /method:\s*data\.mode === 'create' \? 'POST' : 'PUT'/);
+  assert.match(adminTopicEditorScript, /method:\s*'PUT'/);
+  assert.match(adminTopicEditorScript, /method:\s*'DELETE'/);
+  assert.match(adminPostsPage, /data-post-topic-filter/);
+  assert.match(adminPostsScript, /topicSelect/);
   assert.match(adminPostsScript, /topicSlug/);
   assert.match(postsApi, /topicSlug:\s*url\.searchParams\.get\('topicSlug'\)/);
   assert.match(editorPage, /name="topicSlugs"/);

@@ -2,6 +2,14 @@ import type { APIRoute } from 'astro';
 import { requireAdmin } from '../../../../lib/server/auth.mjs';
 import { readingRepository } from '../../../../lib/server/readingRepository.mjs';
 
+export const GET: APIRoute = async (context) => {
+  if (!requireAdmin(context)) return new Response('Unauthorized', { status: 401 });
+
+  const item = readingRepository.get(Number(context.params.id));
+  if (!item) return new Response('Not found', { status: 404 });
+  return Response.json({ item });
+};
+
 export const PUT: APIRoute = async (context) => {
   if (!requireAdmin(context)) return new Response('Unauthorized', { status: 401 });
 
@@ -10,6 +18,7 @@ export const PUT: APIRoute = async (context) => {
   const status = String(body.status || 'reading');
   const statusLabel = status === 'read' ? '已读' : status === 'planned' ? '待读' : '在读';
   const updated = readingRepository.update(id, {
+    title: body.title == null ? undefined : String(body.title),
     author: String(body.author || ''),
     status,
     status_label: String(body.status_label || statusLabel),

@@ -2,6 +2,14 @@ import type { APIRoute } from 'astro';
 import { requireAdmin } from '../../../../lib/server/auth.mjs';
 import { radarRepository } from '../../../../lib/server/radarRepository.mjs';
 
+export const GET: APIRoute = async (context) => {
+  if (!requireAdmin(context)) return new Response('Unauthorized', { status: 401 });
+
+  const item = radarRepository.get(Number(context.params.id));
+  if (!item) return Response.json({ error: 'not found' }, { status: 404 });
+  return Response.json({ item });
+};
+
 export const PUT: APIRoute = async (context) => {
   if (!requireAdmin(context)) return new Response('Unauthorized', { status: 401 });
 

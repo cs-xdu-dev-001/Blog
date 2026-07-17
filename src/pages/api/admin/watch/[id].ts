@@ -2,12 +2,22 @@ import type { APIRoute } from 'astro';
 import { requireAdmin } from '../../../../lib/server/auth.mjs';
 import { watchRepository } from '../../../../lib/server/watchRepository.mjs';
 
+export const GET: APIRoute = async (context) => {
+  if (!requireAdmin(context)) return new Response('Unauthorized', { status: 401 });
+
+  const item = watchRepository.get(Number(context.params.id));
+  if (!item) return new Response('Not found', { status: 404 });
+  return Response.json({ item });
+};
+
 export const PUT: APIRoute = async (context) => {
   if (!requireAdmin(context)) return new Response('Unauthorized', { status: 401 });
 
   const id = Number(context.params.id);
   const body = await context.request.json();
   const updated = watchRepository.update(id, {
+    title: body.title == null ? undefined : String(body.title),
+    type: body.type == null ? undefined : String(body.type),
     status: String(body.status || '已看'),
     rating: String(body.rating || ''),
     comment: String(body.comment || ''),

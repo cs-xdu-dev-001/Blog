@@ -25,14 +25,15 @@ test('writing index filters technical notes and reflections in place', () => {
 test('admin can create and edit reflection posts without a separate module', () => {
   assert.match(editorPage, /'随记'/);
   assert.match(adminPage, /data-post-category="随记"/);
-  assert.match(adminPage, /data-post-kind-filter="all"/);
-  assert.match(adminPage, /data-post-kind-filter="technical"/);
-  assert.match(adminPage, /data-post-kind-filter="reflection"/);
+  assert.match(adminPage, /data-post-kind-filter/);
+  assert.match(adminPage, /<option value="all">/);
+  assert.match(adminPage, /<option value="technical">/);
+  assert.match(adminPage, /<option value="reflection">/);
   assert.match(adminClient, /querySelectorAll\('\[data-create-post\]'\)/);
   assert.match(adminClient, /button\.dataset\.postCategory/);
   assert.match(adminClient, /category === '随记'/);
   assert.match(adminClient, /kind:\s*'all'/);
   assert.match(adminClient, /state\.kind === 'reflection'/);
-  assert.match(adminClient, /data-post-kind-filter/);
-  assert.match(styles, /\.cms-kind-filters\s*\{/);
+  assert.match(adminClient, /kindSelect\.value/);
+  assert.match(styles, /\.cms-index-toolbar select/);
 });

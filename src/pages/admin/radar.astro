@@ -3,37 +3,36 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 ---
 
 <AdminLayout title="Dev Notes CMS | 统计标签" active="radar" dataAttr="data-radar-admin">
-  <input slot="search" class="cms-search" type="search" placeholder="搜索标签、中文名或类型..." data-radar-search />
-  <a slot="actions" href="/#statistics" target="_blank" rel="noreferrer">预览统计区</a>
+  <div slot="search" class="cms-admin-breadcrumb"><strong>站点</strong><span>/</span>统计标签</div>
+  <a slot="actions" href="/#statistics" target="_blank" rel="noreferrer">预览统计</a>
 
-  <Fragment slot="sidebar-actions">
-    <span>快速操作</span>
-    <button type="button" data-create-radar>新增标签</button>
-    <button type="button" data-filter="all">全部标签</button>
-    <button type="button" data-filter="movie">Movie雷达</button>
-    <button type="button" data-filter="code">Code雷达</button>
-  </Fragment>
-
-  <div class="cms-hero">
-    <div>
-      <span>Radar Tags</span>
-      <h1>统计标签控制台</h1>
-      <p>维护首页统计区的雷达图标签、计数、权重和排序。保存后前台自动读取，不再改首页源码。</p>
+  <section class="cms-index-shell">
+    <header class="cms-index-head">
+      <h1>统计标签</h1>
+      <span class="cms-index-summary" data-radar-summary>正在读取</span>
+    </header>
+    <div class="cms-index-toolbar">
+      <input type="search" placeholder="搜索标签" data-radar-search />
+      <div class="cms-filter-group" aria-label="标签类型">
+        <button type="button" data-filter="all" class="active">全部</button>
+        <button type="button" data-filter="movie">影视</button>
+        <button type="button" data-filter="code">技术</button>
+      </div>
+      <button class="cms-primary-action" type="button" data-create-radar>新增标签</button>
     </div>
-    <strong data-save-state>ONLINE / DB CONNECTED</strong>
-  </div>
+    <div class="cms-index-list">
+      <div class="cms-index-list-head"><span>标签</span><span>类型</span><span>权重</span><span></span></div>
+      <div data-radar-list></div>
+    </div>
+  </section>
 
-  <div class="cms-metrics" data-radar-stats></div>
-  <div class="cms-filters">
-    <button type="button" data-filter="all" class="active">全部</button>
-    <button type="button" data-filter="movie">Movie</button>
-    <button type="button" data-filter="code">Code</button>
-  </div>
-  <div class="cms-list" data-radar-list></div>
-
-  <aside slot="editor" class="cms-editor" data-radar-editor>
-    <p>从左侧选择一个标签开始编辑，或点击“新增标签”。</p>
-  </aside>
-
+  <dialog class="cms-drawer" data-radar-drawer>
+    <header><h2 data-radar-drawer-title>编辑标签</h2><button class="cms-button" type="button" data-close-radar aria-label="关闭">关闭</button></header>
+    <div class="cms-drawer-body"><form class="cms-editor-form" id="radar-editor-form" data-radar-form></form></div>
+    <footer>
+      <button class="cms-danger-action" type="button" data-delete-radar hidden>删除</button>
+      <button class="cms-primary-action" type="submit" form="radar-editor-form">保存</button>
+    </footer>
+  </dialog>
   <script is:inline src="/admin-radar.js"></script>
 </AdminLayout>

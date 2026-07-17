@@ -72,3 +72,7 @@ assert.ok(fs.existsSync(path.join(uploadDir, '隐入尘烟-960.webp')));
 assert.ok(fs.existsSync(path.join(uploadDir, '隐入尘烟-480.webp')));
 assert.ok(fs.existsSync(path.join(uploadDir, 'original', '隐入尘烟.png')));
 assert.equal(safeImageBaseName('百家讲坛《风雨张居正》'), '百家讲坛《风雨张居正》');
+
+const renamed = repo.update(item.id, { title: '隐入尘烟（重看）', type: '纪录片' });
+assert.equal(renamed.title, '隐入尘烟（重看）');
+assert.equal(renamed.type, '纪录片');

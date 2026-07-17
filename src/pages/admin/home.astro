@@ -1,0 +1,27 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Dev Notes CMS | 首页模块" active="home" dataAttr="data-site-admin">
+  <div slot="search" class="cms-admin-breadcrumb"><strong>站点</strong><span>/</span>首页模块</div>
+  <Fragment slot="actions"><a href="/" target="_blank" rel="noreferrer">预览首页</a><button class="cms-primary-action" type="submit" form="site-settings-form">保存</button></Fragment>
+  <section class="cms-settings-page" data-site-section="home">
+    <header><h1>首页模块</h1><span class="cms-save-state" data-save-state>正在读取</span></header>
+    <nav class="cms-settings-tabs"><a href="/admin/site">站点信息</a><a class="active" href="/admin/home">首页模块</a><a href="/admin/assistant">AI助手</a><a href="/admin/about">关于</a></nav>
+    <form id="site-settings-form" class="cms-settings-form" data-site-form>
+      <section class="cms-settings-section">
+        <h2>首页首屏</h2>
+        <div class="cms-settings-grid">
+          <label class="cms-setting-field"><span>首屏标识</span><input name="heroKicker" /></label>
+          <label class="cms-setting-field"><span>右上信息</span><input name="heroMeta" /></label>
+          <label class="cms-setting-field full"><span>第一句</span><textarea name="heroLine"></textarea></label>
+          <label class="cms-setting-field full"><span>第二句</span><textarea name="heroSubline"></textarea></label>
+          <label class="cms-setting-field full"><span>高亮句</span><textarea name="heroHighlight"></textarea></label>
+          <label class="cms-setting-field full"><span>动态标签</span><input name="orbitTags" placeholder="使用/分隔" /></label>
+        </div>
+      </section>
+      <section class="cms-settings-section"><h2>模块顺序</h2><div class="cms-home-sections" data-home-sections></div></section>
+    </form>
+  </section>
+  <script is:inline src="/admin-site.js"></script>
+</AdminLayout>

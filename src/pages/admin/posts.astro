@@ -2,53 +2,44 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 ---
 
-<AdminLayout
-  title="Dev Notes CMS | 近期笔记"
-  active="posts"
-  pageClass="post-admin-list-page"
-  layoutClass="cms-layout-post-list"
-  dataAttr="data-posts-admin"
->
-  <input slot="search" class="cms-search" type="search" placeholder="搜索标题、分类、摘要和正文..." data-post-search />
-  <Fragment slot="actions">
-    <a href="/writing" target="_blank" rel="noreferrer">预览笔记</a>
-    <a href="/admin/topics">主线管理</a>
-  </Fragment>
+<AdminLayout title="Dev Notes CMS | 笔记" active="posts" dataAttr="data-posts-admin">
+  <div slot="search" class="cms-admin-breadcrumb"><strong>内容</strong><span>/</span>笔记</div>
+  <a slot="actions" href="/writing" target="_blank" rel="noreferrer">预览笔记</a>
 
-  <Fragment slot="sidebar-actions">
-    <span>快速操作</span>
-    <button type="button" data-create-post data-post-category="Notes">新增笔记</button>
-    <button type="button" data-create-post data-post-category="随记">新增随记</button>
-    <a href="/admin/topics">管理主线</a>
-    <button type="button" data-post-filter="all" class="active">全部笔记</button>
-    <button type="button" data-post-filter="published">已发布</button>
-    <button type="button" data-post-filter="draft">草稿</button>
-    <button type="button" data-post-filter="featured">重点笔记</button>
-  </Fragment>
+  <section class="cms-index-shell">
+    <header class="cms-index-head">
+      <h1>笔记</h1>
+      <span class="cms-index-summary" data-post-stats>正在读取</span>
+    </header>
 
-  <div class="cms-hero cms-hero-posts">
-    <div>
-      <span>Writing Desk</span>
-      <h1>近期笔记管理</h1>
-      <p>这里负责检索、筛选和进入单篇编辑。真正写作放到独立编辑页，避免导航、索引、Markdown原文和预览全部挤在一起。</p>
+    <div class="cms-index-toolbar">
+      <input type="search" placeholder="搜索标题、摘要和正文" data-post-search />
+      <div class="cms-filter-group" aria-label="发布状态">
+        <button type="button" data-post-filter="all" class="active">全部</button>
+        <button type="button" data-post-filter="published">已发布</button>
+        <button type="button" data-post-filter="draft">草稿</button>
+        <button type="button" data-post-filter="featured">精选</button>
+      </div>
+      <select data-post-kind-filter aria-label="内容类型">
+        <option value="all">全部类型</option>
+        <option value="technical">技术</option>
+        <option value="reflection">随记</option>
+      </select>
+      <select data-post-topic-filter aria-label="所属主线">
+        <option value="">全部主线</option>
+      </select>
+      <div class="cms-toolbar-actions">
+        <button class="cms-button" type="button" data-create-post data-post-category="随记">新增随记</button>
+        <button class="cms-primary-action" type="button" data-create-post data-post-category="Notes">新增笔记</button>
+      </div>
     </div>
-    <strong data-post-save-state>ONLINE / DB CONNECTED</strong>
-  </div>
 
-  <div class="cms-metrics" data-post-stats></div>
-  <div class="cms-filters">
-    <button type="button" data-post-filter="all" class="active">全部</button>
-    <button type="button" data-post-filter="published">已发布</button>
-    <button type="button" data-post-filter="draft">草稿</button>
-    <button type="button" data-post-filter="featured">重点笔记</button>
-  </div>
-  <div class="cms-filters cms-kind-filters" aria-label="内容类型">
-    <button type="button" data-post-kind-filter="all" class="active">全部内容</button>
-    <button type="button" data-post-kind-filter="technical">技术</button>
-    <button type="button" data-post-kind-filter="reflection">随记</button>
-  </div>
-  <div class="cms-filters cms-topic-filters" data-post-topic-filters></div>
-  <div class="cms-list cms-post-list" data-post-list></div>
+    <div class="cms-index-list">
+      <div class="cms-index-list-head"><span>标题</span><span>分类</span><span>状态</span><span></span></div>
+      <div data-post-list></div>
+    </div>
+    <span class="cms-save-state" data-post-save-state hidden></span>
+  </section>
 
   <script is:inline src="/admin-posts.js"></script>
 </AdminLayout>

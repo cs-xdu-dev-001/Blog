@@ -149,6 +149,8 @@ export function createWatchRepository({ dbPath, uploadDir } = {}) {
       if (!current) return null;
       const values = {
         id,
+        title: input.title ?? current.title,
+        type: input.type ?? current.type,
         status: input.status ?? current.status,
         rating: input.rating ?? current.rating ?? '',
         comment: input.comment ?? current.comment ?? '',
@@ -164,6 +166,8 @@ export function createWatchRepository({ dbPath, uploadDir } = {}) {
 
       const updateItem = db.prepare(`
           UPDATE watch_items SET
+            title = @title,
+            type = @type,
             status = @status,
             rating = @rating,
             comment = @comment,

@@ -2,83 +2,26 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 ---
 
-<AdminLayout
-  title="Dev Notes CMS | 主线管理"
-  active="topics"
-  pageClass="topic-admin-page"
-  layoutClass="cms-layout-topic-admin"
-  dataAttr="data-topics-admin"
->
-  <input slot="search" class="cms-search" type="search" placeholder="搜索主线名、标签、详情..." data-topic-search />
-  <Fragment slot="actions">
-    <a href="/#topics" target="_blank" rel="noreferrer">预览主线</a>
-    <button type="button" data-add-topic>新增主线</button>
-    <button type="button" class="cms-primary-action" data-save-topics>保存主线</button>
-  </Fragment>
+<AdminLayout title="Dev Notes CMS | 主线" active="topics" dataAttr="data-topics-admin">
+  <div slot="search" class="cms-admin-breadcrumb"><strong>内容</strong><span>/</span>主线</div>
+  <a slot="actions" href="/#topics" target="_blank" rel="noreferrer">预览主线</a>
 
-  <Fragment slot="sidebar-actions">
-    <span>快速操作</span>
-    <button type="button" data-add-topic>新增主线</button>
-    <button type="button" data-save-topics>保存主线</button>
-    <button type="button" data-reset-topics>重新加载</button>
-  </Fragment>
+  <section class="cms-index-shell">
+    <header class="cms-index-head">
+      <h1>主线</h1>
+      <span class="cms-index-summary" data-topic-summary>正在读取</span>
+    </header>
 
-  <div class="cms-hero cms-hero-topics">
-    <div>
-      <span>Topic Desk</span>
-      <h1>主线管理</h1>
+    <div class="cms-index-toolbar">
+      <input type="search" placeholder="搜索主线、标签和详情" data-topic-search />
+      <a class="cms-primary-action" href="/admin/topics/new">新增主线</a>
     </div>
-    <strong data-topic-save-state>READY</strong>
-  </div>
 
-  <div class="cms-metrics" data-topic-stats></div>
-  <div class="topic-admin-toolbar">
-    <label>
-      <span>首页标题</span>
-      <input name="topics.title" value="主线" data-topics-title />
-    </label>
-  </div>
-  <div class="topic-admin-board" data-topic-list></div>
-
-  <dialog class="topic-post-drawer" data-topic-post-drawer aria-labelledby="topic-post-drawer-title">
-    <div class="topic-post-drawer-shell">
-      <header class="topic-post-drawer-head">
-        <div>
-          <span>主线笔记</span>
-          <h2 id="topic-post-drawer-title" data-topic-post-title>关联笔记</h2>
-        </div>
-        <button type="button" data-topic-post-close aria-label="关闭关联管理" title="关闭">×</button>
-      </header>
-
-      <div class="topic-post-drawer-state">
-        <span data-topic-post-count>0篇</span>
-        <strong data-topic-post-status>READY</strong>
-      </div>
-
-      <div class="topic-post-workspace">
-        <section class="topic-post-column topic-post-linked-column">
-          <header>
-            <strong>已关联</strong>
-            <span>拖动排序</span>
-          </header>
-          <div class="topic-post-list" data-topic-post-linked></div>
-        </section>
-
-        <section class="topic-post-column topic-post-available-column">
-          <header>
-            <strong>全部笔记</strong>
-            <input type="search" placeholder="搜索标题、分类或摘要" data-topic-post-search />
-          </header>
-          <div class="topic-post-list" data-topic-post-available></div>
-        </section>
-      </div>
-
-      <footer class="topic-post-drawer-actions">
-        <button type="button" data-topic-post-close>取消</button>
-        <button type="button" class="cms-primary-action" data-topic-post-save>保存关联</button>
-      </footer>
+    <div class="cms-index-list">
+      <div class="cms-index-list-head"><span>主线</span><span>标签</span><span>强度</span><span>排序</span></div>
+      <div data-topic-list></div>
     </div>
-  </dialog>
+  </section>
 
   <script is:inline src="/admin-topics.js"></script>
 </AdminLayout>

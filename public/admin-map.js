@@ -233,7 +233,7 @@ document.querySelectorAll('[data-map-checkbox]').forEach((input) => {
 });
 
 document.querySelector('[data-save-map]').addEventListener('click', async () => {
-  saveState.textContent = 'SAVING...';
+  saveState.textContent = '正在保存';
   const res = await fetch('/api/admin/map', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -242,9 +242,9 @@ document.querySelector('[data-save-map]').addEventListener('click', async () => 
   const data = await res.json();
   state.config = data.config;
   applyConfig();
-  saveState.textContent = 'SAVED';
+  saveState.textContent = '已保存';
   window.setTimeout(() => {
-    saveState.textContent = 'READY';
+    saveState.textContent = '已就绪';
   }, 1200);
 });
 

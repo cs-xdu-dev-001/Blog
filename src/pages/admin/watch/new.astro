@@ -1,0 +1,27 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+const editorJson = JSON.stringify({ mode: 'create' });
+---
+
+<AdminLayout title="Dev Notes CMS | 新增影像" active="watch" dataAttr="data-watch-create-page">
+  <div slot="search" class="cms-admin-breadcrumb"><strong>影像档案</strong><span>/</span>新增</div>
+  <section class="cms-editor-page" data-watch-create-page>
+    <header class="cms-editor-topbar">
+      <h1>新增影像</h1>
+      <div class="cms-editor-actions">
+        <a class="cms-button" href="/admin/watch">取消</a>
+        <button class="cms-primary-action" type="submit" form="watch-create-form">创建</button>
+      </div>
+    </header>
+    <form id="watch-create-form" class="cms-editor-form" data-watch-create-form>
+      <div class="cms-field-grid">
+        <label class="cms-field full"><span>名称</span><input name="title" required autofocus /></label>
+        <label class="cms-field"><span>类型</span><select name="type"><option>电影</option><option>剧集</option><option>纪录片</option><option>动画</option><option>综艺</option></select></label>
+        <label class="cms-field"><span>状态</span><select name="status"><option>在看</option><option>已看</option><option>想看</option></select></label>
+      </div>
+      <span class="cms-save-state" data-watch-editor-state></span>
+    </form>
+  </section>
+  <script type="application/json" id="watch-editor-data" set:html={editorJson}></script>
+  <script is:inline src="/admin-watch-editor.js"></script>
+</AdminLayout>

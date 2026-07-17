@@ -1,0 +1,17 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Dev Notes CMS | 关于" active="about" dataAttr="data-site-admin">
+  <div slot="search" class="cms-admin-breadcrumb"><strong>站点</strong><span>/</span>关于</div>
+  <Fragment slot="actions"><a href="/about" target="_blank" rel="noreferrer">预览关于</a><button class="cms-primary-action" type="submit" form="site-settings-form">保存</button></Fragment>
+  <section class="cms-settings-page" data-site-section="about">
+    <header><h1>关于</h1><span class="cms-save-state" data-save-state>正在读取</span></header>
+    <nav class="cms-settings-tabs"><a href="/admin/site">站点信息</a><a href="/admin/home">首页模块</a><a href="/admin/assistant">AI助手</a><a class="active" href="/admin/about">关于</a></nav>
+    <form id="site-settings-form" class="cms-settings-form" data-site-form>
+      <label class="cms-setting-field"><span>标题</span><input name="aboutTitle" /></label>
+      <label class="cms-setting-field cms-setting-markdown"><span>正文</span><textarea class="cms-long-text" name="aboutBody"></textarea><article data-about-preview></article></label>
+    </form>
+  </section>
+  <script is:inline src="/admin-site.js"></script>
+</AdminLayout>

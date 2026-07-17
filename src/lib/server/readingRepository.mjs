@@ -216,8 +216,11 @@ export function createReadingRepository({ dbPath, uploadDir } = {}) {
 
     update(id, input) {
       initialize();
+      const current = this.get(id);
+      if (!current) return null;
       db.prepare(`
         UPDATE reading_items SET
+          title = @title,
           author = @author,
           status = @status,
           status_label = @status_label,
@@ -232,16 +235,17 @@ export function createReadingRepository({ dbPath, uploadDir } = {}) {
         WHERE id = @id
       `).run({
         id,
-        author: input.author ?? '',
-        status: input.status,
-        status_label: input.status_label ?? '',
-        progress: input.progress ?? '',
-        summary: input.summary ?? '',
-        quote: input.quote ?? '',
-        review: input.review ?? '',
-        spine_color: input.spine_color ?? '#263548',
-        accent_color: input.accent_color ?? '#ff9138',
-        is_featured: input.is_featured ? 1 : 0,
+        title: input.title ?? current.title,
+        author: input.author ?? current.author,
+        status: input.status ?? current.status,
+        status_label: input.status_label ?? current.status_label,
+        progress: input.progress ?? current.progress,
+        summary: input.summary ?? current.summary,
+        quote: input.quote ?? current.quote,
+        review: input.review ?? current.review,
+        spine_color: input.spine_color ?? current.spine_color,
+        accent_color: input.accent_color ?? current.accent_color,
+        is_featured: input.is_featured === undefined ? current.is_featured : input.is_featured ? 1 : 0,
       });
       return this.get(id);
     },

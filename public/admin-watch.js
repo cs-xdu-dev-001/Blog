@@ -1,18 +1,7 @@
-const state = {
-  items: [],
-  stats: null,
-  selected: null,
-  mode: 'edit',
-  filter: 'all',
-  query: '',
-};
-
+const state = { items: [], stats: {}, filter: 'all', query: '' };
 const listEl = document.querySelector('[data-watch-list]');
-const statsEl = document.querySelector('[data-watch-stats]');
-const editorEl = document.querySelector('[data-watch-editor]');
+const summaryEl = document.querySelector('[data-watch-summary]');
 const searchEl = document.querySelector('[data-watch-search]');
-const saveStateEl = document.querySelector('[data-save-state]');
-const createButton = document.querySelector('[data-create-watch]');
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -23,298 +12,58 @@ function escapeHtml(value) {
     .replaceAll("'", '&#039;');
 }
 
-async function loadItems() {
-  const params = new URLSearchParams({ filter: state.filter, query: state.query });
-  const res = await fetch(`/api/admin/watch?${params}`);
-  if (!res.ok) throw new Error('Failed to load watch items');
-  const data = await res.json();
-  state.items = data.items;
-  state.stats = data.stats;
-  if (state.mode !== 'create') {
-    if (!state.selected || !state.items.some((item) => item.id === state.selected.id)) {
-      state.selected = state.items[0] || null;
-    } else {
-      state.selected = state.items.find((item) => item.id === state.selected.id);
-    }
-  }
-  render();
-}
-
-function renderStats() {
-  statsEl.innerHTML = [
-    ['总条目', state.stats.total, '全部影像档案'],
-    ['缺图', state.stats.missingImage, '需要上传图片'],
-    ['缺影评', state.stats.missingComment, '等待个人影评'],
-    ['缺佳句', state.stats.missingQuote, '等待佳句摘录'],
-  ].map(([label, value, hint]) => `
-    <article class="cms-metric">
-      <span>${label}</span>
-      <strong>${value}</strong>
-      <p>${hint}</p>
-    </article>
-  `).join('');
-}
-
-function renderList() {
+function render() {
+  summaryEl.textContent = `${state.stats.total || 0}部影像`;
   if (!state.items.length) {
-    listEl.innerHTML = '<p class="cms-empty">没有匹配的影像条目。</p>';
+    listEl.innerHTML = '<div class="cms-index-empty">没有匹配的影像</div>';
     return;
   }
-
   listEl.innerHTML = state.items.map((item) => {
-    const line = item.quote || item.comment || '等待补充内容';
-    const imageStyle = item.image_path
-      ? `style="background-image: linear-gradient(180deg, transparent, rgba(0,0,0,.68)), url('${escapeHtml(item.image_path)}')"`
-      : '';
+    const image = item.image_small_path || item.image_path;
+    const style = image ? `style="background-image:url('${escapeHtml(image)}')"` : '';
+    const activity = item.is_activity_featured ? ' · 观看近况' : '';
     return `
-      <button class="cms-item ${state.mode === 'edit' && state.selected?.id === item.id ? 'active' : ''}" data-id="${item.id}">
-        <span class="cms-thumb ${item.image_path ? '' : 'missing'}" ${imageStyle}>${item.image_path ? '' : 'NO IMG'}</span>
-        <span>
-          <small>${escapeHtml(item.status)} / ${escapeHtml(item.type)}</small>
-          <strong>${escapeHtml(item.title)}</strong>
-          <em>${escapeHtml(line)}</em>
+      <a class="cms-index-row" href="/admin/watch/${item.id}/edit">
+        <span class="cms-index-row-main">
+          <span class="cms-index-thumb" ${style}>${image ? '' : '影'}</span>
+          <span>
+            <strong class="cms-index-title">${escapeHtml(item.title)}</strong>
+            <span class="cms-index-meta">${escapeHtml(item.quote || item.comment || '未填写内容')}</span>
+          </span>
         </span>
-        <b>${item.is_activity_featured ? '近况' : item.image_path ? '有图' : '缺图'}</b>
-      </button>
+        <span class="cms-index-cell">${escapeHtml(item.type || '未分类')}</span>
+        <span class="cms-index-badge">${escapeHtml(item.status || '未设置')}${activity}</span>
+        <span class="cms-index-action">编辑</span>
+      </a>
     `;
   }).join('');
-
-  listEl.querySelectorAll('[data-id]').forEach((button) => {
-    button.addEventListener('click', () => {
-      state.mode = 'edit';
-      state.selected = state.items.find((item) => item.id === Number(button.dataset.id));
-      render();
-    });
-  });
 }
 
-function renderCreateForm() {
-  editorEl.innerHTML = `
-    <span>New Archive Item</span>
-    <div class="cms-preview missing">
-      <strong>新增影像</strong>
-    </div>
-    <form data-create-form>
-      <label>影像名称 <input name="title" required placeholder="例如 大明王朝1566" /></label>
-      <label>类型
-        <select name="type">
-          <option>电影</option>
-          <option>剧集</option>
-          <option>纪录片</option>
-          <option>动画</option>
-          <option>综艺</option>
-        </select>
-      </label>
-      <label>状态
-        <select name="status">
-          <option>已看</option>
-          <option>想看</option>
-          <option>在看</option>
-        </select>
-      </label>
-      <button type="submit">创建并继续编辑</button>
-    </form>
-  `;
-
-  editorEl.querySelector('[data-create-form]').addEventListener('submit', createItem);
-}
-
-function renderEditor() {
-  if (state.mode === 'create') {
-    renderCreateForm();
-    return;
-  }
-
-  const item = state.selected;
-  if (!item) {
-    editorEl.innerHTML = '<p>从左侧选择一个影像条目开始编辑，或点击“新增影像”。</p>';
-    return;
-  }
-
-  editorEl.innerHTML = `
-    <span>Live Editor</span>
-    <div class="cms-preview ${item.image_path ? '' : 'missing'}" ${item.image_path ? `style="background-image: linear-gradient(180deg, transparent, rgba(0,0,0,.72)), url('${escapeHtml(item.image_path)}')"` : ''}>
-      <strong>${escapeHtml(item.title)}</strong>
-    </div>
-    <form data-edit-form>
-      <label>状态
-        <select name="status">
-          <option ${item.status === '已看' ? 'selected' : ''}>已看</option>
-          <option ${item.status === '想看' ? 'selected' : ''}>想看</option>
-          <option ${item.status === '在看' ? 'selected' : ''}>在看</option>
-        </select>
-      </label>
-      <label data-activity-field="watching">观看进度 <input name="progress_text" value="${escapeHtml(item.progress_text || '')}" placeholder="例如 第18集" /></label>
-      <label data-activity-field="finished">完成日期 <input name="completed_at" type="date" value="${escapeHtml(item.completed_at || '')}" /></label>
-      <label>评分 <input name="rating" value="${escapeHtml(item.rating || '')}" placeholder="例如 4" /></label>
-      <label>个人影评 <textarea name="comment" placeholder="支持Markdown">${escapeHtml(item.comment || '')}</textarea></label>
-      <label>佳句 <textarea name="quote" placeholder="摘录一句适合放在卡片上的话">${escapeHtml(item.quote || '')}</textarea></label>
-      <label>佳句来源 <input name="quote_source" value="${escapeHtml(item.quote_source || '')}" placeholder="例如 官方台词 / 豆瓣 / 自己整理" /></label>
-      <label class="cms-check"><input type="checkbox" name="is_featured" ${item.is_featured ? 'checked' : ''} /> 精选展示</label>
-      <label class="cms-check"><input type="checkbox" name="is_activity_featured" ${item.is_activity_featured ? 'checked' : ''} /> 展示在观看近况</label>
-      <button type="submit">保存内容</button>
-    </form>
-    <form data-image-form>
-      <label>上传对应图片 <input name="image" type="file" accept="image/jpeg,image/png,image/webp,image/avif" /></label>
-      <button type="submit">上传图片</button>
-      <p>上传后会按影像名保存，例如“${escapeHtml(item.title)}.jpg”。</p>
-    </form>
-    <form data-delete-form class="cms-danger-zone">
-      <p>删除重复或误建条目。图片文件会保留，避免误删复用素材。</p>
-      <button type="submit">删除当前影像</button>
-    </form>
-  `;
-
-  const editForm = editorEl.querySelector('[data-edit-form]');
-  editForm.addEventListener('submit', saveSelected);
-  editForm.elements.status.addEventListener('change', () => syncActivityFields(editForm));
-  syncActivityFields(editForm);
-  editorEl.querySelector('[data-image-form]').addEventListener('submit', uploadImage);
-  editorEl.querySelector('[data-delete-form]').addEventListener('submit', deleteSelected);
-}
-
-function syncActivityFields(form) {
-  const status = form.elements.status.value;
-  const watchingField = form.querySelector('[data-activity-field="watching"]');
-  const finishedField = form.querySelector('[data-activity-field="finished"]');
-  const activityToggle = form.elements.is_activity_featured;
-
-  watchingField.hidden = status !== '在看';
-  finishedField.hidden = status !== '已看';
-  activityToggle.disabled = status === '想看';
-  if (activityToggle.disabled) activityToggle.checked = false;
-}
-
-function render() {
-  renderStats();
-  renderList();
-  renderEditor();
-}
-
-async function createItem(event) {
-  event.preventDefault();
-  const form = new FormData(event.currentTarget);
-  saveStateEl.textContent = 'CREATING';
-  const res = await fetch('/api/admin/watch', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      title: form.get('title'),
-      type: form.get('type'),
-      status: form.get('status'),
-    }),
-  });
-
-  if (!res.ok) {
-    saveStateEl.textContent = 'CREATE FAILED';
-    return;
-  }
-
-  const data = await res.json();
-  state.mode = 'edit';
-  state.filter = 'all';
-  state.query = '';
-  searchEl.value = '';
-  state.selected = data.item;
-  saveStateEl.textContent = 'CREATED';
-  await loadItems();
-}
-
-async function saveSelected(event) {
-  event.preventDefault();
-  const form = new FormData(event.currentTarget);
-  saveStateEl.textContent = 'SAVING';
-  const res = await fetch(`/api/admin/watch/${state.selected.id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      status: form.get('status'),
-      rating: form.get('rating'),
-      comment: form.get('comment'),
-      quote: form.get('quote'),
-      quote_source: form.get('quote_source'),
-      is_featured: form.get('is_featured') === 'on',
-      progress_text: form.get('progress_text'),
-      completed_at: form.get('completed_at'),
-      is_activity_featured: form.get('is_activity_featured') === 'on',
-    }),
-  });
-
-  if (!res.ok) {
-    saveStateEl.textContent = 'SAVE FAILED';
-    return;
-  }
-
-  const data = await res.json();
-  state.selected = data.item;
-  saveStateEl.textContent = 'SAVED';
-  await loadItems();
-}
-
-async function uploadImage(event) {
-  event.preventDefault();
-  const form = new FormData(event.currentTarget);
-  if (!form.get('image')?.size) return;
-  saveStateEl.textContent = 'UPLOADING';
-  const res = await fetch(`/api/admin/watch/${state.selected.id}/image`, {
-    method: 'POST',
-    body: form,
-  });
-
-  if (!res.ok) {
-    saveStateEl.textContent = 'UPLOAD FAILED';
-    return;
-  }
-
-  const data = await res.json();
-  state.selected = data.item;
-  saveStateEl.textContent = 'IMAGE SAVED';
-  await loadItems();
-}
-
-async function deleteSelected(event) {
-  event.preventDefault();
-  const item = state.selected;
-  if (!item) return;
-  if (!window.confirm(`确认删除《${item.title}》？此操作不可撤销。`)) return;
-
-  saveStateEl.textContent = 'DELETING';
-  const res = await fetch(`/api/admin/watch/${item.id}`, {
-    method: 'DELETE',
-  });
-
-  if (!res.ok) {
-    saveStateEl.textContent = 'DELETE FAILED';
-    return;
-  }
-
-  state.selected = null;
-  saveStateEl.textContent = 'DELETED';
-  await loadItems();
-}
-
-createButton?.addEventListener('click', () => {
-  state.mode = 'create';
-  state.selected = null;
+async function loadItems() {
+  const params = new URLSearchParams({ filter: state.filter, query: state.query });
+  const response = await fetch(`/api/admin/watch?${params}`);
+  if (!response.ok) throw new Error('读取影像失败');
+  const data = await response.json();
+  state.items = data.items || [];
+  state.stats = data.stats || {};
   render();
-});
+}
 
 document.querySelectorAll('[data-filter]').forEach((button) => {
   button.addEventListener('click', () => {
-    state.mode = 'edit';
-    state.filter = button.dataset.filter;
-    document.querySelectorAll('[data-filter]').forEach((el) => el.classList.toggle('active', el === button));
-    loadItems();
+    state.filter = button.dataset.filter || 'all';
+    document.querySelectorAll('[data-filter]').forEach((item) => item.classList.toggle('active', item === button));
+    loadItems().catch((error) => { summaryEl.textContent = error.message; });
   });
 });
 
-searchEl.addEventListener('input', () => {
-  state.mode = 'edit';
+searchEl?.addEventListener('input', () => {
   state.query = searchEl.value;
   window.clearTimeout(searchEl._timer);
-  searchEl._timer = window.setTimeout(loadItems, 180);
+  searchEl._timer = window.setTimeout(() => loadItems().catch((error) => { summaryEl.textContent = error.message; }), 180);
 });
 
-loadItems().catch(() => {
-  saveStateEl.textContent = 'LOAD FAILED';
+loadItems().catch((error) => {
+  summaryEl.textContent = error.message;
+  listEl.innerHTML = '<div class="cms-index-error">读取失败，请刷新重试</div>';
 });
