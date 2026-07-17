@@ -3,6 +3,7 @@ const state = {
   stats: null,
   topics: [],
   filter: 'all',
+  kind: 'all',
   topicSlug: '',
   query: '',
 };
@@ -80,12 +81,18 @@ function renderTopicFilters() {
 
 function renderList() {
   if (!listEl) return;
-  if (!state.items.length) {
-    listEl.innerHTML = '<p class="cms-empty">没有匹配的笔记。</p>';
+  const visibleItems = state.items.filter((item) => {
+    if (state.kind === 'reflection') return item.category === '随记';
+    if (state.kind === 'technical') return item.category !== '随记';
+    return true;
+  });
+  if (!visibleItems.length) {
+    const emptyText = state.kind === 'reflection' ? '当前条件下没有随记。' : '没有匹配的笔记。';
+    listEl.innerHTML = `<p class="cms-empty">${emptyText}</p>`;
     return;
   }
 
-  listEl.innerHTML = state.items.map((item) => `
+  listEl.innerHTML = visibleItems.map((item) => `
     <a class="cms-item cms-post-list-item" href="/admin/posts/${item.id}/edit">
       <span class="cms-thumb cms-thumb-post">${item.published ? 'POST' : 'DRAFT'}</span>
       <span>
@@ -137,6 +144,14 @@ document.querySelectorAll('[data-post-filter]').forEach((button) => {
     state.filter = button.dataset.postFilter;
     document.querySelectorAll('[data-post-filter]').forEach((el) => el.classList.toggle('active', el === button));
     loadItems();
+  });
+});
+
+document.querySelectorAll('[data-post-kind-filter]').forEach((button) => {
+  button.addEventListener('click', () => {
+    state.kind = button.dataset.postKindFilter || 'all';
+    document.querySelectorAll('[data-post-kind-filter]').forEach((el) => el.classList.toggle('active', el === button));
+    renderList();
   });
 });
 

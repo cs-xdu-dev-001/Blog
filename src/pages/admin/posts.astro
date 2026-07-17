@@ -42,6 +42,11 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     <button type="button" data-post-filter="draft">草稿</button>
     <button type="button" data-post-filter="featured">重点笔记</button>
   </div>
+  <div class="cms-filters cms-kind-filters" aria-label="内容类型">
+    <button type="button" data-post-kind-filter="all" class="active">全部内容</button>
+    <button type="button" data-post-kind-filter="technical">技术</button>
+    <button type="button" data-post-kind-filter="reflection">随记</button>
+  </div>
   <div class="cms-filters cms-topic-filters" data-post-topic-filters></div>
   <div class="cms-list cms-post-list" data-post-list></div>
 

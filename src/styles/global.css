@@ -7060,6 +7060,18 @@ button:focus-visible {
   color: #67e8f9;
 }
 
+.cms-kind-filters {
+  margin-top: -8px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  padding-bottom: 18px;
+}
+
+.cms-kind-filters button.active {
+  border-color: rgba(255, 145, 56, 0.5);
+  background: rgba(255, 145, 56, 0.13);
+  color: #ffb86b;
+}
+
 .cms-list {
   display: grid;
   gap: 10px;

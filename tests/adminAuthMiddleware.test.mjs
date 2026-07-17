@@ -13,3 +13,9 @@ test('admin page redirects are handled by middleware before layouts render', () 
   assert.doesNotMatch(adminLayout, /Astro\.redirect\('\/admin\/login'\)/);
   assert.doesNotMatch(adminLayout, /requireAdmin\(Astro\)/);
 });
+
+test('admin root redirects to the post management entry', () => {
+  const adminIndex = fs.readFileSync(new URL('../src/pages/admin/index.astro', import.meta.url), 'utf8');
+
+  assert.match(adminIndex, /Astro\.redirect\('\/admin\/posts'\)/);
+});
