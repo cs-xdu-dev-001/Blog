@@ -130,8 +130,39 @@ console.log('ok')
 
   assert.match(rendered.html, /<h1 id="标题">标题<\/h1>/);
   assert.match(rendered.html, /<strong>重点<\/strong>/);
+  assert.match(rendered.html, /<a href="https:\/\/example\.com" target="_blank" rel="noreferrer">链接<\/a>/);
   assert.match(rendered.html, /<ul>/);
   assert.match(rendered.html, /<blockquote>/);
   assert.match(rendered.html, /<pre><code class="language-js">/);
   assert.deepEqual(rendered.headings[0], { depth: 1, slug: '标题', text: '标题' });
+});
+
+test('markdown renderer supports gfm syntax used in admin preview', () => {
+  const rendered = markdownToHtml(`使用文档：https://qwenlm.github.io/qwen-code-docs/zh/
+
+之前在国内服务器上用过几次：
+
+- 免费额度很少
+- 质量属实一般
+
+### 安装codex->配置代理->海外服务器
+
+1. 登录服务器
+2. 安装代理
+
+- [x] 已完成
+- [ ] 待验证
+
+| 模块 | 结果 |
+| --- | --- |
+| Qwen Code | ~~暂不稳定~~ |
+`);
+
+  assert.match(rendered.html, /<a href="https:\/\/qwenlm\.github\.io\/qwen-code-docs\/zh\/" target="_blank" rel="noreferrer">/);
+  assert.match(rendered.html, /<ul>/);
+  assert.match(rendered.html, /<h3 id="安装codex-配置代理-海外服务器">安装codex->配置代理->海外服务器<\/h3>/);
+  assert.match(rendered.html, /<ol>/);
+  assert.match(rendered.html, /type="checkbox" checked disabled/);
+  assert.match(rendered.html, /<table>/);
+  assert.match(rendered.html, /<del>暂不稳定<\/del>/);
 });

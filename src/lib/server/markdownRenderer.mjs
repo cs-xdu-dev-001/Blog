@@ -1,11 +1,9 @@
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
+import { unified } from 'unified';
+import remarkParse from 'remark-parse';
+import remarkGfm from 'remark-gfm';
+import remarkRehype from 'remark-rehype';
+import rehypeStringify from 'rehype-stringify';
+import { visit } from 'unist-util-visit';
 
 function slugifyHeading(value) {
   return String(value || '')
@@ -17,121 +15,56 @@ function slugifyHeading(value) {
     || 'section';
 }
 
-function renderInline(value) {
-  let html = escapeHtml(value);
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
-  return html;
+function textFromNode(node) {
+  if (!node) return '';
+  if (typeof node.value === 'string') return node.value;
+  if (!Array.isArray(node.children)) return '';
+  return node.children.map(textFromNode).join('');
 }
 
-function flushParagraph(lines, output) {
-  if (!lines.length) return;
-  output.push(`<p>${renderInline(lines.join(' '))}</p>`);
-  lines.length = 0;
+function headingPlugin(headings) {
+  return () => (tree) => {
+    visit(tree, 'heading', (node) => {
+      const text = textFromNode(node).trim();
+      if (!text) return;
+      const slug = slugifyHeading(text);
+      headings.push({ depth: node.depth, slug, text });
+      node.data ||= {};
+      node.data.hProperties ||= {};
+      node.data.hProperties.id = slug;
+    });
+  };
 }
 
-function flushList(lines, output) {
-  if (!lines.length) return;
-  output.push('<ul>');
-  lines.forEach((line) => output.push(`<li>${renderInline(line)}</li>`));
-  output.push('</ul>');
-  lines.length = 0;
-}
-
-function flushQuote(lines, output) {
-  if (!lines.length) return;
-  output.push('<blockquote>');
-  lines.forEach((line) => output.push(`<p>${renderInline(line)}</p>`));
-  output.push('</blockquote>');
-  lines.length = 0;
-}
-
-function flushCode(block, output) {
-  if (!block) return;
-  const language = block.language ? ` class="language-${escapeHtml(block.language)}"` : '';
-  output.push(`<pre><code${language}>${escapeHtml(block.lines.join('\n'))}</code></pre>`);
+function externalLinkPlugin() {
+  return (tree) => {
+    visit(tree, 'element', (node) => {
+      if (node.tagName !== 'a') return;
+      const href = String(node.properties?.href || '');
+      if (!/^https?:\/\//i.test(href)) return;
+      node.properties.target = '_blank';
+      node.properties.rel = 'noreferrer';
+    });
+  };
 }
 
 export function markdownToHtml(markdown = '') {
-  const output = [];
   const headings = [];
-  const paragraph = [];
-  const list = [];
-  const quote = [];
-  let code = null;
+  const file = unified()
+    .use(remarkParse)
+    .use(remarkGfm)
+    .use(headingPlugin(headings))
+    .use(remarkRehype)
+    .use(externalLinkPlugin)
+    .use(rehypeStringify)
+    .processSync(String(markdown || ''));
 
-  const flushTextBlocks = () => {
-    flushParagraph(paragraph, output);
-    flushList(list, output);
-    flushQuote(quote, output);
-  };
-
-  String(markdown || '').replace(/\r\n/g, '\n').split('\n').forEach((rawLine) => {
-    const line = rawLine.replace(/\s+$/g, '');
-    const fence = line.match(/^```(\w+)?\s*$/);
-    if (fence) {
-      if (code) {
-        flushCode(code, output);
-        code = null;
-      } else {
-        flushTextBlocks();
-        code = { language: fence[1] || '', lines: [] };
-      }
-      return;
-    }
-
-    if (code) {
-      code.lines.push(rawLine);
-      return;
-    }
-
-    if (!line.trim()) {
-      flushTextBlocks();
-      return;
-    }
-
-    const heading = line.match(/^(#{1,3})\s+(.+)$/);
-    if (heading) {
-      flushTextBlocks();
-      const depth = heading[1].length;
-      const text = heading[2].trim();
-      const slug = slugifyHeading(text);
-      headings.push({ depth, slug, text });
-      output.push(`<h${depth} id="${slug}">${renderInline(text)}</h${depth}>`);
-      return;
-    }
-
-    const listItem = line.match(/^[-*]\s+(.+)$/);
-    if (listItem) {
-      flushParagraph(paragraph, output);
-      flushQuote(quote, output);
-      list.push(listItem[1]);
-      return;
-    }
-
-    const quoteItem = line.match(/^>\s?(.+)$/);
-    if (quoteItem) {
-      flushParagraph(paragraph, output);
-      flushList(list, output);
-      quote.push(quoteItem[1]);
-      return;
-    }
-
-    flushList(list, output);
-    flushQuote(quote, output);
-    paragraph.push(line.trim());
-  });
-
-  if (code) flushCode(code, output);
-  flushTextBlocks();
-
-  return { html: output.join('\n'), headings };
+  return { html: String(file), headings };
 }
 
 export function readingTimeForMarkdown(markdown = '') {
   const text = String(markdown || '')
     .replace(/```[\s\S]*?```/g, '')
-    .replace(/[#>*_`[\]()\-]/g, '');
+    .replace(/[#>*_`[\]()\-|~]/g, '');
   return Math.max(1, Math.ceil(text.length / 650));
 }

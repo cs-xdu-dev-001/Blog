@@ -13,15 +13,8 @@ const regenerateSlugButton = document.querySelector('[data-regenerate-slug]');
 
 let previewTimer = null;
 let isSaving = false;
-
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
+let previewRequestId = 0;
+let previewAbortController = null;
 
 function slugify(value) {
   return String(value || '')
@@ -36,95 +29,38 @@ function fallbackSlug() {
   return `note-${new Date().toISOString().slice(0, 10)}`;
 }
 
-function inlineMarkdown(value) {
-  return escapeHtml(value)
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
-}
-
-function markdownPreview(markdown) {
-  const lines = String(markdown || '').replace(/\r\n/g, '\n').split('\n');
-  const html = [];
-  let paragraph = [];
-  let list = [];
-  let code = null;
-
-  const flushParagraph = () => {
-    if (!paragraph.length) return;
-    html.push(`<p>${inlineMarkdown(paragraph.join(' '))}</p>`);
-    paragraph = [];
-  };
-
-  const flushList = () => {
-    if (!list.length) return;
-    html.push('<ul>');
-    list.forEach((item) => html.push(`<li>${inlineMarkdown(item)}</li>`));
-    html.push('</ul>');
-    list = [];
-  };
-
-  const flushText = () => {
-    flushParagraph();
-    flushList();
-  };
-
-  lines.forEach((rawLine) => {
-    const line = rawLine.replace(/\s+$/g, '');
-    const fence = line.match(/^```(\w+)?\s*$/);
-    if (fence) {
-      if (code) {
-        html.push(`<pre><code>${escapeHtml(code.join('\n'))}</code></pre>`);
-        code = null;
-      } else {
-        flushText();
-        code = [];
-      }
-      return;
-    }
-    if (code) {
-      code.push(rawLine);
-      return;
-    }
-    if (!line.trim()) {
-      flushText();
-      return;
-    }
-    const image = line.match(/^!\[([^\]]*)]\(([^)\s]+)\)$/);
-    if (image) {
-      flushText();
-      html.push(`<img src="${escapeHtml(image[2])}" alt="${escapeHtml(image[1])}" />`);
-      return;
-    }
-    const heading = line.match(/^(#{1,3})\s+(.+)$/);
-    if (heading) {
-      flushText();
-      const depth = heading[1].length;
-      html.push(`<h${depth}>${inlineMarkdown(heading[2])}</h${depth}>`);
-      return;
-    }
-    const listItem = line.match(/^[-*]\s+(.+)$/);
-    if (listItem) {
-      flushParagraph();
-      list.push(listItem[1]);
-      return;
-    }
-    flushList();
-    paragraph.push(line.trim());
-  });
-
-  flushText();
-  return html.join('') || '<p>预览会显示在这里。</p>';
-}
-
 function setStatus(text) {
   if (statusEl) statusEl.textContent = text;
 }
 
-function updatePreview() {
+async function updatePreview() {
   if (!preview || !input) return;
-  preview.innerHTML = markdownPreview(input.value);
+  const requestId = ++previewRequestId;
+  previewAbortController?.abort();
+  previewAbortController = new AbortController();
+
+  try {
+    const res = await fetch('/api/admin/posts/preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ markdown: input.value }),
+      signal: previewAbortController.signal,
+    });
+    if (requestId !== previewRequestId) return;
+    if (!res.ok) {
+      preview.innerHTML = `<p>预览暂时不可用（${res.status}）。</p>`;
+      return;
+    }
+    const data = await res.json();
+    if (requestId === previewRequestId) {
+      preview.innerHTML = data.html || '<p>预览会显示在这里。</p>';
+    }
+  } catch (error) {
+    if (error?.name === 'AbortError') return;
+    if (requestId === previewRequestId) {
+      preview.innerHTML = '<p>预览暂时不可用。</p>';
+    }
+  }
 }
 
 function schedulePreview() {

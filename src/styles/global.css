@@ -5251,11 +5251,18 @@ button:focus-visible {
   margin-top: 32px;
 }
 
+.article-prose h1,
 .article-prose h2,
 .article-prose h3 {
   color: var(--ink);
   letter-spacing: -0.012em;
   line-height: 1.25;
+}
+
+.article-prose h1 {
+  margin-top: 0;
+  font-size: 34px;
+  font-weight: 350;
 }
 
 .article-prose h2 {
@@ -5295,6 +5302,30 @@ button:focus-visible {
 
 .article-prose li + li {
   margin-top: 14px;
+}
+
+.article-prose .contains-task-list {
+  padding-left: 0;
+  list-style: none;
+}
+
+.article-prose .task-list-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.article-prose .task-list-item input {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin: 10px 0 0;
+  accent-color: var(--link);
+}
+
+.article-prose del {
+  color: #756f66;
+  text-decoration-thickness: 1px;
 }
 
 .article-prose code {
