@@ -74,6 +74,7 @@ export function initializeSchema(db) {
       title TEXT NOT NULL,
       description TEXT NOT NULL DEFAULT '',
       category TEXT NOT NULL DEFAULT '',
+      tags TEXT NOT NULL DEFAULT '[]',
       body TEXT NOT NULL DEFAULT '',
       date TEXT NOT NULL DEFAULT CURRENT_DATE,
       featured INTEGER NOT NULL DEFAULT 0,
@@ -155,6 +156,7 @@ export function initializeSchema(db) {
   ensureColumn(db, 'reading_items', 'image_original_path', "TEXT NOT NULL DEFAULT ''");
   ensureColumn(db, 'reading_items', 'image_width', 'INTEGER NOT NULL DEFAULT 0');
   ensureColumn(db, 'reading_items', 'image_height', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn(db, 'blog_posts', 'tags', "TEXT NOT NULL DEFAULT '[]'");
   ensureColumn(db, 'post_topic_links', 'sort_order', 'INTEGER NOT NULL DEFAULT 0');
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_post_topic_links_topic_order

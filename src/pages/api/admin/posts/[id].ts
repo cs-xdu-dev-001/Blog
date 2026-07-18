@@ -16,6 +16,7 @@ export const PUT: APIRoute = async (context) => {
     date: String(body.date || ''),
     featured: Boolean(body.featured),
     published: Boolean(body.published),
+    tags: body.tags,
     topicSlugs: body.topicSlugs,
   });
 

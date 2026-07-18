@@ -30,12 +30,13 @@ function formatDate(value) {
 
 function postResult(item) {
   const category = item.category || item.data?.category || '笔记';
+  const tags = Array.isArray(item.tags) ? item.tags : item.data?.tags || [];
   const date = formatDate(item.date || item.data?.date);
   return {
     id: `post:${item.id ?? item.slug}`,
     type: 'post',
     title: item.title || item.data?.title || '',
-    meta: [category, date].filter(Boolean).join(' · '),
+    meta: [category, tags.slice(0, 2).map((tag) => `#${tag}`).join(' '), date].filter(Boolean).join(' · '),
     excerpt: cleanText(item.description || item.data?.description || item.body),
     image: '',
     href: `/posts/${item.slug}`,
@@ -106,6 +107,8 @@ export function createSearchService({
         item.data?.description,
         item.category,
         item.data?.category,
+        ...(Array.isArray(item.tags) ? item.tags : []),
+        ...(Array.isArray(item.data?.tags) ? item.data.tags : []),
         item.body,
       ]).includes(needle));
       const matchedReading = readingItems.filter((item) => searchable([
@@ -129,10 +132,18 @@ export function createSearchService({
       const categories = new Map();
       postItems.forEach((item) => {
         const category = String(item.category || item.data?.category || '').trim();
-        if (!category) return;
-        const key = category.toLocaleLowerCase('zh-CN');
-        if (!categories.has(key)) categories.set(key, { title: category, posts: [] });
-        categories.get(key).posts.push(item);
+        const tags = Array.isArray(item.tags) && item.tags.length
+          ? item.tags
+          : Array.isArray(item.data?.tags) && item.data.tags.length
+            ? item.data.tags
+            : [category].filter(Boolean);
+        tags.forEach((tag) => {
+          const label = String(tag || '').trim();
+          if (!label) return;
+          const key = label.toLocaleLowerCase('zh-CN');
+          if (!categories.has(key)) categories.set(key, { title: label, posts: [] });
+          categories.get(key).posts.push(item);
+        });
       });
       const matchedTags = [...categories.entries()]
         .filter(([key]) => key.includes(needle))

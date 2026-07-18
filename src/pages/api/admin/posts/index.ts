@@ -32,6 +32,7 @@ export const POST: APIRoute = async (context) => {
     featured: Boolean(input.featured),
     published: input.published !== false,
     date: input.date,
+    tags: input.tags || [],
     topicSlugs: input.topicSlugs || [],
   });
 

@@ -19,6 +19,11 @@ const postJson = JSON.stringify(post).replaceAll('<', '\\u003c');
 const topicCards = (siteConfigRepository.getSiteConfig().topics?.cards || [])
   .filter((card) => card.slug && card.title);
 const selectedTopicSlugs = new Set(post.topicSlugs || []);
+const tagOptions = Array.from(new Set([
+  ...(postRepository.listTags?.() || []),
+  ...(post.tags || []),
+])).filter(Boolean).sort((a, b) => a.localeCompare(b, 'zh-CN'));
+const tagOptionsJson = JSON.stringify(tagOptions).replaceAll('<', '\\u003c');
 const categoryOptions = Array.from(new Set([
   post.category,
   ...postRepository.list({ filter: 'all' }).items.map((item) => item.category),
@@ -66,7 +71,7 @@ const categoryOptions = Array.from(new Set([
         <input class="post-title-input" name="title" value={post.title} required aria-label="标题" />
         <div class="post-meta-row">
           <label class="post-property post-property-slug">
-            <span>Slug</span>
+            <span>URL别名</span>
             <input name="slug" value={post.slug} readonly data-slug-input />
             <button type="button" data-regenerate-slug>重建</button>
           </label>
@@ -84,6 +89,20 @@ const categoryOptions = Array.from(new Set([
           </label>
           <label class="post-editor-check"><input type="checkbox" name="published" checked={Boolean(post.published)} /> 发布</label>
           <label class="post-editor-check"><input type="checkbox" name="featured" checked={Boolean(post.featured)} /> 重点</label>
+        </div>
+        <div class="post-tag-picker" data-tag-picker>
+          <span class="post-tag-label">标签</span>
+          <div class="post-tag-combobox">
+            <div class="post-tag-summary" role="button" tabindex="0" data-tag-summary aria-expanded="false">选择标签</div>
+            <div class="post-tag-popover" data-tag-popover hidden>
+              <div class="post-tag-input-row">
+                <input type="text" data-tag-input placeholder="新建或筛选标签" autocomplete="off" />
+                <button type="button" data-tag-add>新增</button>
+              </div>
+              <div class="post-tag-options" data-tag-options></div>
+            </div>
+          </div>
+          <div data-tag-hidden></div>
         </div>
         <fieldset class="post-topic-picker">
           <legend>
@@ -125,6 +144,7 @@ const categoryOptions = Array.from(new Set([
     </section>
 
     <script type="application/json" id="post-editor-data" set:html={postJson}></script>
+    <script type="application/json" id="post-tag-options-data" set:html={tagOptionsJson}></script>
     <script is:inline src="/admin-post-editor.js"></script>
   </main>
 </BaseLayout>

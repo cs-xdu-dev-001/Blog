@@ -4,8 +4,8 @@ import { createSearchService } from '../src/lib/server/searchService.mjs';
 
 function createService() {
   const postItems = [
-    { id: 1, slug: 'ai-note', title: 'AI时代的学习路径', description: '理解模型与知识系统。', category: 'AI Knowledge', body: 'Notion和Agent实践。', date: '2026-07-13', published: 1 },
-    { id: 2, slug: 'rag-note', title: 'Notion到RAG', description: '把知识接入检索。', category: 'AI Knowledge', body: 'RAG工作流。', date: '2026-07-12', published: 1 },
+    { id: 1, slug: 'ai-note', title: 'AI时代的学习路径', description: '理解模型与知识系统。', category: 'AI Knowledge', tags: ['AI', 'RAG'], body: 'Notion和Agent实践。', date: '2026-07-13', published: 1 },
+    { id: 2, slug: 'rag-note', title: 'Notion到RAG', description: '把知识接入检索。', category: 'AI Knowledge', tags: ['AI', 'Notion'], body: 'RAG工作流。', date: '2026-07-12', published: 1 },
     { id: 3, slug: 'draft-note', title: 'draft note', description: '不能公开', category: 'AI Knowledge', body: '', date: '2026-07-11', published: 0 },
     ...Array.from({ length: 8 }, (_, index) => ({
       id: index + 10,
@@ -48,7 +48,7 @@ test('search service groups public posts, reading, watch, and expandable tags', 
   assert.equal(reading.href, '/reading/wave-top');
   assert.equal(reading.image, '/reading/wave-480.webp');
   const tag = result.groups.find((group) => group.key === 'tags').items[0];
-  assert.equal(tag.title, 'AI Knowledge');
+  assert.equal(tag.title, 'AI');
   assert.equal(tag.children.length, 2);
   assert.equal(JSON.stringify(result).includes('draft note'), false);
 });

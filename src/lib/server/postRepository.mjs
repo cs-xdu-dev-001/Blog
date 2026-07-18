@@ -45,19 +45,57 @@ function normalizeTopicSlugs(value) {
     .sort((a, b) => a.localeCompare(b));
 }
 
+function normalizeTags(value) {
+  const source = Array.isArray(value)
+    ? value
+    : String(value || '')
+      .replace(/^\s*\[/, '')
+      .replace(/\]\s*$/, '')
+      .split(/[,，\n]/);
+  const seen = new Set();
+  const tags = [];
+  source.forEach((item) => {
+    const tag = String(item || '')
+      .trim()
+      .replace(/^#+/, '')
+      .replace(/^['"]|['"]$/g, '')
+      .replace(/\s+/g, ' ');
+    const key = tag.toLocaleLowerCase('zh-CN');
+    if (!tag || seen.has(key)) return;
+    seen.add(key);
+    tags.push(tag);
+  });
+  return tags;
+}
+
+function parseTags(value) {
+  if (Array.isArray(value)) return normalizeTags(value);
+  const text = String(value || '').trim();
+  if (!text) return [];
+  try {
+    const parsed = JSON.parse(text);
+    return normalizeTags(parsed);
+  } catch {
+    return normalizeTags(text);
+  }
+}
+
 function normalize(row, topicSlugs = []) {
   if (!row) return null;
+  const tags = parseTags(row.tags);
   return {
     ...row,
     featured: Number(row.featured || 0),
     published: Number(row.published || 0),
     topicSlugs,
+    tags,
     data: {
       title: row.title,
       description: row.description,
       category: row.category,
       date: new Date(row.date),
       featured: Boolean(row.featured),
+      tags,
     },
   };
 }
@@ -77,6 +115,7 @@ function parseFrontmatter(raw) {
     }
     if (value === 'true') data[item[1]] = true;
     else if (value === 'false') data[item[1]] = false;
+    else if (item[1] === 'tags') data[item[1]] = normalizeTags(value);
     else data[item[1]] = value;
   });
 
@@ -178,14 +217,15 @@ export function createPostRepository({ dbPath } = {}) {
       const slug = uniqueSlug(input.slug || title);
       const result = db.prepare(`
         INSERT INTO blog_posts
-          (slug, title, description, category, body, date, featured, published)
+          (slug, title, description, category, tags, body, date, featured, published)
         VALUES
-          (@slug, @title, @description, @category, @body, @date, @featured, @published)
+          (@slug, @title, @description, @category, @tags, @body, @date, @featured, @published)
       `).run({
         slug,
         title,
         description: String(input.description || '').trim(),
         category: String(input.category || 'Notes').trim(),
+        tags: JSON.stringify(normalizeTags(input.tags || [])),
         body: String(input.body || ''),
         date: normalizeDate(input.date),
         featured: input.featured ? 1 : 0,
@@ -202,13 +242,14 @@ export function createPostRepository({ dbPath } = {}) {
       const slug = slugifyPost(input.slug || title);
       db.prepare(`
         INSERT INTO blog_posts
-          (slug, title, description, category, body, date, featured, published)
+          (slug, title, description, category, tags, body, date, featured, published)
         VALUES
-          (@slug, @title, @description, @category, @body, @date, @featured, @published)
+          (@slug, @title, @description, @category, @tags, @body, @date, @featured, @published)
         ON CONFLICT(slug) DO UPDATE SET
           title = excluded.title,
           description = excluded.description,
           category = excluded.category,
+          tags = excluded.tags,
           body = excluded.body,
           date = excluded.date,
           featured = excluded.featured,
@@ -219,6 +260,7 @@ export function createPostRepository({ dbPath } = {}) {
         title,
         description: String(input.description || '').trim(),
         category: String(input.category || 'Notes').trim(),
+        tags: JSON.stringify(normalizeTags(input.tags || [])),
         body: String(input.body || ''),
         date: normalizeDate(input.date),
         featured: input.featured ? 1 : 0,
@@ -241,6 +283,7 @@ export function createPostRepository({ dbPath } = {}) {
           description: data.description || '',
           date: data.date,
           category: data.category || 'Notes',
+          tags: data.tags || [],
           featured: Boolean(data.featured),
           published: true,
           body,
@@ -277,7 +320,7 @@ export function createPostRepository({ dbPath } = {}) {
       const normalizedTopicSlug = normalizeTopicSlugs([topicSlug])[0];
       const trimmedQuery = String(query || '').trim();
       if (trimmedQuery) {
-        where.push('(p.title LIKE @query OR p.description LIKE @query OR p.category LIKE @query OR p.body LIKE @query)');
+        where.push('(p.title LIKE @query OR p.description LIKE @query OR p.category LIKE @query OR p.tags LIKE @query OR p.body LIKE @query)');
         params.query = `%${trimmedQuery}%`;
       }
       if (normalizedTopicSlug) {
@@ -298,6 +341,46 @@ export function createPostRepository({ dbPath } = {}) {
     },
 
     setTopicPostOrder,
+
+    listTags() {
+      initialize();
+      const tagMap = new Map();
+      db.prepare('SELECT tags FROM blog_posts ORDER BY date DESC, id DESC').all().forEach((row) => {
+        parseTags(row.tags).forEach((tag) => {
+          const key = tag.toLocaleLowerCase('zh-CN');
+          if (!tagMap.has(key)) tagMap.set(key, tag);
+        });
+      });
+      return [...tagMap.values()].sort((a, b) => a.localeCompare(b, 'zh-CN'));
+    },
+
+    deleteTag(value) {
+      initialize();
+      const [target] = normalizeTags(value);
+      if (!target) return { ok: false, changedPosts: 0, tags: this.listTags() };
+
+      const targetKey = target.toLocaleLowerCase('zh-CN');
+      const rows = db.prepare('SELECT id, tags FROM blog_posts').all();
+      let changedPosts = 0;
+      const update = db.prepare(`
+        UPDATE blog_posts SET
+          tags = @tags,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = @id
+      `);
+      const tx = db.transaction((items) => {
+        items.forEach((row) => {
+          const tags = parseTags(row.tags);
+          const nextTags = tags.filter((tag) => tag.toLocaleLowerCase('zh-CN') !== targetKey);
+          if (nextTags.length === tags.length) return;
+          changedPosts += 1;
+          update.run({ id: row.id, tags: JSON.stringify(nextTags) });
+        });
+      });
+      tx(rows);
+
+      return { ok: changedPosts > 0, changedPosts, tags: this.listTags() };
+    },
 
     stats() {
       initialize();
@@ -322,6 +405,7 @@ export function createPostRepository({ dbPath } = {}) {
           title = @title,
           description = @description,
           category = @category,
+          tags = @tags,
           body = @body,
           date = @date,
           featured = @featured,
@@ -334,6 +418,7 @@ export function createPostRepository({ dbPath } = {}) {
         title,
         description: String(input.description || '').trim(),
         category: String(input.category || 'Notes').trim(),
+        tags: JSON.stringify(Object.hasOwn(input, 'tags') ? normalizeTags(input.tags) : existing.tags),
         body: String(input.body || ''),
         date: normalizeDate(input.date),
         featured: input.featured ? 1 : 0,

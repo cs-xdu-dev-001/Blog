@@ -22,13 +22,17 @@ test('post repository creates, lists, updates, and deletes markdown posts', () =
     published: true,
     date: '2026-07-05',
     topicSlugs: ['llm-finetune', 'agent-system'],
+    tags: ['AI', 'RAG', 'AI'],
   });
 
   assert.equal(created.slug, 'recent-note-test');
   assert.deepEqual(created.topicSlugs, ['agent-system', 'llm-finetune']);
+  assert.deepEqual(created.tags, ['AI', 'RAG']);
   assert.equal(repo.getBySlug('recent-note-test').title, '近期笔记测试');
   assert.equal(repo.list().items[0].description, '一条可管理的Markdown笔记');
   assert.equal(repo.list({ topicSlug: 'agent-system' }).items[0].slug, 'recent-note-test');
+  assert.equal(repo.list({ query: 'RAG', filter: 'all' }).items[0].slug, 'recent-note-test');
+  assert.deepEqual(repo.listTags(), ['AI', 'RAG']);
 
   const updated = repo.update(created.id, {
     title: '近期笔记测试更新',
@@ -40,11 +44,14 @@ test('post repository creates, lists, updates, and deletes markdown posts', () =
     published: true,
     date: '2026-07-06',
     topicSlugs: ['frontend-interaction'],
+    tags: ['Frontend', 'UI'],
   });
 
   assert.equal(updated.title, '近期笔记测试更新');
   assert.equal(updated.category, 'Frontend');
   assert.deepEqual(updated.topicSlugs, ['frontend-interaction']);
+  assert.deepEqual(updated.tags, ['Frontend', 'UI']);
+  assert.deepEqual(repo.listTags(), ['Frontend', 'UI']);
   assert.equal(repo.list({ topicSlug: 'agent-system' }).items.length, 0);
   assert.equal(repo.list({ topicSlug: 'frontend-interaction' }).items[0].slug, 'recent-note-test');
   assert.equal(repo.stats().published, 1);
@@ -84,6 +91,26 @@ test('topic post order is independent and replacing links does not delete posts'
     [second.id, first.id],
   );
   assert.equal(repo.stats().total, 3);
+});
+
+test('post repository deletes a shared tag from every post', () => {
+  const repo = createPostRepository({ dbPath: tempDbPath() });
+  const first = repo.create({
+    title: '第一篇',
+    tags: ['AI', 'RAG'],
+  });
+  const second = repo.create({
+    title: '第二篇',
+    tags: ['AI', 'Frontend'],
+  });
+
+  const result = repo.deleteTag('ai');
+
+  assert.equal(result.ok, true);
+  assert.equal(result.changedPosts, 2);
+  assert.deepEqual(result.tags, ['Frontend', 'RAG']);
+  assert.deepEqual(repo.get(first.id).tags, ['RAG']);
+  assert.deepEqual(repo.get(second.id).tags, ['Frontend']);
 });
 
 test('post repository imports markdown files without duplicating slugs', () => {
