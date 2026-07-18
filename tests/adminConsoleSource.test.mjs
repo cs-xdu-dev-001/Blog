@@ -8,6 +8,7 @@ function read(relativePath) {
 }
 
 const layout = read('src/layouts/AdminLayout.astro');
+const baseLayout = read('src/layouts/BaseLayout.astro');
 const styles = read('src/styles/global.css');
 const posts = read('src/pages/admin/posts.astro');
 const topics = read('src/pages/admin/topics.astro');
@@ -19,6 +20,7 @@ const site = read('src/pages/admin/site.astro');
 const home = read('src/pages/admin/home.astro');
 const assistant = read('src/pages/admin/assistant.astro');
 const about = read('src/pages/admin/about.astro');
+const postEditor = read('src/pages/admin/posts/[id]/edit.astro');
 
 test('admin shell exposes only content and site navigation groups', () => {
   assert.match(layout, /label: '内容'/);
@@ -28,6 +30,19 @@ test('admin shell exposes only content and site navigation groups', () => {
   assert.match(layout, /href: '\/admin\/home'/);
   assert.match(layout, /href: '\/admin\/assistant'/);
   assert.match(layout, /href: '\/admin\/about'/);
+});
+
+test('admin shell supports a persistent accessible light and dark theme', () => {
+  assert.match(baseLayout, /dataset\.adminTheme/);
+  assert.match(baseLayout, /dev-notes-admin-theme/);
+  assert.match(baseLayout, /prefers-color-scheme:\s*dark/);
+  assert.match(layout, /data-admin-theme-toggle/);
+  assert.match(postEditor, /data-admin-theme-toggle/);
+  assert.match(baseLayout, /localStorage\.setItem/);
+  assert.match(styles, /html\[data-admin-theme="light"\] \.cms-page/);
+  assert.match(styles, /\.cms-page ::selection/);
+  assert.match(styles, /\.post-editor-page ::selection/);
+  assert.match(styles, /--cms-selection-bg:/);
 });
 
 test('all admin surfaces use the shared readable workbench contract', () => {

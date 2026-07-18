@@ -46,6 +46,21 @@ const navGroups = [
         <slot name="actions">
           <a href="/" target="_blank" rel="noreferrer">预览前台</a>
         </slot>
+        <button
+          class="cms-theme-toggle"
+          type="button"
+          data-admin-theme-toggle
+          aria-label="切换管理端主题"
+          title="切换管理端主题"
+        >
+          <svg class="cms-theme-icon cms-theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"></path>
+          </svg>
+          <svg class="cms-theme-icon cms-theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"></path>
+          </svg>
+        </button>
         <form method="post" action="/api/admin/logout">
           <button type="submit">退出</button>
         </form>

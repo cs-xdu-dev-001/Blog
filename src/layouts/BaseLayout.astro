@@ -46,6 +46,22 @@ if (assistant) {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
+    {isAdminRoute && (
+      <script is:inline>
+        (() => {
+          const storageKey = 'dev-notes-admin-theme';
+          let theme = '';
+          try {
+            theme = localStorage.getItem(storageKey) || '';
+          } catch {}
+          if (theme !== 'light' && theme !== 'dark') {
+            theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          }
+          document.documentElement.dataset.adminTheme = theme;
+          document.documentElement.style.colorScheme = theme;
+        })();
+      </script>
+    )}
     {isAdminRoute ? (
       <meta name="robots" content="noindex, nofollow" />
     ) : (
@@ -119,5 +135,38 @@ if (assistant) {
     )}
     {assistantConfig && <script is:inline type="module" src="/assistant.js"></script>}
     <script is:inline type="module" src="/global-search.js"></script>
+    {isAdminRoute && (
+      <script is:inline>
+        (() => {
+          const storageKey = 'dev-notes-admin-theme';
+          const root = document.documentElement;
+          const toggles = document.querySelectorAll('[data-admin-theme-toggle]');
+
+          const syncToggles = () => {
+            const isDark = root.dataset.adminTheme !== 'light';
+            const label = isDark ? '切换到浅色模式' : '切换到深色模式';
+            toggles.forEach((toggle) => {
+              toggle.setAttribute('aria-label', label);
+              toggle.setAttribute('title', label);
+              toggle.setAttribute('aria-pressed', String(!isDark));
+            });
+          };
+
+          toggles.forEach((toggle) => {
+            toggle.addEventListener('click', () => {
+              const theme = root.dataset.adminTheme === 'light' ? 'dark' : 'light';
+              root.dataset.adminTheme = theme;
+              root.style.colorScheme = theme;
+              try {
+                localStorage.setItem(storageKey, theme);
+              } catch {}
+              syncToggles();
+            });
+          });
+
+          syncToggles();
+        })();
+      </script>
+    )}
   </body>
 </html>
