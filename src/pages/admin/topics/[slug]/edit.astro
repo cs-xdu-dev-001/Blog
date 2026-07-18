@@ -18,9 +18,10 @@ const topicJson = JSON.stringify({ mode: 'edit', item: topic }).replaceAll('<', 
     <header class="cms-editor-topbar">
       <h1>{topic.title}</h1>
       <div class="cms-editor-actions">
+        <span class="cms-save-state cms-editor-save-state" data-topic-editor-state data-state="idle" role="status" aria-live="polite">已就绪</span>
         <a class="cms-button" href="/admin/topics">返回</a>
         <button class="cms-danger-action" type="button" data-delete-topic>删除</button>
-        <button class="cms-primary-action" type="submit" form="topic-editor-form">保存</button>
+        <button class="cms-primary-action" type="submit" form="topic-editor-form" data-save-topic>保存</button>
       </div>
     </header>
 
@@ -32,7 +33,6 @@ const topicJson = JSON.stringify({ mode: 'edit', item: topic }).replaceAll('<', 
         <label class="cms-field"><span>强度</span><input name="level" type="number" min="1" max="8" value={topic.level} /></label>
         <label class="cms-field full"><span>详情</span><textarea name="text" class="cms-long-text">{topic.text}</textarea></label>
       </div>
-      <span class="cms-save-state" data-topic-editor-state></span>
     </form>
 
     <section class="cms-related-panel" data-topic-posts>

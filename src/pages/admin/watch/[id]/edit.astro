@@ -19,9 +19,10 @@ const imagePath = item.image_path || '';
     <header class="cms-editor-topbar">
       <h1>{item.title}</h1>
       <div class="cms-editor-actions">
+        <span class="cms-save-state cms-editor-save-state" data-watch-editor-state data-state="idle" role="status" aria-live="polite">已就绪</span>
         <a class="cms-button" href="/admin/watch">返回</a>
         <button class="cms-danger-action" type="button" data-delete-watch>删除</button>
-        <button class="cms-primary-action" type="submit" form="watch-editor-form">保存</button>
+        <button class="cms-primary-action" type="submit" form="watch-editor-form" data-save-watch>保存</button>
       </div>
     </header>
     <form id="watch-editor-form" class="cms-editor-form" data-watch-editor-form>
@@ -48,7 +49,6 @@ const imagePath = item.image_path || '';
         <label><input type="checkbox" name="is_featured" checked={Boolean(item.is_featured)} />精选</label>
         <label><input type="checkbox" name="is_activity_featured" checked={Boolean(item.is_activity_featured)} />观看近况</label>
       </div>
-      <span class="cms-save-state" data-watch-editor-state></span>
     </form>
   </section>
   <script type="application/json" id="watch-editor-data" set:html={editorJson}></script>

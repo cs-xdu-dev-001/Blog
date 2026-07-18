@@ -210,19 +210,19 @@ test('site config repository manages homepage section switches and ordering', ()
   const repo = createSiteConfigRepository({ dbPath: tempDbPath() });
 
   const sections = repo.listSections();
-  assert.ok(sections.some((section) => section.key === 'notes'));
+  assert.equal(sections.some((section) => section.key === 'notes'), false);
 
-  const updated = repo.updateSection('notes', {
-    title: '笔记流',
-    eyebrow: 'Writing',
-    navLabel: '笔记',
+  const updated = repo.updateSection('watch', {
+    title: '影像',
+    eyebrow: 'Cinema',
+    navLabel: '影像',
     navSmall: 'log',
     enabled: false,
     sortOrder: 90,
   });
 
-  assert.equal(updated.title, '笔记流');
+  assert.equal(updated.title, '影像');
   assert.equal(updated.enabled, 0);
   assert.equal(updated.sortOrder, 90);
-  assert.equal(repo.enabledSections().some((section) => section.key === 'notes'), false);
+  assert.equal(repo.enabledSections().some((section) => section.key === 'watch'), false);
 });

@@ -24,8 +24,6 @@ const navSmall = (key, fallback) => {
   return value;
 };
 
-const featured = posts.find((post) => post.featured) ?? posts[0];
-const highlightPosts = posts.slice(0, 6);
 const watchArchive = getWatchArchiveFromDb();
 const WATCH_TRACK_BATCH_SIZE = 12;
 const compactWatchItem = (item) => ({
@@ -169,7 +167,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
       <a class="qzq-brand" href="/">{siteConfig.brandName}</a>
       <div class="qzq-nav-links">
         {isSectionEnabled('topics') && <a class="qzq-nav-item" href="#topics"><span>{section('topics', { navLabel: '主线' }).navLabel}</span><small>{navSmall('topics', '4')}</small></a>}
-        {isSectionEnabled('notes') && <a class="qzq-nav-item" href="#notes"><span>{section('notes', { navLabel: '笔记' }).navLabel}</span><small>{navSmall('notes', String(posts.length))}</small></a>}
+        <a class="qzq-nav-item" href="/writing"><span>笔记</span><small>{posts.length}</small></a>
         {isSectionEnabled('watch') && <a class="qzq-nav-item" href="#watch"><span>{section('watch', { navLabel: '影像' }).navLabel}</span><small>{navSmall('watch', String(watchStats.watched))}</small></a>}
         {isSectionEnabled('reading') && <a class="qzq-nav-item" href="#reading"><span>{section('reading', { navLabel: '书架' }).navLabel}</span><small>{navSmall('reading', String(readingTotal))}</small></a>}
         {isSectionEnabled('statistics') && <a class="qzq-nav-item" href="#statistics"><span>{section('statistics', { navLabel: '统计' }).navLabel}</span><small>{navSmall('statistics', '∞')}</small></a>}
@@ -333,37 +331,6 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
           </div>
         ))}
       </div>
-    </section>}
-
-    {isSectionEnabled('notes') && <section id="notes" class="qzq-notes-section" aria-label="近期笔记" data-reveal-section>
-      <div class="qzq-section-title">
-        <h2>{section('notes', { title: '近期笔记' }).title}</h2>
-      </div>
-
-      {featured && (
-        <div class="qzq-notes-panel">
-          <a class="qzq-note-feature" href={`/posts/${featured.slug}`} data-tilt-card>
-            <span>{featured.data.category}</span>
-            <h3>{featured.data.title}</h3>
-            <p>{featured.data.description}</p>
-            <small>{new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(featured.data.date)} · 重点笔记</small>
-          </a>
-
-          <div class="qzq-notes-list">
-            {highlightPosts.filter((post) => post.slug !== featured.slug).slice(0, 5).map((post, index) => (
-              <a class="qzq-note-row" href={`/posts/${post.slug}`}>
-                <span>{String(index + 1).padStart(2, '0')}</span>
-                <div>
-                  <strong>{post.data.title}</strong>
-                  <p>{post.data.description}</p>
-                </div>
-                <em>{post.data.category}</em>
-              </a>
-            ))}
-            <a class="qzq-notes-all" href="/writing">查看全部笔记</a>
-          </div>
-        </div>
-      )}
     </section>}
 
     {isSectionEnabled('watch') && <section id="watch" class="qzq-watch-section" aria-label="影像档案" data-reveal-section>

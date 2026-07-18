@@ -19,9 +19,10 @@ const imagePath = item.image_path || '';
     <header class="cms-editor-topbar">
       <h1>{item.title}</h1>
       <div class="cms-editor-actions">
+        <span class="cms-save-state cms-editor-save-state" data-reading-editor-state data-state="idle" role="status" aria-live="polite">已就绪</span>
         <a class="cms-button" href="/admin/reading">返回</a>
         <button class="cms-danger-action" type="button" data-delete-reading>删除</button>
-        <button class="cms-primary-action" type="submit" form="reading-editor-form">保存</button>
+        <button class="cms-primary-action" type="submit" form="reading-editor-form" data-save-reading>保存</button>
       </div>
     </header>
     <form id="reading-editor-form" class="cms-editor-form" data-reading-editor-form>
@@ -45,7 +46,6 @@ const imagePath = item.image_path || '';
         <label class="cms-field full"><span>书评</span><textarea name="review" class="cms-long-text">{item.review || ''}</textarea></label>
       </div>
       <div class="cms-check-row"><label><input type="checkbox" name="is_featured" checked={Boolean(item.is_featured)} />精选</label></div>
-      <span class="cms-save-state" data-reading-editor-state></span>
     </form>
   </section>
   <script type="application/json" id="reading-editor-data" set:html={editorJson}></script>

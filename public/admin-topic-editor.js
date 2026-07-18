@@ -2,11 +2,14 @@ const dataEl = document.querySelector('#topic-editor-data');
 const data = JSON.parse(dataEl?.textContent || '{}');
 const form = document.querySelector('[data-topic-editor-form]');
 const stateEl = document.querySelector('[data-topic-editor-state]');
+const saveButton = document.querySelector('[data-save-topic]');
 const linkedEl = document.querySelector('[data-linked-posts]');
 const availableEl = document.querySelector('[data-available-posts]');
 const availableSearch = document.querySelector('[data-available-search]');
 const linkedCount = document.querySelector('[data-linked-count]');
 const state = { item: data.item || null, linked: [], available: [], query: '', dirty: false };
+let isSaving = false;
+let changeVersion = 0;
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -17,8 +20,16 @@ function escapeHtml(value) {
     .replaceAll("'", '&#039;');
 }
 
-function setStatus(text) {
-  if (stateEl) stateEl.textContent = text;
+function setStatus(text, status = 'idle') {
+  if (!stateEl) return;
+  stateEl.textContent = text;
+  stateEl.dataset.state = status;
+}
+
+function saveError(response) {
+  if (response.status === 401) return '登录已失效，请重新登录';
+  if (response.status === 403) return '保存被拒绝，请刷新后重试';
+  return `保存失败（${response.status}）`;
 }
 
 function formPayload() {
@@ -34,29 +45,43 @@ function formPayload() {
 
 async function saveTopic(event) {
   event.preventDefault();
+  if (isSaving) return;
   const payload = formPayload();
-  if (!payload.title) return;
-  setStatus(data.mode === 'create' ? '正在创建' : '正在保存');
+  if (!payload.title) return setStatus('名称不能为空', 'error');
+  isSaving = true;
+  const savingVersion = changeVersion;
+  setStatus(data.mode === 'create' ? '正在创建' : '正在保存', 'saving');
+  if (saveButton) {
+    saveButton.disabled = true;
+    saveButton.textContent = data.mode === 'create' ? '创建中' : '保存中';
+  }
   const url = data.mode === 'create' ? '/api/admin/topics' : `/api/admin/topics/${encodeURIComponent(state.item.slug)}`;
-  const response = await fetch(url, {
-    method: data.mode === 'create' ? 'POST' : 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!response.ok) {
-    setStatus(data.mode === 'create' ? '创建失败' : '保存失败');
-    return;
-  }
-  const result = await response.json();
-  state.item = result.item;
-  state.dirty = false;
-  if (data.mode === 'create') {
-    window.location.href = `/admin/topics/${encodeURIComponent(result.item.slug)}/edit`;
-    return;
-  }
-  setStatus('已保存');
-  if (result.item.slug !== data.item.slug) {
-    window.location.replace(`/admin/topics/${encodeURIComponent(result.item.slug)}/edit`);
+  try {
+    const response = await fetch(url, {
+      method: data.mode === 'create' ? 'POST' : 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw new Error(saveError(response));
+    const result = await response.json();
+    state.item = result.item;
+    state.dirty = changeVersion !== savingVersion;
+    if (data.mode === 'create') {
+      window.location.href = `/admin/topics/${encodeURIComponent(result.item.slug)}/edit`;
+      return;
+    }
+    setStatus(state.dirty ? '仍有未保存更改' : '已保存', state.dirty ? 'dirty' : 'saved');
+    if (result.item.slug !== data.item.slug) {
+      window.location.replace(`/admin/topics/${encodeURIComponent(result.item.slug)}/edit`);
+    }
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : '保存失败，请重试', 'error');
+  } finally {
+    isSaving = false;
+    if (saveButton) {
+      saveButton.disabled = false;
+      saveButton.textContent = data.mode === 'create' ? '创建' : '保存';
+    }
   }
 }
 
@@ -147,7 +172,11 @@ document.querySelector('[data-delete-topic]')?.addEventListener('click', async (
 });
 
 form?.addEventListener('submit', saveTopic);
-form?.addEventListener('input', () => { state.dirty = true; setStatus('未保存'); });
+form?.addEventListener('input', () => {
+  state.dirty = true;
+  changeVersion += 1;
+  setStatus('未保存', 'dirty');
+});
 window.addEventListener('beforeunload', (event) => {
   if (!state.dirty) return;
   event.preventDefault();

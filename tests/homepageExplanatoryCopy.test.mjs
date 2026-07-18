@@ -16,3 +16,11 @@ test('homepage omits decorative eyebrows and explanatory copy', () => {
   assert.doesNotMatch(styles, /这是我的旅行足迹/);
   assert.doesNotMatch(admin, /section\.\$\{section\.key\}\.eyebrow/);
 });
+
+test('homepage keeps the writing entry but omits the duplicate note index section', () => {
+  const homepage = fs.readFileSync(new URL('../src/pages/index.astro', import.meta.url), 'utf8');
+
+  assert.match(homepage, /href="\/writing"/);
+  assert.doesNotMatch(homepage, /id="notes"|qzq-notes-section|qzq-notes-panel/);
+  assert.doesNotMatch(homepage, /const featured\s*=|const highlightPosts\s*=/);
+});
