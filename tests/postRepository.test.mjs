@@ -164,6 +164,14 @@ console.log('ok')
   assert.deepEqual(rendered.headings[0], { depth: 1, slug: '标题', text: '标题' });
 });
 
+test('markdown renderer preserves single line breaks like a writing editor', () => {
+  const rendered = markdownToHtml(`第一行
+第二行
+第三行`);
+
+  assert.match(rendered.html, /第一行<br>\s*第二行<br>\s*第三行/);
+});
+
 test('markdown renderer supports gfm syntax used in admin preview', () => {
   const rendered = markdownToHtml(`使用文档：https://qwenlm.github.io/qwen-code-docs/zh/
 
@@ -192,4 +200,19 @@ test('markdown renderer supports gfm syntax used in admin preview', () => {
   assert.match(rendered.html, /type="checkbox" checked disabled/);
   assert.match(rendered.html, /<table>/);
   assert.match(rendered.html, /<del>暂不稳定<\/del>/);
+});
+
+test('markdown renderer supports notion-like math and red text marks', () => {
+  const rendered = markdownToHtml(`行内公式 $H_2O$ 和 $2^2$。
+
+$$
+E = mc^2
+$$
+
+{{red:重点风险}}
+`);
+
+  assert.match(rendered.html, /class="katex"/);
+  assert.match(rendered.html, /katex-display/);
+  assert.match(rendered.html, /class="article-red">重点风险<\/span>/);
 });

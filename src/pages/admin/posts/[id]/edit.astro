@@ -68,63 +68,75 @@ const categoryOptions = Array.from(new Set([
 
     <section class="post-editor-shell is-edit" data-editor-shell>
       <form class="post-editor-meta" data-post-form>
-        <input class="post-title-input" name="title" value={post.title} required aria-label="标题" />
-        <div class="post-meta-row">
-          <label class="post-property post-property-slug">
-            <span>URL别名</span>
-            <input name="slug" value={post.slug} readonly data-slug-input />
-            <button type="button" data-regenerate-slug>重建</button>
-          </label>
-          <label class="post-property">
-            <span>分类</span>
-            <select name="category">
-              {categoryOptions.map((category) => (
-                <option value={category} selected={category === post.category}>{category}</option>
-              ))}
-            </select>
-          </label>
-          <label class="post-property">
-            <span>日期</span>
-            <input name="date" type="date" value={post.date} />
-          </label>
-          <label class="post-editor-check"><input type="checkbox" name="published" checked={Boolean(post.published)} /> 发布</label>
-          <label class="post-editor-check"><input type="checkbox" name="featured" checked={Boolean(post.featured)} /> 重点</label>
-        </div>
-        <div class="post-tag-picker" data-tag-picker>
-          <span class="post-tag-label">标签</span>
-          <div class="post-tag-combobox">
-            <div class="post-tag-summary" role="button" tabindex="0" data-tag-summary aria-expanded="false">选择标签</div>
-            <div class="post-tag-popover" data-tag-popover hidden>
-              <div class="post-tag-input-row">
-                <input type="text" data-tag-input placeholder="新建或筛选标签" autocomplete="off" />
-                <button type="button" data-tag-add>新增</button>
+        <div class="post-editor-meta-grid">
+          <section class="post-editor-content-meta">
+            <input class="post-title-input" name="title" value={post.title} required aria-label="标题" />
+            <label class="post-description-field">
+              <span>摘要</span>
+              <textarea class="post-description-input" name="description" rows="2" placeholder="写一句前台可见的简介">{post.description || ''}</textarea>
+            </label>
+            <div class="post-tag-picker" data-tag-picker>
+              <span class="post-tag-label">标签</span>
+              <div class="post-tag-combobox">
+                <div class="post-tag-summary" role="button" tabindex="0" data-tag-summary aria-expanded="false">选择标签</div>
+                <div class="post-tag-popover" data-tag-popover hidden>
+                  <div class="post-tag-input-row">
+                    <input type="text" data-tag-input placeholder="新建或筛选标签" autocomplete="off" />
+                    <button type="button" data-tag-add>新增</button>
+                  </div>
+                  <div class="post-tag-options" data-tag-options></div>
+                </div>
               </div>
-              <div class="post-tag-options" data-tag-options></div>
+              <div data-tag-hidden></div>
             </div>
-          </div>
-          <div data-tag-hidden></div>
+            <fieldset class="post-topic-picker">
+              <legend>
+                <span>关联主线</span>
+                <a href="/admin/topics" target="_blank" rel="noreferrer">管理/新增主线</a>
+              </legend>
+              {topicCards.length > 0 ? (
+                <div>
+                  {topicCards.map((card) => (
+                    <label>
+                      <input type="checkbox" name="topicSlugs" value={card.slug} checked={selectedTopicSlugs.has(card.slug)} />
+                      <span>{card.title}</span>
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <div class="post-topic-empty">
+                  <a href="/admin/topics" target="_blank" rel="noreferrer">新增第一条主线</a>
+                </div>
+              )}
+            </fieldset>
+          </section>
+
+          <aside class="post-editor-properties" aria-label="笔记属性">
+            <div class="post-meta-property-list">
+              <label class="post-property post-property-slug">
+                <span>URL别名</span>
+                <div>
+                  <input name="slug" value={post.slug} readonly data-slug-input />
+                  <button type="button" data-regenerate-slug>重建</button>
+                </div>
+              </label>
+              <label class="post-property">
+                <span>分类</span>
+                <select name="category">
+                  {categoryOptions.map((category) => (
+                    <option value={category} selected={category === post.category}>{category}</option>
+                  ))}
+                </select>
+              </label>
+              <label class="post-property">
+                <span>日期</span>
+                <input name="date" type="date" value={post.date} />
+              </label>
+              <label class="post-editor-check"><span>发布</span><input type="checkbox" name="published" checked={Boolean(post.published)} /></label>
+              <label class="post-editor-check"><span>重点</span><input type="checkbox" name="featured" checked={Boolean(post.featured)} /></label>
+            </div>
+          </aside>
         </div>
-        <fieldset class="post-topic-picker">
-          <legend>
-            <span>关联主线</span>
-            <a href="/admin/topics" target="_blank" rel="noreferrer">管理/新增主线</a>
-          </legend>
-          {topicCards.length > 0 ? (
-            <div>
-              {topicCards.map((card) => (
-                <label>
-                  <input type="checkbox" name="topicSlugs" value={card.slug} checked={selectedTopicSlugs.has(card.slug)} />
-                  <span>{card.title}</span>
-                </label>
-              ))}
-            </div>
-          ) : (
-            <div class="post-topic-empty">
-              <a href="/admin/topics" target="_blank" rel="noreferrer">新增第一条主线</a>
-            </div>
-          )}
-        </fieldset>
-        <textarea class="post-description-input" name="description" rows="2" placeholder="一句话摘要，会显示在首页和笔记列表。">{post.description || ''}</textarea>
       </form>
 
       <div class="post-editor-modebar" role="tablist" aria-label="编辑模式">
@@ -134,10 +146,10 @@ const categoryOptions = Array.from(new Set([
       </div>
 
       <section class="post-editor-main">
-        <label class="post-editor-pane post-editor-write">
-          <span>Markdown</span>
-          <textarea class="post-editor-textarea" name="body" spellcheck="false" data-markdown-input>{post.body || ''}</textarea>
-        </label>
+        <section class="post-editor-pane post-editor-write post-editor-wysiwyg">
+          <textarea class="post-editor-textarea" name="body" hidden data-markdown-input>{post.body || ''}</textarea>
+          <div class="post-editor-milkdown" data-milkdown-editor></div>
+        </section>
 
         <article class="post-editor-pane post-editor-preview article-prose" data-markdown-preview></article>
       </section>
@@ -146,5 +158,8 @@ const categoryOptions = Array.from(new Set([
     <script type="application/json" id="post-editor-data" set:html={postJson}></script>
     <script type="application/json" id="post-tag-options-data" set:html={tagOptionsJson}></script>
     <script is:inline src="/admin-post-editor.js"></script>
+    <script>
+      import '../../../../scripts/admin-post-milkdown.js';
+    </script>
   </main>
 </BaseLayout>
