@@ -1,5 +1,9 @@
 ---
 import ArticleLayout from '../../layouts/ArticleLayout.astro';
+import {
+  getLockedNoteCookieName,
+  readLockedNoteKeyFromCookie,
+} from '../../lib/server/lockedNoteCrypto.mjs';
 import { markdownToHtml, readingTimeForMarkdown } from '../../lib/server/markdownRenderer.mjs';
 import { postRepository } from '../../lib/server/postRepository.mjs';
 
@@ -13,8 +17,25 @@ if (!post) {
   return Astro.redirect('/writing');
 }
 
-const rendered = markdownToHtml(post.body);
-const readingTime = readingTimeForMarkdown(post.body);
+let postToRender = post;
+let unlockFailed = Astro.url.searchParams.get('unlock') === 'failed';
+if (post.locked) {
+  const unlockKey = readLockedNoteKeyFromCookie(Astro.cookies.get(getLockedNoteCookieName())?.value);
+  if (unlockKey) {
+    try {
+      postToRender = postRepository.getBySlug(slug, { unlockKey }) || post;
+      unlockFailed = !postToRender.lockedContentUnlocked;
+    } catch {
+      Astro.cookies.delete(getLockedNoteCookieName(), { path: '/' });
+      postToRender = post;
+      unlockFailed = true;
+    }
+  }
+}
+
+const isLockedPending = post.locked && !postToRender.lockedContentUnlocked;
+const rendered = isLockedPending ? { html: '', headings: [] } : markdownToHtml(postToRender.body);
+const readingTime = isLockedPending ? 0 : readingTimeForMarkdown(postToRender.body);
 const toc = rendered.headings.filter((heading) => heading.depth === 2).slice(0, 8);
 const allPosts = postRepository.list({ filter: 'published', limit: 500 }).items;
 const currentIndex = allPosts.findIndex((item) => item.slug === post.slug);
@@ -32,5 +53,19 @@ const nextPost = allPosts[currentIndex + 1] ?? null;
   prevPost={prevPost}
   nextPost={nextPost}
 >
-  <Fragment set:html={rendered.html} />
+  {isLockedPending ? (
+    <section class="locked-post-card" data-locked-post-unlock>
+      <div class="locked-post-mark" aria-hidden="true">锁</div>
+      <form method="post" action={`/api/posts/${post.slug}/unlock`} class="locked-post-form">
+        <label>
+          <span>访问密钥</span>
+          <input name="lockedNoteKey" type="password" autocomplete="current-password" autofocus />
+        </label>
+        <button type="submit">解锁</button>
+      </form>
+      {unlockFailed && <p class="locked-post-error">密钥不对。</p>}
+    </section>
+  ) : (
+    <Fragment set:html={rendered.html} />
+  )}
 </ArticleLayout>

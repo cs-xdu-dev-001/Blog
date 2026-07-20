@@ -24,17 +24,24 @@ export const POST: APIRoute = async (context) => {
   const title = String(input.title || '').trim();
   if (!title) return Response.json({ error: 'title is required' }, { status: 400 });
 
-  const item = postRepository.create({
-    title,
-    category: input.category || 'Notes',
-    description: input.description || '',
-    body: input.body || '',
-    featured: Boolean(input.featured),
-    published: input.published !== false,
-    date: input.date,
-    tags: input.tags || [],
-    topicSlugs: input.topicSlugs || [],
-  });
+  let item;
+  try {
+    item = postRepository.create({
+      title,
+      category: input.category || 'Notes',
+      description: input.description || '',
+      body: input.body || '',
+      featured: Boolean(input.featured),
+      published: input.published !== false,
+      visibility: input.visibility,
+      lockedNoteKey: input.lockedNoteKey,
+      date: input.date,
+      tags: input.tags || [],
+      topicSlugs: input.topicSlugs || [],
+    });
+  } catch (error) {
+    return Response.json({ error: error instanceof Error ? error.message : 'create failed' }, { status: 400 });
+  }
 
   return Response.json({ item, stats: postRepository.stats() }, { status: 201 });
 };

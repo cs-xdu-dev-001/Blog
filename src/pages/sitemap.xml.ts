@@ -10,7 +10,8 @@ export const prerender = false;
 export const GET: APIRoute = () => {
   postRepository.ensureSeededFromContent();
 
-  const posts = postRepository.list({ filter: 'published', limit: 500 }).items;
+  const posts = postRepository.list({ filter: 'published', limit: 500 }).items
+    .filter((post) => !post.locked);
   const topics = siteConfigRepository.listTopics();
   const books = readingRepository.list({ filter: 'all', limit: 500 }).items;
   const watchItems = watchRepository.list({ filter: 'all', limit: 500 }).items;

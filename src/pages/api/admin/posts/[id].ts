@@ -7,18 +7,25 @@ export const PUT: APIRoute = async (context) => {
 
   const id = Number(context.params.id);
   const body = await context.request.json().catch(() => ({}));
-  const updated = postRepository.update(id, {
-    title: String(body.title || ''),
-    slug: String(body.slug || ''),
-    category: String(body.category || ''),
-    description: String(body.description || ''),
-    body: String(body.body || ''),
-    date: String(body.date || ''),
-    featured: Boolean(body.featured),
-    published: Boolean(body.published),
-    tags: body.tags,
-    topicSlugs: body.topicSlugs,
-  });
+  let updated;
+  try {
+    updated = postRepository.update(id, {
+      title: String(body.title || ''),
+      slug: String(body.slug || ''),
+      category: String(body.category || ''),
+      description: String(body.description || ''),
+      body: String(body.body || ''),
+      date: String(body.date || ''),
+      featured: Boolean(body.featured),
+      published: Boolean(body.published),
+      visibility: body.visibility,
+      lockedNoteKey: body.lockedNoteKey,
+      tags: body.tags,
+      topicSlugs: body.topicSlugs,
+    });
+  } catch (error) {
+    return Response.json({ error: error instanceof Error ? error.message : 'save failed' }, { status: 400 });
+  }
 
   if (!updated) return new Response('Not found', { status: 404 });
 

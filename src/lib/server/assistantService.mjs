@@ -129,6 +129,7 @@ function buildDocuments(config, deps = {}) {
   if (modules.posts !== false) {
     posts.ensureSeededFromContent();
     posts.list({ filter: 'published', limit: 100 }).items.forEach((post) => {
+      if (post.locked) return;
       docs.push({
         type: 'post',
         title: post.title,

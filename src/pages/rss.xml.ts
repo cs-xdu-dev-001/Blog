@@ -8,7 +8,8 @@ export const prerender = false;
 export const GET: APIRoute = () => {
   postRepository.ensureSeededFromContent();
   const siteConfig = siteConfigRepository.getSiteConfig();
-  const posts = postRepository.list({ filter: 'published', limit: 500 }).items;
+  const posts = postRepository.list({ filter: 'published', limit: 500 }).items
+    .filter((post) => !post.locked);
   const body = buildRssXml({
     title: siteConfig.brandName,
     description: siteConfig.pageDescription,

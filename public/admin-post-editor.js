@@ -18,6 +18,9 @@ const tagSummaryButton = document.querySelector('[data-tag-summary]');
 const tagPopover = document.querySelector('[data-tag-popover]');
 const tagOptionsContainer = document.querySelector('[data-tag-options]');
 const tagHiddenContainer = document.querySelector('[data-tag-hidden]');
+const lockedNoteKeyInput = document.querySelector('[data-locked-note-key]');
+const unlockLockedPostButton = document.querySelector('[data-unlock-locked-post]');
+const lockedNoteStatus = document.querySelector('[data-locked-note-status]');
 
 let previewTimer = null;
 let isSaving = false;
@@ -808,6 +811,8 @@ function collectPayload() {
     body: input.value,
     published: data.get('published') === 'on',
     featured: data.get('featured') === 'on',
+    visibility: data.get('visibility'),
+    lockedNoteKey: data.get('lockedNoteKey'),
     tags: data.getAll('tags'),
     topicSlugs: data.getAll('topicSlugs'),
   };
@@ -823,7 +828,8 @@ async function savePost() {
     body: JSON.stringify(collectPayload()),
   });
   if (!res.ok) {
-    setStatus('SAVE FAILED');
+    const data = await res.json().catch(() => ({}));
+    setStatus(data.error || 'SAVE FAILED');
     isSaving = false;
     return;
   }
@@ -833,6 +839,28 @@ async function savePost() {
   if (slugInput) slugInput.value = data.item.slug;
   setStatus('SAVED');
   isSaving = false;
+}
+
+async function unlockLockedPost() {
+  const key = lockedNoteKeyInput?.value?.trim();
+  if (!key) {
+    setStatus('KEY REQUIRED');
+    lockedNoteKeyInput?.focus();
+    return;
+  }
+  setStatus('UNLOCKING');
+  const res = await fetch(`/api/admin/posts/${post.id}/unlock`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lockedNoteKey: key }),
+  });
+  if (!res.ok) {
+    setStatus('UNLOCK FAILED');
+    if (lockedNoteStatus) lockedNoteStatus.textContent = '密钥不对';
+    return;
+  }
+  setStatus('UNLOCKED');
+  window.location.reload();
 }
 
 async function deletePost() {
@@ -945,6 +973,7 @@ regenerateSlugButton?.addEventListener('click', () => {
 });
 
 saveButton?.addEventListener('click', savePost);
+unlockLockedPostButton?.addEventListener('click', unlockLockedPost);
 deleteButton?.addEventListener('click', deletePost);
 previewButton?.addEventListener('click', () => {
   const slug = form?.querySelector('[name="slug"]')?.value || post.slug;

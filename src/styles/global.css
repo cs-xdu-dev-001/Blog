@@ -390,6 +390,18 @@ button:focus-visible {
   line-height: 1.6;
 }
 
+.post-lock-inline {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  border-radius: 999px;
+  padding: 3px 9px;
+  color: #2f2f2f;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
 .writing-row-meta {
   display: grid;
   gap: 8px;
@@ -5290,6 +5302,75 @@ button:focus-visible {
   margin-bottom: 0;
 }
 
+.locked-post-card {
+  display: grid;
+  max-width: 520px;
+  gap: 22px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 34px 0 38px;
+}
+
+.locked-post-mark {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid #d8d2c8;
+  border-radius: 50%;
+  color: #2f2a24;
+  font-size: 14px;
+  font-weight: 520;
+}
+
+.locked-post-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.locked-post-form label {
+  display: grid;
+  gap: 8px;
+}
+
+.locked-post-form span {
+  color: #6f685d;
+  font-size: 14px;
+}
+
+.locked-post-form input {
+  min-height: 46px;
+  border: 1px solid #d9d3c9;
+  border-radius: 10px;
+  background: #fffdfa;
+  color: #1f1b16;
+  padding: 0 14px;
+  font: inherit;
+  outline: none;
+}
+
+.locked-post-form input:focus {
+  border-color: #1f1b16;
+}
+
+.locked-post-form button {
+  min-height: 46px;
+  border: 1px solid #1f1b16;
+  border-radius: 10px;
+  background: #1f1b16;
+  color: #fffaf1;
+  padding: 0 18px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.locked-post-error {
+  color: #9f2f27;
+  font-size: 15px;
+}
+
 .article-prose a {
   color: var(--link);
   text-decoration: underline;
@@ -7980,6 +8061,71 @@ button:focus-visible {
   min-width: 16px;
   height: 16px;
   accent-color: #22d3ee;
+}
+
+.post-lock-property {
+  display: grid;
+  gap: 8px;
+  border-radius: 12px;
+  padding: 10px 9px;
+  color: var(--cms-muted);
+  font-size: 13px;
+  font-weight: 780;
+}
+
+.post-lock-property:hover,
+.post-lock-property:focus-within {
+  background: var(--cms-active-bg);
+}
+
+.post-lock-property > span {
+  color: var(--cms-muted);
+}
+
+.post-lock-property label {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 8px;
+  color: var(--cms-text-soft);
+}
+
+.post-lock-property label input {
+  width: 14px;
+  min-width: 14px;
+  height: 14px;
+  accent-color: #22d3ee;
+}
+
+.post-lock-property b,
+.post-lock-property em {
+  font: inherit;
+  font-style: normal;
+}
+
+.post-lock-property input[type="password"] {
+  min-height: 34px;
+  border: 1px solid var(--cms-line);
+  border-radius: 10px;
+  background: var(--cms-control);
+  padding: 0 10px;
+  color: var(--cms-text);
+  font-size: 13px;
+}
+
+.post-lock-property input[type="password"]:focus {
+  border-color: var(--cms-accent);
+  background: var(--cms-control-focus);
+}
+
+.post-lock-property button {
+  min-height: 32px;
+  border: 1px solid rgba(34, 211, 238, 0.24);
+  border-radius: 10px;
+  background: rgba(34, 211, 238, 0.08);
+  color: var(--cms-accent);
+  font: inherit;
+  cursor: pointer;
 }
 
 .post-tag-picker {

@@ -32,14 +32,16 @@ function postResult(item) {
   const category = item.category || item.data?.category || '笔记';
   const tags = Array.isArray(item.tags) ? item.tags : item.data?.tags || [];
   const date = formatDate(item.date || item.data?.date);
+  const locked = Boolean(item.locked);
   return {
     id: `post:${item.id ?? item.slug}`,
     type: 'post',
     title: item.title || item.data?.title || '',
-    meta: [category, tags.slice(0, 2).map((tag) => `#${tag}`).join(' '), date].filter(Boolean).join(' · '),
-    excerpt: cleanText(item.description || item.data?.description || item.body),
+    meta: [locked ? '加密' : category, tags.slice(0, 2).map((tag) => `#${tag}`).join(' '), date].filter(Boolean).join(' · '),
+    excerpt: locked ? '' : cleanText(item.description || item.data?.description || item.body),
     image: '',
     href: `/posts/${item.slug}`,
+    locked,
   };
 }
 
@@ -103,13 +105,13 @@ export function createSearchService({
       const matchedPosts = postItems.filter((item) => searchable([
         item.title,
         item.data?.title,
-        item.description,
-        item.data?.description,
+        item.locked ? '' : item.description,
+        item.locked ? '' : item.data?.description,
         item.category,
         item.data?.category,
         ...(Array.isArray(item.tags) ? item.tags : []),
         ...(Array.isArray(item.data?.tags) ? item.data.tags : []),
-        item.body,
+        item.locked ? '' : item.body,
       ]).includes(needle));
       const matchedReading = readingItems.filter((item) => searchable([
         item.title,

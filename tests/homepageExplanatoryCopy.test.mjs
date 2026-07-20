@@ -24,3 +24,16 @@ test('homepage keeps the writing entry but omits the duplicate note index sectio
   assert.doesNotMatch(homepage, /id="notes"|qzq-notes-section|qzq-notes-panel/);
   assert.doesNotMatch(homepage, /const featured\s*=|const highlightPosts\s*=/);
 });
+
+test('homepage hero keeps the original orange dev notes plate', () => {
+  const homepage = fs.readFileSync(new URL('../src/pages/index.astro', import.meta.url), 'utf8');
+  const styles = fs.readFileSync(new URL('../src/styles/global.css', import.meta.url), 'utf8');
+
+  assert.match(homepage, /aria-label="Dev Notes"/);
+  assert.match(homepage, /data-text="Dev"/);
+  assert.match(homepage, /data-text="Notes"/);
+  assert.match(homepage, /Public field notes/);
+  assert.doesNotMatch(homepage, /aria-label="笔记索引"|data-text="笔记"|主线笔记/);
+  assert.match(styles, /\.qzq-wordmark-card h1\s*\{[^}]*color:\s*#e8751a/s);
+  assert.match(styles, /\.qzq-wordmark-card h1\s*\{[^}]*text-transform:\s*uppercase/s);
+});

@@ -1,6 +1,10 @@
 ---
 import BaseLayout from '../../../../layouts/BaseLayout.astro';
 import { requireAdmin } from '../../../../lib/server/auth.mjs';
+import {
+  getLockedNoteCookieName,
+  readLockedNoteKeyFromCookie,
+} from '../../../../lib/server/lockedNoteCrypto.mjs';
 import { postRepository } from '../../../../lib/server/postRepository.mjs';
 import { siteConfigRepository } from '../../../../lib/server/siteConfigRepository.mjs';
 
@@ -9,7 +13,16 @@ if (!requireAdmin(Astro)) {
 }
 
 const id = Number(Astro.params.id);
-const post = Number.isFinite(id) ? postRepository.get(id) : null;
+const unlockKey = readLockedNoteKeyFromCookie(Astro.cookies.get(getLockedNoteCookieName())?.value);
+let post = null;
+if (Number.isFinite(id)) {
+  try {
+    post = postRepository.get(id, { unlockKey });
+  } catch {
+    Astro.cookies.delete(getLockedNoteCookieName(), { path: '/' });
+    post = postRepository.get(id);
+  }
+}
 
 if (!post) {
   return Astro.redirect('/admin/posts');
@@ -134,6 +147,28 @@ const categoryOptions = Array.from(new Set([
               </label>
               <label class="post-editor-check"><span>发布</span><input type="checkbox" name="published" checked={Boolean(post.published)} /></label>
               <label class="post-editor-check"><span>重点</span><input type="checkbox" name="featured" checked={Boolean(post.featured)} /></label>
+              <div class="post-lock-property" data-lock-property>
+                <span>访问权限</span>
+                <label>
+                  <input type="radio" name="visibility" value="public" checked={!post.locked} />
+                  <b>公开</b>
+                </label>
+                <label>
+                  <input type="radio" name="visibility" value="locked" checked={post.locked} />
+                  <b>加密</b>
+                </label>
+                <input
+                  type="password"
+                  name="lockedNoteKey"
+                  data-locked-note-key
+                  autocomplete="new-password"
+                  placeholder={post.locked ? '输入密钥' : '设置密钥'}
+                />
+                {post.locked && !post.lockedContentUnlocked && (
+                  <button type="button" data-unlock-locked-post>解锁编辑</button>
+                )}
+                <em data-locked-note-status>{post.lockedContentUnlocked ? '已解锁' : ''}</em>
+              </div>
             </div>
           </aside>
         </div>

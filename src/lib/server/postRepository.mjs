@@ -1,6 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { initializeSchema, openDatabase } from './db.mjs';
+import {
+  decryptLockedText,
+  encryptLockedText,
+  normalizeLockedNoteKey,
+  resolveLockedNoteKey,
+} from './lockedNoteCrypto.mjs';
 
 const allowedFilters = new Set(['all', 'published', 'draft', 'featured']);
 
@@ -80,22 +86,75 @@ function parseTags(value) {
   }
 }
 
-function normalize(row, topicSlugs = []) {
+function normalizeVisibility(value) {
+  return String(value || '').trim().toLowerCase() === 'locked' ? 'locked' : 'public';
+}
+
+function preparePostContent(input = {}, existing = null) {
+  const visibility = normalizeVisibility(input.visibility || (input.locked ? 'locked' : existing?.visibility));
+  const description = String(input.description ?? existing?.description ?? '').trim();
+  const body = String(input.body ?? existing?.body ?? '');
+
+  if (visibility !== 'locked') {
+    return {
+      visibility: 'public',
+      description,
+      body,
+      encryptedDescription: '',
+      encryptedBody: '',
+    };
+  }
+
+  const key = resolveLockedNoteKey(input.lockedNoteKey);
+  if (!key) throw new Error('locked note key is required');
+  return {
+    visibility: 'locked',
+    description: '',
+    body: '',
+    encryptedDescription: encryptLockedText(description, key),
+    encryptedBody: encryptLockedText(body, key),
+  };
+}
+
+function normalize(row, topicSlugs = [], { unlockKey = '' } = {}) {
   if (!row) return null;
   const tags = parseTags(row.tags);
+  const visibility = normalizeVisibility(row.visibility);
+  const locked = visibility === 'locked';
+  const key = normalizeLockedNoteKey(unlockKey);
+  let description = String(row.description || '');
+  let body = String(row.body || '');
+  let lockedContentUnlocked = false;
+
+  if (locked) {
+    description = '';
+    body = '';
+    if (key) {
+      description = decryptLockedText(row.encrypted_description || '', key);
+      body = decryptLockedText(row.encrypted_body || '', key);
+      lockedContentUnlocked = true;
+    }
+  }
+
   return {
     ...row,
+    description,
+    body,
+    visibility,
+    locked,
+    lockedContentUnlocked,
     featured: Number(row.featured || 0),
     published: Number(row.published || 0),
     topicSlugs,
     tags,
     data: {
       title: row.title,
-      description: row.description,
+      description,
       category: row.category,
       date: new Date(row.date),
       featured: Boolean(row.featured),
       tags,
+      locked,
     },
   };
 }
@@ -149,8 +208,8 @@ export function createPostRepository({ dbPath } = {}) {
     `).all(postId).map((row) => row.topic_slug);
   }
 
-  function normalizeWithTopics(row) {
-    return normalize(row, row ? topicSlugsForPost(row.id) : []);
+  function normalizeWithTopics(row, options = {}) {
+    return normalize(row, row ? topicSlugsForPost(row.id) : [], options);
   }
 
   function setPostTopics(postId, topicSlugs = []) {
@@ -215,18 +274,22 @@ export function createPostRepository({ dbPath } = {}) {
       const title = String(input.title || '').trim();
       if (!title) throw new Error('title is required');
       const slug = uniqueSlug(input.slug || title);
+      const content = preparePostContent(input);
       const result = db.prepare(`
         INSERT INTO blog_posts
-          (slug, title, description, category, tags, body, date, featured, published)
+          (slug, title, description, category, tags, body, visibility, encrypted_description, encrypted_body, date, featured, published)
         VALUES
-          (@slug, @title, @description, @category, @tags, @body, @date, @featured, @published)
+          (@slug, @title, @description, @category, @tags, @body, @visibility, @encryptedDescription, @encryptedBody, @date, @featured, @published)
       `).run({
         slug,
         title,
-        description: String(input.description || '').trim(),
+        description: content.description,
         category: String(input.category || 'Notes').trim(),
         tags: JSON.stringify(normalizeTags(input.tags || [])),
-        body: String(input.body || ''),
+        body: content.body,
+        visibility: content.visibility,
+        encryptedDescription: content.encryptedDescription,
+        encryptedBody: content.encryptedBody,
         date: normalizeDate(input.date),
         featured: input.featured ? 1 : 0,
         published: input.published === false ? 0 : 1,
@@ -240,17 +303,21 @@ export function createPostRepository({ dbPath } = {}) {
       const title = String(input.title || '').trim();
       if (!title) throw new Error('title is required');
       const slug = slugifyPost(input.slug || title);
+      const content = preparePostContent(input);
       db.prepare(`
         INSERT INTO blog_posts
-          (slug, title, description, category, tags, body, date, featured, published)
+          (slug, title, description, category, tags, body, visibility, encrypted_description, encrypted_body, date, featured, published)
         VALUES
-          (@slug, @title, @description, @category, @tags, @body, @date, @featured, @published)
+          (@slug, @title, @description, @category, @tags, @body, @visibility, @encryptedDescription, @encryptedBody, @date, @featured, @published)
         ON CONFLICT(slug) DO UPDATE SET
           title = excluded.title,
           description = excluded.description,
           category = excluded.category,
           tags = excluded.tags,
           body = excluded.body,
+          visibility = excluded.visibility,
+          encrypted_description = excluded.encrypted_description,
+          encrypted_body = excluded.encrypted_body,
           date = excluded.date,
           featured = excluded.featured,
           published = excluded.published,
@@ -258,10 +325,13 @@ export function createPostRepository({ dbPath } = {}) {
       `).run({
         slug,
         title,
-        description: String(input.description || '').trim(),
+        description: content.description,
         category: String(input.category || 'Notes').trim(),
         tags: JSON.stringify(normalizeTags(input.tags || [])),
-        body: String(input.body || ''),
+        body: content.body,
+        visibility: content.visibility,
+        encryptedDescription: content.encryptedDescription,
+        encryptedBody: content.encryptedBody,
         date: normalizeDate(input.date),
         featured: input.featured ? 1 : 0,
         published: input.published === false ? 0 : 1,
@@ -299,17 +369,17 @@ export function createPostRepository({ dbPath } = {}) {
       return this.importFromDirectory();
     },
 
-    get(id) {
+    get(id, { unlockKey = '' } = {}) {
       initialize();
-      return normalizeWithTopics(db.prepare('SELECT * FROM blog_posts WHERE id = ?').get(id));
+      return normalizeWithTopics(db.prepare('SELECT * FROM blog_posts WHERE id = ?').get(id), { unlockKey });
     },
 
-    getBySlug(slug, { includeDraft = false } = {}) {
+    getBySlug(slug, { includeDraft = false, unlockKey = '' } = {}) {
       initialize();
       const row = includeDraft
         ? db.prepare('SELECT * FROM blog_posts WHERE slug = ?').get(slug)
         : db.prepare('SELECT * FROM blog_posts WHERE slug = ? AND published = 1').get(slug);
-      return normalizeWithTopics(row);
+      return normalizeWithTopics(row, { unlockKey });
     },
 
     list({ query = '', filter = 'published', limit = 500, topicSlug = '' } = {}) {
@@ -320,7 +390,7 @@ export function createPostRepository({ dbPath } = {}) {
       const normalizedTopicSlug = normalizeTopicSlugs([topicSlug])[0];
       const trimmedQuery = String(query || '').trim();
       if (trimmedQuery) {
-        where.push('(p.title LIKE @query OR p.description LIKE @query OR p.category LIKE @query OR p.tags LIKE @query OR p.body LIKE @query)');
+        where.push("(p.title LIKE @query OR p.category LIKE @query OR p.tags LIKE @query OR (COALESCE(p.visibility, 'public') <> 'locked' AND (p.description LIKE @query OR p.body LIKE @query)))");
         params.query = `%${trimmedQuery}%`;
       }
       if (normalizedTopicSlug) {
@@ -399,6 +469,7 @@ export function createPostRepository({ dbPath } = {}) {
       const title = String(input.title || existing.title).trim();
       if (!title) throw new Error('title is required');
       const slug = uniqueSlug(input.slug || existing.slug || title, id);
+      const content = preparePostContent(input, existing);
       db.prepare(`
         UPDATE blog_posts SET
           slug = @slug,
@@ -407,6 +478,9 @@ export function createPostRepository({ dbPath } = {}) {
           category = @category,
           tags = @tags,
           body = @body,
+          visibility = @visibility,
+          encrypted_description = @encryptedDescription,
+          encrypted_body = @encryptedBody,
           date = @date,
           featured = @featured,
           published = @published,
@@ -416,10 +490,13 @@ export function createPostRepository({ dbPath } = {}) {
         id,
         slug,
         title,
-        description: String(input.description || '').trim(),
+        description: content.description,
         category: String(input.category || 'Notes').trim(),
         tags: JSON.stringify(Object.hasOwn(input, 'tags') ? normalizeTags(input.tags) : existing.tags),
-        body: String(input.body || ''),
+        body: content.body,
+        visibility: content.visibility,
+        encryptedDescription: content.encryptedDescription,
+        encryptedBody: content.encryptedBody,
         date: normalizeDate(input.date),
         featured: input.featured ? 1 : 0,
         published: input.published ? 1 : 0,

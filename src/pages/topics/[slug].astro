@@ -58,7 +58,7 @@ const formatDate = (date) =>
             <span class="topic-page-number">{String(index + 1).padStart(2, '0')}</span>
             <span class="topic-page-post-main">
               <strong>{post.data.title}</strong>
-              <span>{post.data.description || '这篇笔记还没有摘要。'}</span>
+              <span class:list={[post.locked && 'post-lock-inline']}>{post.locked ? '加密' : post.data.description || '未写摘要'}</span>
             </span>
             <span class="topic-page-post-meta">
               <b>{formatDate(post.data.date)}</b>
