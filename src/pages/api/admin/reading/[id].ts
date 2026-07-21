@@ -29,6 +29,7 @@ export const PUT: APIRoute = async (context) => {
     spine_color: String(body.spine_color || '#263548'),
     accent_color: String(body.accent_color || '#ff9138'),
     is_featured: Boolean(body.is_featured),
+    published: body.published == null ? undefined : Boolean(body.published),
   });
 
   if (!updated) return new Response('Not found', { status: 404 });

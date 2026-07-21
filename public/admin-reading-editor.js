@@ -26,7 +26,12 @@ createForm?.addEventListener('submit', async (event) => {
   const response = await fetch('/api/admin/reading', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title: values.get('title'), author: values.get('author'), status: values.get('status') }),
+    body: JSON.stringify({
+      title: values.get('title'),
+      author: values.get('author'),
+      status: values.get('status'),
+      published: values.get('published') === 'on',
+    }),
   });
   if (!response.ok) return setStatus('创建失败');
   const data = await response.json();
@@ -66,6 +71,7 @@ editForm?.addEventListener('submit', async (event) => {
         spine_color: values.get('spine_color'),
         accent_color: values.get('accent_color'),
         is_featured: values.get('is_featured') === 'on',
+        published: values.get('published') === 'on',
       }),
     });
     if (!response.ok) throw new Error(saveError(response));

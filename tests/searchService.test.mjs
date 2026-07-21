@@ -34,7 +34,12 @@ function createService() {
         return { items: postItems.filter((item) => item.published === 1) };
       },
     },
-    reading: { list: () => ({ items: readingItems }) },
+    reading: {
+      list: ({ publishedOnly } = {}) => {
+        assert.equal(publishedOnly, true);
+        return { items: readingItems };
+      },
+    },
     watch: { list: () => ({ items: watchItems }) },
   });
 }

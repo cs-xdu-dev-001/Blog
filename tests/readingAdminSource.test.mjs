@@ -7,6 +7,7 @@ const newPage = fs.readFileSync(new URL('../src/pages/admin/reading/new.astro', 
 const editPage = fs.readFileSync(new URL('../src/pages/admin/reading/[id]/edit.astro', import.meta.url), 'utf8');
 const client = fs.readFileSync(new URL('../public/admin-reading.js', import.meta.url), 'utf8');
 const editorClient = fs.readFileSync(new URL('../public/admin-reading-editor.js', import.meta.url), 'utf8');
+const editApi = fs.readFileSync(new URL('../src/pages/api/admin/reading/[id].ts', import.meta.url), 'utf8');
 const styles = fs.readFileSync(new URL('../src/styles/global.css', import.meta.url), 'utf8');
 
 test('reading admin uses a compact index and dedicated editors', () => {
@@ -27,6 +28,11 @@ test('reading admin keeps retry, create, upload, save, and delete flows', () => 
   assert.match(editorClient, /data-reading-image/);
   assert.match(editorClient, /method:\s*'PUT'/);
   assert.match(editorClient, /method:\s*'DELETE'/);
+  assert.match(newPage, /name="published"[^>]*checked/);
+  assert.match(editPage, /name="published"[^>]*checked=\{Boolean\(item\.published\)\}/);
+  assert.match(editorClient, /published:\s*values\.get\('published'\)\s*===\s*'on'/);
+  assert.match(client, /未发布/);
+  assert.match(editApi, /published:\s*body\.published\s*==\s*null\s*\?\s*undefined\s*:\s*Boolean\(body\.published\)/);
 });
 
 test('reading admin keeps core text readable', () => {

@@ -73,6 +73,7 @@ test('public layouts and XML routes expose complete publication metadata', () =>
   assert.match(sitemapRoute, /application\/xml/);
   assert.match(sitemapRoute, /postRepository/);
   assert.match(sitemapRoute, /readingRepository/);
+  assert.match(sitemapRoute, /readingRepository\.list\(\{[^}]*publishedOnly:\s*true/);
   assert.match(sitemapRoute, /watchRepository/);
   assert.match(robots, /Disallow: \/admin\//);
   assert.match(robots, /Disallow: \/api\//);

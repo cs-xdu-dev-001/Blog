@@ -81,7 +81,7 @@ export function createSearchService({
   function readPublicData() {
     const postItems = posts.list({ filter: 'published', limit: 500 }).items
       .filter((item) => item.published === undefined || Number(item.published) === 1);
-    const readingItems = reading.list({ limit: 500 }).items;
+    const readingItems = reading.list({ limit: 500, publishedOnly: true }).items;
     const watchItems = watch.list({ limit: 1000 }).items;
     return { postItems, readingItems, watchItems };
   }

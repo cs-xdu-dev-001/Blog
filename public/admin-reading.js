@@ -30,6 +30,9 @@ function render() {
     const style = image
       ? `style="background-image:url('${escapeHtml(image)}')"`
       : `style="background-color:${escapeHtml(item.spine_color || '#263548')}"`;
+    const displayStatus = Number(item.published ?? 1) === 1
+      ? statusLabel(item)
+      : `${statusLabel(item)} · 未发布`;
     return `
       <a class="cms-index-row" href="/admin/reading/${item.id}/edit">
         <span class="cms-index-row-main">
@@ -40,7 +43,7 @@ function render() {
           </span>
         </span>
         <span class="cms-index-cell">${escapeHtml(item.author || '未填写')}</span>
-        <span class="cms-index-badge">${escapeHtml(statusLabel(item))}</span>
+        <span class="cms-index-badge">${escapeHtml(displayStatus)}</span>
         <span class="cms-index-action">编辑</span>
       </a>
     `;

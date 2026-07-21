@@ -45,7 +45,10 @@ const imagePath = item.image_path || '';
         <label class="cms-field full"><span>摘句</span><textarea name="quote">{item.quote || ''}</textarea></label>
         <label class="cms-field full"><span>书评</span><textarea name="review" class="cms-long-text">{item.review || ''}</textarea></label>
       </div>
-      <div class="cms-check-row"><label><input type="checkbox" name="is_featured" checked={Boolean(item.is_featured)} />精选</label></div>
+      <div class="cms-check-row">
+        <label><input type="checkbox" name="published" checked={Boolean(item.published)} />发布</label>
+        <label><input type="checkbox" name="is_featured" checked={Boolean(item.is_featured)} />精选</label>
+      </div>
     </form>
   </section>
   <script type="application/json" id="reading-editor-data" set:html={editorJson}></script>

@@ -23,6 +23,7 @@ export const POST: APIRoute = async (context) => {
     title,
     author: input.author,
     status: input.status,
+    published: input.published !== false,
   });
 
   return Response.json({ item, stats: readingRepository.stats() }, { status: 201 });

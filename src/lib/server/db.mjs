@@ -63,6 +63,7 @@ export function initializeSchema(db) {
       image_width INTEGER NOT NULL DEFAULT 0,
       image_height INTEGER NOT NULL DEFAULT 0,
       is_featured INTEGER NOT NULL DEFAULT 0,
+      published INTEGER NOT NULL DEFAULT 1,
       sort_order INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -159,6 +160,7 @@ export function initializeSchema(db) {
   ensureColumn(db, 'reading_items', 'image_original_path', "TEXT NOT NULL DEFAULT ''");
   ensureColumn(db, 'reading_items', 'image_width', 'INTEGER NOT NULL DEFAULT 0');
   ensureColumn(db, 'reading_items', 'image_height', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn(db, 'reading_items', 'published', 'INTEGER NOT NULL DEFAULT 1');
   ensureColumn(db, 'blog_posts', 'tags', "TEXT NOT NULL DEFAULT '[]'");
   ensureColumn(db, 'blog_posts', 'visibility', "TEXT NOT NULL DEFAULT 'public'");
   ensureColumn(db, 'blog_posts', 'encrypted_description', "TEXT NOT NULL DEFAULT ''");

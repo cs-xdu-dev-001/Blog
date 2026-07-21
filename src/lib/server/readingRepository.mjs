@@ -46,6 +46,7 @@ export function createReadingRepository({ dbPath, uploadDir } = {}) {
     return {
       ...row,
       is_featured: Number(row.is_featured || 0),
+      published: Number(row.published ?? 1),
     };
   }
 
@@ -56,9 +57,9 @@ export function createReadingRepository({ dbPath, uploadDir } = {}) {
       initialize();
       const stmt = db.prepare(`
         INSERT INTO reading_items
-          (slug, title, author, status, status_label, progress, summary, quote, review, spine_color, accent_color, image_path, is_featured, sort_order)
+          (slug, title, author, status, status_label, progress, summary, quote, review, spine_color, accent_color, image_path, is_featured, published, sort_order)
         VALUES
-          (@slug, @title, @author, @status, @status_label, @progress, @summary, @quote, @review, @spine_color, @accent_color, @image_path, @is_featured, @sort_order)
+          (@slug, @title, @author, @status, @status_label, @progress, @summary, @quote, @review, @spine_color, @accent_color, @image_path, @is_featured, @published, @sort_order)
       `);
       const tx = db.transaction((rows) => rows.forEach((row, index) => stmt.run({
         slug: row.slug,
@@ -74,6 +75,7 @@ export function createReadingRepository({ dbPath, uploadDir } = {}) {
         accent_color: row.accent_color ?? row.accentColor ?? '#ff9138',
         image_path: row.image_path ?? row.imagePath ?? '',
         is_featured: row.is_featured ?? row.featured ? 1 : 0,
+        published: row.published === false || Number(row.published) === 0 ? 0 : 1,
         sort_order: row.sort_order ?? index + 1,
       })));
       tx(items);
@@ -93,9 +95,9 @@ export function createReadingRepository({ dbPath, uploadDir } = {}) {
       initialize();
       const stmt = db.prepare(`
         INSERT INTO reading_items
-          (slug, title, author, status, status_label, progress, summary, quote, review, spine_color, accent_color, image_path, is_featured, sort_order)
+          (slug, title, author, status, status_label, progress, summary, quote, review, spine_color, accent_color, image_path, is_featured, published, sort_order)
         VALUES
-          (@slug, @title, @author, @status, @status_label, @progress, @summary, @quote, @review, @spine_color, @accent_color, @image_path, @is_featured, @sort_order)
+          (@slug, @title, @author, @status, @status_label, @progress, @summary, @quote, @review, @spine_color, @accent_color, @image_path, @is_featured, @published, @sort_order)
         ON CONFLICT(slug) DO UPDATE SET
           title = excluded.title,
           author = excluded.author,
@@ -108,6 +110,7 @@ export function createReadingRepository({ dbPath, uploadDir } = {}) {
           spine_color = excluded.spine_color,
           accent_color = excluded.accent_color,
           is_featured = excluded.is_featured,
+          published = excluded.published,
           sort_order = excluded.sort_order,
           updated_at = CURRENT_TIMESTAMP
       `);
@@ -125,6 +128,7 @@ export function createReadingRepository({ dbPath, uploadDir } = {}) {
         accent_color: row.accent_color ?? row.accentColor ?? '#ff9138',
         image_path: row.image_path ?? row.imagePath ?? '',
         is_featured: row.is_featured ?? row.featured ? 1 : 0,
+        published: row.published === false || Number(row.published) === 0 ? 0 : 1,
         sort_order: row.sort_order ?? index + 1,
       })));
       tx(items);
@@ -148,9 +152,9 @@ export function createReadingRepository({ dbPath, uploadDir } = {}) {
       const statusLabel = statusLabels[status];
       const result = db.prepare(`
         INSERT INTO reading_items
-          (slug, title, author, status, status_label, progress, summary, quote, review, spine_color, accent_color, image_path, is_featured, sort_order)
+          (slug, title, author, status, status_label, progress, summary, quote, review, spine_color, accent_color, image_path, is_featured, published, sort_order)
         VALUES
-          (@slug, @title, @author, @status, @status_label, @progress, '', '', '', '#263548', '#ff9138', '', 0, @sort_order)
+          (@slug, @title, @author, @status, @status_label, @progress, '', '', '', '#263548', '#ff9138', '', 0, @published, @sort_order)
       `).run({
         slug,
         title,
@@ -158,6 +162,7 @@ export function createReadingRepository({ dbPath, uploadDir } = {}) {
         status,
         status_label: statusLabel,
         progress: statusLabel,
+        published: input.published === false ? 0 : 1,
         sort_order: maxSort + 1,
       });
 
@@ -176,7 +181,7 @@ export function createReadingRepository({ dbPath, uploadDir } = {}) {
       return row ? normalize(row) : null;
     },
 
-    list({ query = '', filter = 'all', limit = 500 } = {}) {
+    list({ query = '', filter = 'all', limit = 500, publishedOnly = false } = {}) {
       initialize();
       const where = [];
       const params = {};
@@ -192,6 +197,7 @@ export function createReadingRepository({ dbPath, uploadDir } = {}) {
       if (safeFilter === 'missing_quote') where.push("quote = ''");
       if (['reading', 'read', 'planned'].includes(safeFilter)) where.push('status = @status');
       if (safeFilter === 'featured') where.push('is_featured = 1');
+      if (publishedOnly) where.push('published = 1');
       if (['reading', 'read', 'planned'].includes(safeFilter)) params.status = safeFilter;
 
       const sql = `
@@ -231,6 +237,7 @@ export function createReadingRepository({ dbPath, uploadDir } = {}) {
           spine_color = @spine_color,
           accent_color = @accent_color,
           is_featured = @is_featured,
+          published = @published,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = @id
       `).run({
@@ -246,6 +253,7 @@ export function createReadingRepository({ dbPath, uploadDir } = {}) {
         spine_color: input.spine_color ?? current.spine_color,
         accent_color: input.accent_color ?? current.accent_color,
         is_featured: input.is_featured === undefined ? current.is_featured : input.is_featured ? 1 : 0,
+        published: input.published === undefined ? current.published : input.published ? 1 : 0,
       });
       return this.get(id);
     },

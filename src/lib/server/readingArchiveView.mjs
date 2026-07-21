@@ -9,6 +9,7 @@ function fromDb(row) {
     status: row.status,
     statusLabel: row.status_label,
     featured: Boolean(row.is_featured),
+    published: Boolean(row.published),
     progress: row.progress,
     spineColor: row.spine_color,
     accentColor: row.accent_color,
@@ -30,23 +31,23 @@ function fallbackGroups() {
 export function createReadingArchiveView(repository = readingRepository) {
   function listDbItems(options = {}) {
     try {
-      const { items } = repository.list(options);
-      return items.map(fromDb);
+      const { items, stats } = repository.list({ ...options, publishedOnly: true });
+      return { items: items.map(fromDb), hasStoredItems: Number(stats?.total || 0) > 0 };
     } catch {
-      return [];
+      return { items: [], hasStoredItems: false };
     }
   }
 
   return {
     getFeaturedReadingFromDb(limit = readingArchive.length) {
-      const dbItems = listDbItems({ filter: 'featured', limit });
-      if (dbItems.length) return dbItems.slice(0, limit);
+      const { items: dbItems, hasStoredItems } = listDbItems({ filter: 'featured', limit });
+      if (hasStoredItems) return dbItems.slice(0, limit);
       return readingArchive.filter((book) => book.featured).slice(0, limit);
     },
 
     getReadingGroupsFromDb() {
-      const dbItems = listDbItems({ limit: 1000 });
-      if (!dbItems.length) return fallbackGroups();
+      const { items: dbItems, hasStoredItems } = listDbItems({ limit: 1000 });
+      if (!hasStoredItems) return fallbackGroups();
       return {
         reading: dbItems.filter((book) => book.status === 'reading'),
         read: dbItems.filter((book) => book.status === 'read'),
@@ -57,15 +58,16 @@ export function createReadingArchiveView(repository = readingRepository) {
     getReadingBySlugFromDb(slug) {
       try {
         const item = repository.getBySlug(slug);
-        return item ? fromDb(item) : getReadingBySlug(slug);
+        if (item) return item.published ? fromDb(item) : null;
+        return getReadingBySlug(slug);
       } catch {
         return getReadingBySlug(slug);
       }
     },
 
     getAllReadingFromDb() {
-      const dbItems = listDbItems({ limit: 1000 });
-      return dbItems.length ? dbItems : readingArchive;
+      const { items: dbItems, hasStoredItems } = listDbItems({ limit: 1000 });
+      return hasStoredItems ? dbItems : readingArchive;
     },
   };
 }

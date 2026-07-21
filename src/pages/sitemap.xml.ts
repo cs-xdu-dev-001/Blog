@@ -13,7 +13,7 @@ export const GET: APIRoute = () => {
   const posts = postRepository.list({ filter: 'published', limit: 500 }).items
     .filter((post) => !post.locked);
   const topics = siteConfigRepository.listTopics();
-  const books = readingRepository.list({ filter: 'all', limit: 500 }).items;
+  const books = readingRepository.list({ filter: 'all', limit: 500, publishedOnly: true }).items;
   const watchItems = watchRepository.list({ filter: 'all', limit: 500 }).items;
   const entries = [
     { path: '/', changefreq: 'weekly', priority: 1 },

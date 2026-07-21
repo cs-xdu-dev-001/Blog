@@ -31,7 +31,25 @@ repo.replaceAll([
     accent_color: '#f97316',
     image_path: '/uploads/reading/custom.webp',
     is_featured: 1,
+    published: 1,
     sort_order: 1,
+  },
+  {
+    slug: 'hidden-book',
+    title: '未发布书籍',
+    author: '本地管理端',
+    status: 'planned',
+    status_label: '待读',
+    progress: '待读',
+    summary: '不应出现在公开端。',
+    quote: '',
+    review: '',
+    spine_color: '#111827',
+    accent_color: '#f97316',
+    image_path: '',
+    is_featured: 1,
+    published: 0,
+    sort_order: 2,
   },
 ]);
 
@@ -39,3 +57,5 @@ const dbView = createReadingArchiveView(repo);
 assert.deepEqual(dbView.getFeaturedReadingFromDb().map((book) => book.slug), ['custom-book']);
 assert.equal(dbView.getReadingGroupsFromDb().reading[0].title, '自定义书');
 assert.equal(dbView.getReadingBySlugFromDb('custom-book')?.cover, '/uploads/reading/custom.webp');
+assert.equal(dbView.getReadingBySlugFromDb('hidden-book'), null);
+assert.deepEqual(dbView.getAllReadingFromDb().map((book) => book.slug), ['custom-book']);
