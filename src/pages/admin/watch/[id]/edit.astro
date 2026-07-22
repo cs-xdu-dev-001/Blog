@@ -12,7 +12,7 @@ const imagePath = item.image_path || '';
 ---
 
 <AdminLayout title={`Dev Notes CMS | ${item.title}`} active="watch" dataAttr="data-watch-editor-page">
-  <div slot="search" class="cms-admin-breadcrumb"><strong>影像档案</strong><span>/</span>{item.title}</div>
+  <div slot="search" class="cms-admin-breadcrumb"><a href="/admin/watch">影像档案</a><span>/</span>{item.title}</div>
   <a slot="actions" href={`/watch/${item.id}`} target="_blank" rel="noreferrer">前台查看</a>
 
   <section class="cms-editor-page" data-watch-editor-page>

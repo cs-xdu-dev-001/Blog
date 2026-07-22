@@ -3,7 +3,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 ---
 
 <AdminLayout title="Dev Notes CMS | AI助手" active="assistant" dataAttr="data-site-admin">
-  <div slot="search" class="cms-admin-breadcrumb"><strong>站点</strong><span>/</span>AI助手</div>
+  <div slot="search" class="cms-admin-breadcrumb"><a href="/admin/site">站点</a><span>/</span><a href="/admin/assistant" aria-current="page">AI助手</a></div>
   <Fragment slot="actions"><button type="button" data-test-assistant>测试接口</button><button class="cms-primary-action" type="submit" form="site-settings-form">保存</button></Fragment>
   <section class="cms-settings-page" data-site-section="assistant">
     <header><h1>AI助手</h1><span class="cms-save-state" data-save-state>正在读取</span></header>

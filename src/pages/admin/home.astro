@@ -3,7 +3,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 ---
 
 <AdminLayout title="Dev Notes CMS | 首页模块" active="home" dataAttr="data-site-admin">
-  <div slot="search" class="cms-admin-breadcrumb"><strong>站点</strong><span>/</span>首页模块</div>
+  <div slot="search" class="cms-admin-breadcrumb"><a href="/admin/site">站点</a><span>/</span><a href="/admin/home" aria-current="page">首页模块</a></div>
   <Fragment slot="actions"><a href="/" target="_blank" rel="noreferrer">预览首页</a><button class="cms-primary-action" type="submit" form="site-settings-form">保存</button></Fragment>
   <section class="cms-settings-page" data-site-section="home">
     <header><h1>首页模块</h1><span class="cms-save-state" data-save-state>正在读取</span></header>

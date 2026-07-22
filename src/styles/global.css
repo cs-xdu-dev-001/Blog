@@ -11601,6 +11601,28 @@ body.global-search-open {
   font-weight: 650;
 }
 
+.cms-admin-breadcrumb a {
+  border-radius: 4px;
+  color: var(--cms-muted);
+  font-weight: 650;
+  text-decoration: none;
+  transition: color 140ms ease, background-color 140ms ease;
+}
+
+.cms-admin-breadcrumb a:hover {
+  color: var(--cms-text);
+}
+
+.cms-admin-breadcrumb a:focus-visible {
+  outline: 2px solid var(--cms-accent);
+  outline-offset: 3px;
+}
+
+.cms-admin-breadcrumb a[aria-current="page"] {
+  color: var(--cms-faint);
+  font-weight: 500;
+}
+
 .cms-admin-breadcrumb span {
   color: var(--cms-faint);
 }

@@ -21,6 +21,12 @@ const home = read('src/pages/admin/home.astro');
 const assistant = read('src/pages/admin/assistant.astro');
 const about = read('src/pages/admin/about.astro');
 const postEditor = read('src/pages/admin/posts/[id]/edit.astro');
+const watchNew = read('src/pages/admin/watch/new.astro');
+const watchEdit = read('src/pages/admin/watch/[id]/edit.astro');
+const readingNew = read('src/pages/admin/reading/new.astro');
+const readingEdit = read('src/pages/admin/reading/[id]/edit.astro');
+const topicNew = read('src/pages/admin/topics/new.astro');
+const topicEdit = read('src/pages/admin/topics/[slug]/edit.astro');
 
 test('admin shell exposes only content and site navigation groups', () => {
   assert.match(layout, /label: '内容'/);
@@ -30,6 +36,29 @@ test('admin shell exposes only content and site navigation groups', () => {
   assert.match(layout, /href: '\/admin\/home'/);
   assert.match(layout, /href: '\/admin\/assistant'/);
   assert.match(layout, /href: '\/admin\/about'/);
+});
+
+test('admin breadcrumbs navigate through content, site, and module indexes', () => {
+  for (const page of [posts, topics, watch, reading]) {
+    assert.match(page, /class="cms-admin-breadcrumb"><a href="\/admin\/posts">内容<\/a>/);
+  }
+  assert.match(posts, /<a href="\/admin\/posts"[^>]*>笔记<\/a>/);
+  assert.match(topics, /<a href="\/admin\/topics"[^>]*>主线<\/a>/);
+  assert.match(watch, /<a href="\/admin\/watch"[^>]*>影像档案<\/a>/);
+  assert.match(reading, /<a href="\/admin\/reading"[^>]*>阅读书架<\/a>/);
+
+  for (const page of [site, home, assistant, about, radar, map]) {
+    assert.match(page, /class="cms-admin-breadcrumb"><a href="\/admin\/site">站点<\/a>/);
+  }
+  assert.match(home, /<a href="\/admin\/home"[^>]*>首页模块<\/a>/);
+  assert.match(assistant, /<a href="\/admin\/assistant"[^>]*>AI助手<\/a>/);
+  assert.match(about, /<a href="\/admin\/about"[^>]*>关于<\/a>/);
+
+  for (const page of [watchNew, watchEdit]) assert.match(page, /<a href="\/admin\/watch">影像档案<\/a>/);
+  for (const page of [readingNew, readingEdit]) assert.match(page, /<a href="\/admin\/reading">阅读书架<\/a>/);
+  for (const page of [topicNew, topicEdit]) assert.match(page, /<a href="\/admin\/topics">主线<\/a>/);
+
+  assert.match(styles, /\.cms-admin-breadcrumb a:focus-visible/);
 });
 
 test('admin shell supports a persistent accessible light and dark theme', () => {
@@ -77,13 +106,6 @@ test('content indexes keep only meaningful filters and open dedicated editors', 
 });
 
 test('watch reading and topic editors have dedicated routes', () => {
-  const watchNew = read('src/pages/admin/watch/new.astro');
-  const watchEdit = read('src/pages/admin/watch/[id]/edit.astro');
-  const readingNew = read('src/pages/admin/reading/new.astro');
-  const readingEdit = read('src/pages/admin/reading/[id]/edit.astro');
-  const topicNew = read('src/pages/admin/topics/new.astro');
-  const topicEdit = read('src/pages/admin/topics/[slug]/edit.astro');
-
   assert.match(watchNew, /data-watch-create-page/);
   assert.match(watchEdit, /data-watch-editor-page/);
   assert.match(readingNew, /data-reading-create-page/);

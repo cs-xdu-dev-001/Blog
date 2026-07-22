@@ -3,7 +3,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 ---
 
 <AdminLayout title="Dev Notes CMS | 主线" active="topics" dataAttr="data-topics-admin">
-  <div slot="search" class="cms-admin-breadcrumb"><strong>内容</strong><span>/</span>主线</div>
+  <div slot="search" class="cms-admin-breadcrumb"><a href="/admin/posts">内容</a><span>/</span><a href="/admin/topics" aria-current="page">主线</a></div>
   <a slot="actions" href="/#topics" target="_blank" rel="noreferrer">预览主线</a>
 
   <section class="cms-index-shell">

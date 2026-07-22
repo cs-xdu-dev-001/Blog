@@ -11,7 +11,7 @@ const topicJson = JSON.stringify({ mode: 'edit', item: topic }).replaceAll('<', 
 ---
 
 <AdminLayout title={`Dev Notes CMS | ${topic.title}`} active="topics" dataAttr="data-topic-editor-page">
-  <div slot="search" class="cms-admin-breadcrumb"><strong>主线</strong><span>/</span>{topic.title}</div>
+  <div slot="search" class="cms-admin-breadcrumb"><a href="/admin/topics">主线</a><span>/</span>{topic.title}</div>
   <a slot="actions" href={`/topics/${topic.slug}`} target="_blank" rel="noreferrer">前台查看</a>
 
   <section class="cms-editor-page" data-topic-editor-page>

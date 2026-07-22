@@ -3,7 +3,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 ---
 
 <AdminLayout title="Dev Notes CMS | 统计标签" active="radar" dataAttr="data-radar-admin">
-  <div slot="search" class="cms-admin-breadcrumb"><strong>站点</strong><span>/</span>统计标签</div>
+  <div slot="search" class="cms-admin-breadcrumb"><a href="/admin/site">站点</a><span>/</span><a href="/admin/radar" aria-current="page">统计标签</a></div>
   <a slot="actions" href="/#statistics" target="_blank" rel="noreferrer">预览统计</a>
 
   <section class="cms-index-shell">

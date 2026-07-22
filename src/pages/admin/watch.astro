@@ -3,7 +3,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 ---
 
 <AdminLayout title="Dev Notes CMS | 影像档案" active="watch" dataAttr="data-watch-admin">
-  <div slot="search" class="cms-admin-breadcrumb"><strong>内容</strong><span>/</span>影像档案</div>
+  <div slot="search" class="cms-admin-breadcrumb"><a href="/admin/posts">内容</a><span>/</span><a href="/admin/watch" aria-current="page">影像档案</a></div>
   <a slot="actions" href="/#watch" target="_blank" rel="noreferrer">预览影像</a>
 
   <section class="cms-index-shell">

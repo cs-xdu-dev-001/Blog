@@ -12,7 +12,7 @@ const imagePath = item.image_path || '';
 ---
 
 <AdminLayout title={`Dev Notes CMS | ${item.title}`} active="reading" dataAttr="data-reading-editor-page">
-  <div slot="search" class="cms-admin-breadcrumb"><strong>阅读书架</strong><span>/</span>{item.title}</div>
+  <div slot="search" class="cms-admin-breadcrumb"><a href="/admin/reading">阅读书架</a><span>/</span>{item.title}</div>
   <a slot="actions" href={`/reading/${item.slug}`} target="_blank" rel="noreferrer">前台查看</a>
 
   <section class="cms-editor-page" data-reading-editor-page>
