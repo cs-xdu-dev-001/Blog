@@ -100,7 +100,7 @@ if (assistant) {
       </main>
       {chrome && <MinimalFooter />}
     </div>
-    <GlobalSearch />
+    {!isAdminRoute && <GlobalSearch />}
     {assistantConfig && (
       <div
         class="dn-assistant"
@@ -134,7 +134,7 @@ if (assistant) {
       </div>
     )}
     {assistantConfig && <script is:inline type="module" src="/assistant.js"></script>}
-    <script is:inline type="module" src="/global-search.js"></script>
+    {!isAdminRoute && <script is:inline type="module" src="/global-search.js"></script>}
     {isAdminRoute && (
       <script is:inline>
         (() => {

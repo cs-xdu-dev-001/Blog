@@ -36,10 +36,13 @@ export function safeReadingImageBaseName(title) {
 export function createReadingRepository({ dbPath, uploadDir } = {}) {
   const db = openDatabase(dbPath);
   const finalUploadDir = uploadDir || path.resolve(process.cwd(), 'public', 'uploads', 'reading');
+  let initialized = false;
 
   function initialize() {
+    if (initialized) return;
     initializeSchema(db);
     fs.mkdirSync(finalUploadDir, { recursive: true });
+    initialized = true;
   }
 
   function normalize(row) {
@@ -212,11 +215,19 @@ export function createReadingRepository({ dbPath, uploadDir } = {}) {
 
     stats() {
       initialize();
+      const row = db.prepare(`
+        SELECT
+          COUNT(*) AS total,
+          COALESCE(SUM(CASE WHEN image_path = '' THEN 1 ELSE 0 END), 0) AS missing_image,
+          COALESCE(SUM(CASE WHEN review = '' THEN 1 ELSE 0 END), 0) AS missing_review,
+          COALESCE(SUM(CASE WHEN quote = '' THEN 1 ELSE 0 END), 0) AS missing_quote
+        FROM reading_items
+      `).get();
       return {
-        total: db.prepare('SELECT COUNT(*) AS n FROM reading_items').get().n,
-        missingImage: db.prepare("SELECT COUNT(*) AS n FROM reading_items WHERE image_path = ''").get().n,
-        missingReview: db.prepare("SELECT COUNT(*) AS n FROM reading_items WHERE review = ''").get().n,
-        missingQuote: db.prepare("SELECT COUNT(*) AS n FROM reading_items WHERE quote = ''").get().n,
+        total: row.total,
+        missingImage: row.missing_image,
+        missingReview: row.missing_review,
+        missingQuote: row.missing_quote,
       };
     },
 

@@ -12018,6 +12018,10 @@ html[data-admin-theme="light"] .cms-theme-icon-moon {
   font-size: 15px;
 }
 
+.cms-index-error[hidden] {
+  display: none;
+}
+
 .cms-editor-page,
 .cms-settings-page {
   width: min(1120px, 100%);

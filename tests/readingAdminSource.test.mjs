@@ -9,6 +9,7 @@ const client = fs.readFileSync(new URL('../public/admin-reading.js', import.meta
 const editorClient = fs.readFileSync(new URL('../public/admin-reading-editor.js', import.meta.url), 'utf8');
 const editApi = fs.readFileSync(new URL('../src/pages/api/admin/reading/[id].ts', import.meta.url), 'utf8');
 const styles = fs.readFileSync(new URL('../src/styles/global.css', import.meta.url), 'utf8');
+const repository = fs.readFileSync(new URL('../src/lib/server/readingRepository.mjs', import.meta.url), 'utf8');
 
 test('reading admin uses a compact index and dedicated editors', () => {
   assert.match(page, /cms-index-shell/);
@@ -39,4 +40,17 @@ test('reading admin keeps core text readable', () => {
   assert.match(styles, /--cms-font-size-base:\s*15px/);
   assert.match(styles, /\.cms-index-title\s*\{[^}]*font-size:\s*16px/);
   assert.match(styles, /\.cms-field,[\s\S]*?font-size:\s*15px/);
+});
+
+test('reading admin hides retry UI and cancels stale list requests', () => {
+  assert.match(styles, /\.cms-index-error\[hidden\]\s*\{[^}]*display:\s*none/);
+  assert.match(client, /new AbortController\(\)/);
+  assert.match(client, /signal:\s*controller\.signal/);
+  assert.match(client, /error\.name\s*===\s*'AbortError'/);
+});
+
+test('reading repository initializes once and aggregates index stats', () => {
+  assert.match(repository, /let initialized\s*=\s*false/);
+  assert.match(repository, /if \(initialized\) return/);
+  assert.match(repository, /SUM\(CASE WHEN image_path = '' THEN 1 ELSE 0 END\)/);
 });

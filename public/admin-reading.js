@@ -4,6 +4,7 @@ const listEl = document.querySelector('[data-reading-list]');
 const statsEl = document.querySelector('[data-reading-stats]');
 const searchEl = document.querySelector('[data-reading-search]');
 const errorEl = document.querySelector('[data-reading-error]');
+let loadController = null;
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -51,14 +52,25 @@ function render() {
 }
 
 async function loadItems() {
+  loadController?.abort();
+  const controller = new AbortController();
+  loadController = controller;
   errorEl.hidden = true;
   const params = new URLSearchParams({ filter: state.filter, query: state.query });
-  const response = await fetch(`/api/admin/reading?${params}`);
-  if (!response.ok) throw new Error('读取书籍失败');
-  const data = await response.json();
-  state.items = data.items || [];
-  state.stats = { ...EMPTY_STATS, ...(data.stats || {}) };
-  render();
+  try {
+    const response = await fetch(`/api/admin/reading?${params}`, { signal: controller.signal });
+    if (!response.ok) throw new Error('读取书籍失败');
+    const data = await response.json();
+    if (loadController !== controller) return;
+    state.items = data.items || [];
+    state.stats = { ...EMPTY_STATS, ...(data.stats || {}) };
+    render();
+  } catch (error) {
+    if (error.name === 'AbortError') return;
+    throw error;
+  } finally {
+    if (loadController === controller) loadController = null;
+  }
 }
 
 function showLoadError() {

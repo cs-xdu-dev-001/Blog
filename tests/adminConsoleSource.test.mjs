@@ -74,6 +74,11 @@ test('admin shell supports a persistent accessible light and dark theme', () => 
   assert.match(styles, /--cms-selection-bg:/);
 });
 
+test('admin routes do not render or load the public global search', () => {
+  assert.match(baseLayout, /\{!isAdminRoute && <GlobalSearch\s*\/>\}/);
+  assert.match(baseLayout, /\{!isAdminRoute && <script[^>]+src="\/global-search\.js"[^>]*><\/script>\}/);
+});
+
 test('all admin surfaces use the shared readable workbench contract', () => {
   assert.match(styles, /--cms-font-size-base:\s*15px/);
   assert.match(styles, /\.cms-index-shell\s*\{/);
