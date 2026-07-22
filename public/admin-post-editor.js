@@ -21,11 +21,15 @@ const tagHiddenContainer = document.querySelector('[data-tag-hidden]');
 const lockedNoteKeyInput = document.querySelector('[data-locked-note-key]');
 const unlockLockedPostButton = document.querySelector('[data-unlock-locked-post]');
 const lockedNoteStatus = document.querySelector('[data-locked-note-status]');
+const PREVIEW_DELAY_MS = 400;
+const PREVIEW_RETRY_DELAY_MS = 350;
 
 let previewTimer = null;
 let isSaving = false;
 let previewRequestId = 0;
 let previewAbortController = null;
+let editorMode = 'edit';
+let hasSuccessfulPreview = false;
 let allTags = normalizeTags([...initialTagOptions, ...(post.tags || [])]);
 let selectedTags = new Set(normalizeTags(post.tags || []));
 let tagFilter = '';
@@ -763,41 +767,81 @@ function enhancePreviewTables() {
   });
 }
 
+function previewIsVisible() {
+  return editorMode === 'preview' || editorMode === 'split';
+}
+
+function waitForPreviewRetry() {
+  return new Promise((resolve) => window.setTimeout(resolve, PREVIEW_RETRY_DELAY_MS));
+}
+
 async function updatePreview() {
-  if (!preview || !input) return;
+  if (!preview || !input || !previewIsVisible()) return;
   const requestId = ++previewRequestId;
   previewAbortController?.abort();
-  previewAbortController = new AbortController();
+  const controller = new AbortController();
+  previewAbortController = controller;
+  let failureStatus = null;
 
   try {
-    const res = await fetch('/api/admin/posts/preview', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ markdown: input.value }),
-      signal: previewAbortController.signal,
-    });
-    if (requestId !== previewRequestId) return;
-    if (!res.ok) {
-      preview.innerHTML = `<p>预览暂时不可用（${res.status}）。</p>`;
-      return;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const res = await fetch('/api/admin/posts/preview', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          credentials: 'same-origin',
+          cache: 'no-store',
+          body: JSON.stringify({ markdown: input.value }),
+          signal: controller.signal,
+        });
+        if (requestId !== previewRequestId || controller.signal.aborted) return;
+        if (!res.ok) {
+          failureStatus = res.status;
+          const retryable = res.status === 429 || res.status >= 500;
+          if (attempt === 0 && retryable) {
+            await waitForPreviewRetry();
+            if (controller.signal.aborted) return;
+            continue;
+          }
+          break;
+        }
+        if (!String(res.headers.get('content-type') || '').includes('application/json')) {
+          throw new Error('Preview response is not JSON');
+        }
+        const data = await res.json();
+        if (requestId !== previewRequestId || controller.signal.aborted) return;
+        preview.innerHTML = data.html || '<p>预览会显示在这里。</p>';
+        hasSuccessfulPreview = true;
+        enhancePreviewTables();
+        return;
+      } catch (error) {
+        if (error?.name === 'AbortError' || controller.signal.aborted) return;
+        if (attempt === 0) {
+          await waitForPreviewRetry();
+          if (controller.signal.aborted) return;
+          continue;
+        }
+      }
     }
-    const data = await res.json();
-    if (requestId === previewRequestId) {
-      preview.innerHTML = data.html || '<p>预览会显示在这里。</p>';
-      enhancePreviewTables();
+
+    if (requestId === previewRequestId && !hasSuccessfulPreview) {
+      preview.innerHTML = failureStatus
+        ? `<p>预览连接失败（${failureStatus}）。</p>`
+        : '<p>预览连接失败。</p>';
     }
-  } catch (error) {
-    if (error?.name === 'AbortError') return;
-    if (requestId === previewRequestId) {
-      preview.innerHTML = '<p>预览暂时不可用。</p>';
-    }
+  } finally {
+    if (previewAbortController === controller) previewAbortController = null;
   }
 }
 
 function schedulePreview() {
   setStatus('UNSAVED');
   window.clearTimeout(previewTimer);
-  previewTimer = window.setTimeout(updatePreview, 120);
+  if (!previewIsVisible()) return;
+  previewTimer = window.setTimeout(updatePreview, PREVIEW_DELAY_MS);
 }
 
 function collectPayload() {
@@ -878,11 +922,14 @@ async function deletePost() {
 document.querySelectorAll('[data-editor-mode]').forEach((button) => {
   button.addEventListener('click', () => {
     const mode = button.dataset.editorMode;
+    editorMode = mode;
     shell?.classList.toggle('is-edit', mode === 'edit');
     shell?.classList.toggle('is-preview', mode === 'preview');
     shell?.classList.toggle('is-split', mode === 'split');
     document.querySelectorAll('[data-editor-mode]').forEach((el) => el.classList.toggle('active', el === button));
-    updatePreview();
+    window.clearTimeout(previewTimer);
+    if (previewIsVisible()) updatePreview();
+    else previewAbortController?.abort();
   });
 });
 
@@ -1032,5 +1079,4 @@ window.addEventListener('resize', () => {
   if (panel instanceof HTMLElement) moveTableEditor(panel, tableEditorPosition.left, tableEditorPosition.top);
 });
 
-updatePreview();
 renderTags();

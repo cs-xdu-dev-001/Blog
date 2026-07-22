@@ -34,6 +34,10 @@ test('admin post editor previews through the frontend markdown renderer', () => 
   assert.match(api, /markdownToHtml/);
   assert.match(client, /\/api\/admin\/posts\/preview/);
   assert.match(client, /previewRequestId/);
+  assert.match(client, /PREVIEW_DELAY_MS\s*=\s*400/);
+  assert.match(client, /previewIsVisible\(\)/);
+  assert.match(client, /attempt\s*<\s*2/);
+  assert.match(client, /hasSuccessfulPreview/);
   assert.match(client, /continueMarkdownBlock/);
   assert.match(client, /nextMarkdownPrefix/);
   assert.match(client, /adjustMarkdownIndent/);
@@ -77,6 +81,9 @@ test('admin post editor previews through the frontend markdown renderer', () => 
   assert.match(styles, /\.article-prose\s+\.contains-task-list\s*\{[^}]*list-style:\s*none/s);
   assert.match(styles, /@import "katex\/dist\/katex\.min\.css"/);
   assert.match(styles, /\.article-prose\s+\.article-red/);
+  assert.match(styles, /\.article-prose pre\s*\{[^}]*background:\s*#f4f7fa\s*!important/s);
+  assert.match(styles, /\.article-prose pre\s*\{[^}]*color:\s*#263548/s);
+  assert.doesNotMatch(styles, /\.article-prose pre\s*\{[^}]*background:\s*#151515/s);
   assert.match(styles, /\.post-preview-editable-table/);
   assert.match(styles, /\.post-table-editor/);
   assert.match(styles, /\.post-table-editor\s*\{[^}]*pointer-events:\s*none/s);
