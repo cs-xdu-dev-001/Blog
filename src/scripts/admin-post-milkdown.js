@@ -9,6 +9,7 @@ import { listItem } from '@milkdown/crepe/feature/list-item';
 import { placeholder } from '@milkdown/crepe/feature/placeholder';
 import { table } from '@milkdown/crepe/feature/table';
 import { toolbar } from '@milkdown/crepe/feature/toolbar';
+import { insert } from '@milkdown/utils';
 import '@milkdown/crepe/theme/common/reset.css';
 import '@milkdown/crepe/theme/common/block-edit.css';
 import '@milkdown/crepe/theme/common/code-mirror.css';
@@ -43,6 +44,40 @@ async function uploadPostImage(file) {
   if (!res.ok) throw new Error(`图片上传失败（${res.status}）`);
   const data = await res.json();
   return data.image?.imagePath || data.image?.smallPath || '';
+}
+
+function clipboardImageFiles(event) {
+  return Array.from(event.clipboardData?.files || [])
+    .filter((file) => file?.type?.startsWith('image/'));
+}
+
+function imageAlt(file) {
+  return String(file?.name || '图片')
+    .replace(/\.[^.]+$/, '')
+    .replace(/[[\]()]/g, '')
+    .trim() || '图片';
+}
+
+async function insertClipboardImages(event, crepe) {
+  const files = clipboardImageFiles(event);
+  if (!files.length) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  setStatus('UPLOADING IMAGE');
+
+  try {
+    const images = [];
+    for (const file of files) {
+      const imagePath = await uploadPostImage(file);
+      if (!imagePath) throw new Error('图片上传失败');
+      images.push(`![${imageAlt(file)}](${imagePath})`);
+    }
+    crepe.editor.action(insert(images.join('\n\n')));
+    setStatus('UNSAVED');
+  } catch (error) {
+    setStatus(error instanceof Error ? error.message : 'IMAGE UPLOAD FAILED');
+  }
 }
 
 function syncMarkdown(markdown) {
@@ -102,6 +137,9 @@ async function bootMilkdown() {
 
   try {
     await crepe.create();
+    root.addEventListener('paste', (event) => {
+      void insertClipboardImages(event, crepe);
+    }, true);
     root.dataset.milkdownReady = 'true';
     window.__postMilkdownEditor = crepe;
   } catch (error) {

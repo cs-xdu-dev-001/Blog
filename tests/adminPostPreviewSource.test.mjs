@@ -74,6 +74,11 @@ test('admin post editor previews through the frontend markdown renderer', () => 
   assert.match(milkdownClient, /defaultValue:\s*input\.value/);
   assert.match(milkdownClient, /markdownUpdated/);
   assert.match(milkdownClient, /input\.dispatchEvent\(new Event\('input'/);
+  assert.match(milkdownClient, /import\s+\{\s*insert\s*\}\s+from\s+'@milkdown\/utils'/);
+  assert.match(milkdownClient, /clipboardData\?\.files/);
+  assert.match(milkdownClient, /addEventListener\('paste'/);
+  assert.match(milkdownClient, /event\.preventDefault\(\)/);
+  assert.match(milkdownClient, /crepe\.editor\.action\(insert\(/);
   assert.match(milkdownClient, /'X-Image-Name':\s*encodeURIComponent/);
   assert.match(milkdownClient, /body:\s*file/);
   assert.match(client, /'X-Image-Name':\s*encodeURIComponent/);
