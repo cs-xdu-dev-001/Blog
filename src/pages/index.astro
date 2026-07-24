@@ -1,5 +1,6 @@
 ﻿---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import GiscusComments from '../components/GiscusComments.astro';
 import { getWatchArchiveFromDb } from '../lib/server/watchArchiveView.mjs';
 import { getAllReadingFromDb } from '../lib/server/readingArchiveView.mjs';
 import { radarRepository } from '../lib/server/radarRepository.mjs';
@@ -12,6 +13,9 @@ const posts = postRepository.list({ filter: 'published', limit: 100 }).items;
 const siteConfig = siteConfigRepository.getSiteConfig();
 const sectionList = siteConfigRepository.listSections();
 const sectionMap = Object.fromEntries(sectionList.map((section) => [section.key, section]));
+const commentsConfig = siteConfig.comments || {};
+const commentsReady = ['repo', 'repoId', 'category', 'categoryId']
+  .every((key) => String(commentsConfig[key] || '').trim());
 const isSectionEnabled = (key) => sectionMap[key]?.enabled !== 0;
 const section = (key, fallback) => ({
   title: sectionMap[key]?.title || fallback.title,
@@ -172,6 +176,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
         {isSectionEnabled('reading') && <a class="qzq-nav-item" href="#reading"><span>{section('reading', { navLabel: '书架' }).navLabel}</span><small>{navSmall('reading', String(readingTotal))}</small></a>}
         {isSectionEnabled('statistics') && <a class="qzq-nav-item" href="#statistics"><span>{section('statistics', { navLabel: '统计' }).navLabel}</span><small>{navSmall('statistics', '∞')}</small></a>}
         {isSectionEnabled('about') && <a class="qzq-nav-item" href="/about"><span>{section('about', { navLabel: '关于' }).navLabel}</span><small>{navSmall('about', 'me')}</small></a>}
+        {isSectionEnabled('comments') && commentsReady && <a class="qzq-nav-item" href="#comments"><span>{section('comments', { navLabel: '留言' }).navLabel}</span><small>{navSmall('comments', 'GitHub')}</small></a>}
       </div>
       <div class="qzq-socials" aria-label="Social links">
         <button type="button" class="global-search-trigger" data-global-search-open aria-label="打开全站搜索">
@@ -742,6 +747,15 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
         </article>
       </div>
     </section>}
+
+    {isSectionEnabled('comments') && commentsReady && (
+      <section id="comments" class="qzq-comments-section" aria-label="留言" data-reveal-section>
+        <div class="qzq-section-title qzq-comments-title">
+          <h2>{section('comments', { title: '留言' }).title}</h2>
+        </div>
+        <GiscusComments config={commentsConfig} />
+      </section>
+    )}
 
   </main>
 

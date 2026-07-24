@@ -21,6 +21,23 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         </div>
       </section>
       <section class="cms-settings-section"><h2>模块顺序</h2><div class="cms-home-sections" data-home-sections></div></section>
+      <section class="cms-settings-section">
+        <div class="cms-settings-section-head">
+          <h2>GitHub留言</h2>
+          <strong class="cms-integration-state" data-comments-status>待检查</strong>
+        </div>
+        <div class="cms-settings-grid">
+          <label class="cms-setting-field"><span>仓库</span><input name="comments.repo" placeholder="owner/repository" /></label>
+          <label class="cms-setting-field"><span>仓库ID</span><input name="comments.repoId" /></label>
+          <label class="cms-setting-field"><span>分类</span><input name="comments.category" /></label>
+          <label class="cms-setting-field"><span>分类ID</span><input name="comments.categoryId" /></label>
+        </div>
+        <div class="cms-integration-actions">
+          <a href="https://github.com/cs-xdu-dev-001/Blog/settings" target="_blank" rel="noreferrer">开启Discussions</a>
+          <a href="https://github.com/apps/giscus" target="_blank" rel="noreferrer">安装Giscus</a>
+          <a href="https://giscus.app/zh-CN" target="_blank" rel="noreferrer">获取分类ID</a>
+        </div>
+      </section>
     </form>
   </section>
   <script is:inline src="/admin-site.js"></script>

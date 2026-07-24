@@ -12459,3 +12459,119 @@ html[data-admin-theme="light"] .post-editor-page {
     transition-duration: 0.01ms !important;
   }
 }
+
+.qzq-comments-section {
+  width: min(100% - 96px, var(--qzq-wide-max));
+  margin: 0 auto;
+  border-top: 1px solid rgba(51, 65, 85, 0.14);
+  padding: 88px 0 112px;
+}
+
+.qzq-comments-title,
+.qzq-comments-embed {
+  width: min(100%, 920px);
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.qzq-comments-embed {
+  min-height: 230px;
+}
+
+.qzq-comments-embed .giscus,
+.qzq-comments-embed .giscus-frame {
+  width: 100%;
+}
+
+.qzq-comments-embed .giscus-frame {
+  color-scheme: light;
+}
+
+[data-reveal-section] .qzq-comments-embed {
+  opacity: 0.9;
+  translate: 0 10px;
+  scale: 0.985;
+  transition:
+    opacity 420ms cubic-bezier(0.16, 1, 0.3, 1),
+    translate 520ms cubic-bezier(0.2, 1.08, 0.28, 1),
+    scale 520ms cubic-bezier(0.2, 1.08, 0.28, 1);
+  transform-origin: center top;
+}
+
+[data-reveal-section].is-visible .qzq-comments-embed {
+  opacity: 1;
+  translate: 0 0;
+  scale: 1;
+}
+
+.cms-settings-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.cms-integration-state {
+  color: var(--cms-danger);
+  font-size: 14px;
+  font-weight: 680;
+}
+
+.cms-integration-state.is-ready {
+  color: var(--cms-success);
+}
+
+.cms-integration-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cms-integration-actions a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  border: 1px solid var(--cms-line);
+  border-radius: 6px;
+  background: var(--cms-control);
+  color: var(--cms-text-soft);
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.cms-integration-actions a:hover {
+  border-color: var(--cms-line-strong);
+  background: var(--cms-hover);
+}
+
+@media (max-width: 900px) {
+  .qzq-comments-section {
+    width: calc(100% - 48px);
+    margin-right: 24px;
+    margin-left: 24px;
+  }
+}
+
+@media (max-width: 640px) {
+  .qzq-comments-section {
+    width: calc(100% - 32px);
+    margin-right: 16px;
+    margin-left: 16px;
+    padding: 64px 0 80px;
+  }
+
+  .qzq-comments-embed {
+    min-height: 180px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal-section] .qzq-comments-embed {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+    transition: none;
+  }
+}

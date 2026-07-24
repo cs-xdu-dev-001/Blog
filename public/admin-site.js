@@ -29,6 +29,7 @@ function fillForm() {
   });
   renderSections();
   renderAboutPreview();
+  renderCommentsStatus();
 }
 
 function renderSections() {
@@ -50,6 +51,16 @@ function renderAboutPreview() {
   const body = form?.elements.aboutBody;
   if (!preview || !body) return;
   preview.textContent = body.value || '';
+}
+
+function renderCommentsStatus() {
+  const target = document.querySelector('[data-comments-status]');
+  if (!target || !form) return;
+  const values = new FormData(form);
+  const ready = ['comments.repo', 'comments.repoId', 'comments.category', 'comments.categoryId']
+    .every((name) => String(values.get(name) || '').trim());
+  target.textContent = ready ? '配置完整' : '待完成配置';
+  target.classList.toggle('is-ready', ready);
 }
 
 async function loadConfig() {
@@ -86,6 +97,12 @@ function homePayload(values) {
     heroSubline: values.get('heroSubline'),
     heroHighlight: values.get('heroHighlight'),
     orbitTags: values.get('orbitTags'),
+    comments: {
+      repo: values.get('comments.repo'),
+      repoId: values.get('comments.repoId'),
+      category: values.get('comments.category'),
+      categoryId: values.get('comments.categoryId'),
+    },
   };
 }
 
@@ -134,7 +151,11 @@ function homeSections(values) {
   }));
 }
 
-form?.addEventListener('input', () => { setStatus('未保存'); renderAboutPreview(); });
+form?.addEventListener('input', () => {
+  setStatus('未保存');
+  renderAboutPreview();
+  renderCommentsStatus();
+});
 form?.addEventListener('submit', async (event) => {
   event.preventDefault();
   const values = new FormData(form);

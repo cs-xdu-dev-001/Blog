@@ -103,6 +103,12 @@ export const defaultSiteConfig = {
     monitor: 'https://pulseboard.academicedu.me/',
     ai: 'https://ai.academicedu.me/',
   },
+  comments: {
+    repo: 'cs-xdu-dev-001/Blog',
+    repoId: 'R_kgDOTTfuNQ',
+    category: 'Announcements',
+    categoryId: 'DIC_kwDOTTfuNc4DB4et',
+  },
   topics: defaultTopics,
   assistant: {
     enabled: true,
@@ -134,6 +140,7 @@ export const defaultSections = [
   { key: 'reading', title: '阅读书架', eyebrow: 'Reading shelf', navLabel: '书架', navSmall: 'auto', sortOrder: 40 },
   { key: 'statistics', title: '统计', eyebrow: '个人坐标', navLabel: '统计', navSmall: '∞', sortOrder: 50 },
   { key: 'about', title: '关于', eyebrow: 'About', navLabel: '关于', navSmall: 'me', sortOrder: 60 },
+  { key: 'comments', title: '留言', eyebrow: 'GitHub Discussions', navLabel: '留言', navSmall: 'GitHub', sortOrder: 70 },
 ];
 
 function parseJson(value, fallback) {
@@ -216,6 +223,10 @@ function normalizeSiteConfig(value) {
     social: {
       ...defaultSiteConfig.social,
       ...(parsed.social || {}),
+    },
+    comments: {
+      ...defaultSiteConfig.comments,
+      ...(parsed.comments || {}),
     },
     topics: normalizeTopics(parsed.topics || defaultTopics),
     assistant: {
@@ -305,6 +316,10 @@ export function createSiteConfigRepository({ dbPath } = {}) {
         social: {
           ...current.social,
           ...(input.social || {}),
+        },
+        comments: {
+          ...current.comments,
+          ...(input.comments || {}),
         },
         topics: {
           ...current.topics,
