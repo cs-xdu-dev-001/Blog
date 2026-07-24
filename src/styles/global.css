@@ -12575,3 +12575,172 @@ html[data-admin-theme="light"] .post-editor-page {
     transition: none;
   }
 }
+
+.cms-comments-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 58px;
+  border: 1px solid color-mix(in srgb, var(--cms-danger) 32%, var(--cms-line));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--cms-danger) 7%, var(--cms-surface));
+  padding: 10px 14px;
+}
+
+.cms-comments-error[hidden] {
+  display: none;
+}
+
+.cms-comments-error strong {
+  color: var(--cms-danger);
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.cms-comments-list {
+  overflow: hidden;
+  border: 1px solid var(--cms-line);
+  border-radius: 8px;
+  background: var(--cms-surface);
+}
+
+.cms-comment-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 176px 126px;
+  gap: 20px;
+  align-items: center;
+  min-height: 116px;
+  border-bottom: 1px solid var(--cms-row-line);
+  padding: 16px 18px;
+}
+
+.cms-comment-row:last-child {
+  border-bottom: 0;
+}
+
+.cms-comment-main {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  min-width: 0;
+}
+
+.cms-comment-avatar,
+.cms-comment-avatar img,
+.cms-comment-avatar-fallback {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+}
+
+.cms-comment-avatar {
+  display: block;
+  overflow: hidden;
+  border: 1px solid var(--cms-line);
+  background: var(--cms-thumb-bg);
+}
+
+.cms-comment-avatar img {
+  display: block;
+  object-fit: cover;
+}
+
+.cms-comment-avatar-fallback {
+  display: grid;
+  place-items: center;
+  color: var(--cms-muted);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.cms-comment-author {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.cms-comment-author strong {
+  color: var(--cms-text-strong);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.cms-comment-main p {
+  margin: 8px 0 7px;
+  color: var(--cms-text-soft);
+  font-size: 16px;
+  line-height: 1.58;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.cms-comment-context {
+  display: block;
+  overflow: hidden;
+  color: var(--cms-muted);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cms-comment-row time {
+  color: var(--cms-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.cms-comment-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.cms-comment-actions a,
+.cms-comment-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  min-height: 36px;
+  border: 1px solid var(--cms-line);
+  border-radius: 6px;
+  background: var(--cms-control);
+  color: var(--cms-text-soft);
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.cms-comment-actions button {
+  border-color: color-mix(in srgb, var(--cms-danger) 28%, var(--cms-line));
+  color: var(--cms-danger);
+}
+
+.cms-comment-actions a:hover {
+  background: var(--cms-hover);
+}
+
+.cms-comment-actions button:hover {
+  background: color-mix(in srgb, var(--cms-danger) 8%, var(--cms-control));
+}
+
+.cms-comment-actions button:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
+@media (max-width: 1180px) {
+  .cms-comment-row {
+    grid-template-columns: minmax(0, 1fr) 126px;
+  }
+
+  .cms-comment-row time {
+    display: none;
+  }
+}

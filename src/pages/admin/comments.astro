@@ -1,0 +1,25 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Dev Notes CMS | 留言" active="comments" dataAttr="data-comments-admin">
+  <div slot="search" class="cms-admin-breadcrumb"><a href="/admin/posts">内容</a><span>/</span><a href="/admin/comments" aria-current="page">留言</a></div>
+  <a slot="actions" href="/#comments" target="_blank" rel="noreferrer">预览留言</a>
+
+  <section class="cms-index-shell cms-comments-index">
+    <header class="cms-index-head">
+      <h1>留言</h1>
+      <span class="cms-index-summary" data-comments-summary>正在读取</span>
+    </header>
+    <div class="cms-index-toolbar">
+      <input type="search" placeholder="搜索留言或GitHub用户" data-comments-search />
+      <button class="cms-button" type="button" data-comments-refresh>刷新</button>
+    </div>
+    <div class="cms-comments-error" data-comments-error hidden>
+      <strong data-comments-error-message>留言读取失败</strong>
+      <button class="cms-button" type="button" data-comments-retry>重新读取</button>
+    </div>
+    <div class="cms-comments-list" data-comments-list></div>
+  </section>
+  <script is:inline src="/admin-comments.js"></script>
+</AdminLayout>

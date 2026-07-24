@@ -94,6 +94,7 @@ cp .env.example .env
 - `ADMIN_USERNAME`：管理端用户名。
 - `ADMIN_PASSWORD_HASH`：管理端密码hash。
 - `ADMIN_SESSION_SECRET`：管理端会话签名密钥。
+- `GITHUB_DISCUSSIONS_TOKEN`：管理端读取和删除留言使用的细粒度GitHub Token，仅授予`Blog`仓库的Discussions读写权限。
 - `ASSISTANT_API_MODE`：AI接口类型，`chat`或`responses`。
 - `ASSISTANT_BASE_URL`：AI接口Base URL。
 - `ASSISTANT_API_KEY`：AI接口密钥。
