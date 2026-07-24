@@ -201,9 +201,15 @@ function imageAlt(file) {
 }
 
 async function uploadPostImage(file) {
-  const body = new FormData();
-  body.set('image', file);
-  const res = await fetch('/api/admin/posts/image', { method: 'POST', body });
+  const res = await fetch('/api/admin/posts/image', {
+    method: 'POST',
+    headers: {
+      'Content-Type': file.type,
+      'X-Image-Name': encodeURIComponent(file.name || 'image'),
+    },
+    credentials: 'same-origin',
+    body: file,
+  });
   if (!res.ok) throw new Error(`图片上传失败（${res.status}）`);
   const data = await res.json();
   return data.image?.imagePath || data.image?.smallPath || '';

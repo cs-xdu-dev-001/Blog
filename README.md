@@ -107,6 +107,7 @@ cp .env.example .env
 运行数据默认保存在：
 
 - `data/blog.sqlite`
+- `public/uploads/posts`
 - `public/uploads/reading`
 - `public/uploads/watch`
 
@@ -116,7 +117,7 @@ cp .env.example .env
 tar -czf blog-data-backup.tgz data public/uploads
 ```
 
-如果要迁移服务器，需要同时迁移数据库和上传文件，否则管理端配置、影像封面、书籍封面可能不完整。
+如果要迁移服务器，需要同时迁移数据库和上传文件，否则管理端配置、笔记正文图片、影像封面、书籍封面可能不完整。
 
 ## 内容维护
 

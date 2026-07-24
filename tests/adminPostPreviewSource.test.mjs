@@ -74,7 +74,13 @@ test('admin post editor previews through the frontend markdown renderer', () => 
   assert.match(milkdownClient, /defaultValue:\s*input\.value/);
   assert.match(milkdownClient, /markdownUpdated/);
   assert.match(milkdownClient, /input\.dispatchEvent\(new Event\('input'/);
+  assert.match(milkdownClient, /'X-Image-Name':\s*encodeURIComponent/);
+  assert.match(milkdownClient, /body:\s*file/);
+  assert.match(client, /'X-Image-Name':\s*encodeURIComponent/);
+  assert.match(client, /body:\s*file/);
   assert.match(imageApi, /saveImageVariants/);
+  assert.match(imageApi, /context\.request\.arrayBuffer\(\)/);
+  assert.match(imageApi, /x-image-name/);
   assert.match(styles, /\.article-prose\s+ul\s*\{[^}]*list-style:\s*disc/s);
   assert.match(styles, /\.article-prose\s+ol\s*\{[^}]*list-style:\s*decimal/s);
   assert.match(styles, /\.article-prose\s+table\s*\{[^}]*border:\s*1px solid var\(--line\)/s);
