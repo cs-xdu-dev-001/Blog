@@ -35,16 +35,22 @@ test('site config stores Giscus settings without application secrets', () => {
 test('homepage only mounts the GitHub-authorized comment widget when configured', () => {
   const homepage = fs.readFileSync(new URL('../src/pages/index.astro', import.meta.url), 'utf8');
   const component = fs.readFileSync(new URL('../src/components/GiscusComments.astro', import.meta.url), 'utf8');
+  const layout = fs.readFileSync(new URL('../src/layouts/BaseLayout.astro', import.meta.url), 'utf8');
 
   assert.match(homepage, /siteConfig\.comments/);
   assert.match(homepage, /isSectionEnabled\('comments'\)/);
   assert.match(homepage, /<GiscusComments/);
+  assert.match(homepage, /preconnectGiscus=/);
   assert.match(component, /https:\/\/giscus\.app\/client\.js/);
-  assert.match(component, /data-mapping="pathname"/);
-  assert.match(component, /data-lang="zh-CN"/);
-  assert.match(component, /data-loading="lazy"/);
-  assert.match(component, /data-input-position="top"/);
-  assert.match(component, /data-reactions-enabled="1"/);
+  assert.match(component, /\['data-mapping', 'pathname'\]/);
+  assert.match(component, /\['data-lang', 'zh-CN'\]/);
+  assert.match(component, /data-loading', 'eager'/);
+  assert.match(component, /\['data-input-position', 'top'\]/);
+  assert.match(component, /\['data-reactions-enabled', '1'\]/);
+  assert.match(component, /requestIdleCallback/);
+  assert.match(component, /rootMargin:\s*'1000px 0px'/);
+  assert.match(component, /location\.hash === '#comments'/);
+  assert.match(layout, /rel="preconnect" href="https:\/\/giscus\.app"/);
 });
 
 test('homepage admin exposes Giscus settings and saves them with the home payload', () => {

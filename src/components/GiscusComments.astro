@@ -8,24 +8,64 @@ const ready = Boolean(repo && repoId && category && categoryId);
 ---
 
 {ready && (
-  <div class="qzq-comments-embed">
-    <script
-      is:inline
-      src="https://giscus.app/client.js"
+  <>
+    <div
+      class="qzq-comments-embed"
+      data-giscus-root
       data-repo={repo}
       data-repo-id={repoId}
       data-category={category}
       data-category-id={categoryId}
-      data-mapping="pathname"
-      data-strict="1"
-      data-reactions-enabled="1"
-      data-emit-metadata="0"
-      data-input-position="top"
-      data-theme="light"
-      data-lang="zh-CN"
-      data-loading="lazy"
-      crossorigin="anonymous"
-      async
-    ></script>
-  </div>
+    ></div>
+    <script is:inline>
+      (() => {
+        const root = document.currentScript?.previousElementSibling;
+        if (!(root instanceof HTMLElement) || !root.matches('[data-giscus-root]')) return;
+
+        let observer;
+        const load = () => {
+          if (root.dataset.giscusLoaded) return;
+          root.dataset.giscusLoaded = 'true';
+          observer?.disconnect();
+
+          const script = document.createElement('script');
+          [
+            ['data-repo', root.dataset.repo],
+            ['data-repo-id', root.dataset.repoId],
+            ['data-category', root.dataset.category],
+            ['data-category-id', root.dataset.categoryId],
+            ['data-mapping', 'pathname'],
+            ['data-strict', '1'],
+            ['data-reactions-enabled', '1'],
+            ['data-emit-metadata', '0'],
+            ['data-input-position', 'top'],
+            ['data-theme', 'light'],
+            ['data-lang', 'zh-CN'],
+            ['data-loading', 'eager'],
+          ].forEach(([name, value]) => script.setAttribute(name, value || ''));
+          script.src = 'https://giscus.app/client.js';
+          script.crossOrigin = 'anonymous';
+          script.async = true;
+          root.append(script);
+        };
+
+        const navLink = document.querySelector('a[href="#comments"]');
+        navLink?.addEventListener('pointerenter', load, { once: true });
+        navLink?.addEventListener('click', load, { once: true });
+
+        if (location.hash === '#comments') {
+          load();
+        } else if (window.matchMedia('(max-width: 760px)').matches && 'IntersectionObserver' in window) {
+          observer = new IntersectionObserver(([entry]) => {
+            if (entry?.isIntersecting) load();
+          }, { rootMargin: '1000px 0px', threshold: 0 });
+          observer.observe(root);
+        } else if ('requestIdleCallback' in window) {
+          window.requestIdleCallback(load, { timeout: 1200 });
+        } else {
+          window.setTimeout(load, 250);
+        }
+      })();
+    </script>
+  </>
 )}

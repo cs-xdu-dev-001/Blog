@@ -165,6 +165,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
   description={siteConfig.pageDescription}
   chrome={false}
   shell={false}
+  preconnectGiscus={isSectionEnabled('comments') && commentsReady}
 >
   <main class="qzq-home">
     <nav class="qzq-nav" aria-label="Primary navigation">
