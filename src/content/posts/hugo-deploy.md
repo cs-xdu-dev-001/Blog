@@ -2,7 +2,8 @@
 title: "Hugo 部署记录"
 description: "一次从服务器环境、Hugo 安装到 Nginx 发布的静态站点部署记录。"
 date: 2025-09-10
-category: "Deployment"
+kind: "technical"
+tags: ["Deployment"]
 featured: true
 ---
 

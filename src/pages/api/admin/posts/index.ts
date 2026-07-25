@@ -28,7 +28,7 @@ export const POST: APIRoute = async (context) => {
   try {
     item = postRepository.create({
       title,
-      category: input.category || 'Notes',
+      kind: input.kind || 'technical',
       description: input.description || '',
       body: input.body || '',
       featured: Boolean(input.featured),

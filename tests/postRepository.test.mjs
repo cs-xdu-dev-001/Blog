@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { openDatabase } from '../src/lib/server/db.mjs';
 import { createPostRepository } from '../src/lib/server/postRepository.mjs';
 import { markdownToHtml } from '../src/lib/server/markdownRenderer.mjs';
 
@@ -15,7 +16,7 @@ test('post repository creates, lists, updates, and deletes markdown posts', () =
 
   const created = repo.create({
     title: '近期笔记测试',
-    category: 'AI Knowledge',
+    kind: 'technical',
     description: '一条可管理的Markdown笔记',
     body: '## 小标题\n\n正文内容',
     featured: true,
@@ -26,6 +27,8 @@ test('post repository creates, lists, updates, and deletes markdown posts', () =
   });
 
   assert.equal(created.slug, 'recent-note-test');
+  assert.equal(created.kind, 'technical');
+  assert.equal(created.kindLabel, '技术笔记');
   assert.deepEqual(created.topicSlugs, ['agent-system', 'llm-finetune']);
   assert.deepEqual(created.tags, ['AI', 'RAG']);
   assert.equal(repo.getBySlug('recent-note-test').title, '近期笔记测试');
@@ -37,7 +40,7 @@ test('post repository creates, lists, updates, and deletes markdown posts', () =
   const updated = repo.update(created.id, {
     title: '近期笔记测试更新',
     slug: 'recent-note-test',
-    category: 'Frontend',
+    kind: 'technical',
     description: '更新后的摘要',
     body: '# 标题\n\n更新正文',
     featured: false,
@@ -48,7 +51,7 @@ test('post repository creates, lists, updates, and deletes markdown posts', () =
   });
 
   assert.equal(updated.title, '近期笔记测试更新');
-  assert.equal(updated.category, 'Frontend');
+  assert.equal(updated.kind, 'technical');
   assert.deepEqual(updated.topicSlugs, ['frontend-interaction']);
   assert.deepEqual(updated.tags, ['Frontend', 'UI']);
   assert.deepEqual(repo.listTags(), ['Frontend', 'UI']);
@@ -136,6 +139,47 @@ Imported body.
   assert.equal(second.imported, 1);
   assert.equal(repo.stats().total, 1);
   assert.equal(repo.getBySlug('hello-world').featured, 1);
+  assert.equal(repo.getBySlug('hello-world').kind, 'technical');
+  assert.deepEqual(repo.getBySlug('hello-world').tags, ['Deployment']);
+});
+
+test('post repository migrates legacy categories into shared tags and keeps note kinds', () => {
+  const dbPath = tempDbPath();
+  const repo = createPostRepository({ dbPath });
+  repo.initialize();
+  const db = openDatabase(dbPath);
+  const insert = db.prepare(`
+    INSERT INTO blog_posts
+      (slug, title, description, category, tags, body, date, featured, published)
+    VALUES
+      (@slug, @title, '', @category, @tags, '', '2026-07-25', 0, 1)
+  `);
+  insert.run({
+    slug: 'legacy-technical',
+    title: '旧技术笔记',
+    category: 'AI Knowledge',
+    tags: JSON.stringify(['RAG', 'ai knowledge']),
+  });
+  insert.run({
+    slug: 'legacy-reflection',
+    title: '旧随记',
+    category: '随记',
+    tags: '[]',
+  });
+  db.close();
+
+  const technical = repo.getBySlug('legacy-technical');
+  const reflection = repo.getBySlug('legacy-reflection');
+
+  assert.equal(technical.kind, 'technical');
+  assert.equal(technical.kindLabel, '技术笔记');
+  assert.equal(technical.category, 'Notes');
+  assert.deepEqual(technical.tags, ['RAG', 'ai knowledge']);
+  assert.equal(reflection.kind, 'reflection');
+  assert.equal(reflection.kindLabel, '随记');
+  assert.equal(reflection.category, '随记');
+  assert.deepEqual(reflection.tags, []);
+  assert.deepEqual(repo.listTags(), ['ai knowledge', 'RAG']);
 });
 
 test('markdown renderer supports common writing syntax and extracts headings', () => {

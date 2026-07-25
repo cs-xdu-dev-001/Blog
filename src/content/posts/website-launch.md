@@ -2,7 +2,8 @@
 title: "网站上线清单"
 description: "把静态站点发布到服务器时，需要检查域名、Nginx、SSL 和端口。"
 date: 2025-08-27
-category: "Operations"
+kind: "technical"
+tags: ["Operations"]
 featured: true
 ---
 

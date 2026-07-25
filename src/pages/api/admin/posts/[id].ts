@@ -12,7 +12,7 @@ export const PUT: APIRoute = async (context) => {
     updated = postRepository.update(id, {
       title: String(body.title || ''),
       slug: String(body.slug || ''),
-      category: String(body.category || ''),
+      kind: String(body.kind || 'technical'),
       description: String(body.description || ''),
       body: String(body.body || ''),
       date: String(body.date || ''),

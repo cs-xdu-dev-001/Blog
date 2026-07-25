@@ -134,7 +134,7 @@ function buildDocuments(config, deps = {}) {
         type: 'post',
         title: post.title,
         url: `/posts/${post.slug}`,
-        text: textOf([post.title, post.description, post.category, stripMarkdown(post.body)]),
+        text: textOf([post.title, post.description, post.kindLabel, ...(post.tags || []), stripMarkdown(post.body)]),
       });
     });
   }

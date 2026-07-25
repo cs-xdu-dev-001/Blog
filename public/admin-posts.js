@@ -59,8 +59,8 @@ async function loadItems() {
 
 function visibleItems() {
   return state.items.filter((item) => {
-    if (state.kind === 'reflection') return item.category === '随记';
-    if (state.kind === 'technical') return item.category !== '随记';
+    if (state.kind === 'reflection') return item.kind === 'reflection';
+    if (state.kind === 'technical') return item.kind === 'technical';
     return true;
   });
 }
@@ -88,7 +88,7 @@ function renderList() {
             <span class="cms-index-meta">${escapeHtml(item.description || topics || '未填写摘要')}</span>
           </span>
         </span>
-        <span class="cms-index-cell">${escapeHtml(item.category || '未分类')}</span>
+        <span class="cms-index-cell">${escapeHtml(item.kindLabel || '技术笔记')}</span>
         <span class="cms-index-badge">${stateLabel}</span>
         <span class="cms-index-action">编辑</span>
       </a>
@@ -101,14 +101,14 @@ function render() {
   renderList();
 }
 
-async function createPost(category) {
+async function createPost(kind) {
   setStatus('正在创建');
-  const titlePrefix = category === '随记' ? '未命名随记' : '未命名笔记';
+  const titlePrefix = kind === 'reflection' ? '未命名随记' : '未命名笔记';
   const title = `${titlePrefix} ${new Date().toLocaleDateString('zh-CN').replaceAll('/', '-')}`;
   const response = await fetch('/api/admin/posts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, category, description: '', body: `# ${title}\n\n`, published: false }),
+    body: JSON.stringify({ title, kind, description: '', body: `# ${title}\n\n`, published: false }),
   });
   if (!response.ok) {
     setStatus('创建失败');
@@ -119,7 +119,7 @@ async function createPost(category) {
 }
 
 document.querySelectorAll('[data-create-post]').forEach((button) => {
-  button.addEventListener('click', () => createPost(button.dataset.postCategory || 'Notes'));
+  button.addEventListener('click', () => createPost(button.dataset.postKind || 'technical'));
 });
 
 document.querySelectorAll('[data-post-filter]').forEach((button) => {

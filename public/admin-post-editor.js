@@ -855,7 +855,7 @@ function collectPayload() {
   return {
     title: data.get('title'),
     slug: data.get('slug') || slugify(data.get('title')) || fallbackSlug(),
-    category: data.get('category'),
+    kind: data.get('kind'),
     description: data.get('description'),
     date: data.get('date'),
     body: input.value,

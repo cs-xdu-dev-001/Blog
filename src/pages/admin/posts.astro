@@ -22,20 +22,20 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       </div>
       <select data-post-kind-filter aria-label="内容类型">
         <option value="all">全部类型</option>
-        <option value="technical">技术</option>
+        <option value="technical">技术笔记</option>
         <option value="reflection">随记</option>
       </select>
       <select data-post-topic-filter aria-label="所属主线">
         <option value="">全部主线</option>
       </select>
       <div class="cms-toolbar-actions">
-        <button class="cms-button" type="button" data-create-post data-post-category="随记">新增随记</button>
-        <button class="cms-primary-action" type="button" data-create-post data-post-category="Notes">新增笔记</button>
+        <button class="cms-button" type="button" data-create-post data-post-kind="reflection">新增随记</button>
+        <button class="cms-primary-action" type="button" data-create-post data-post-kind="technical">新增笔记</button>
       </div>
     </div>
 
     <div class="cms-index-list">
-      <div class="cms-index-list-head"><span>标题</span><span>分类</span><span>状态</span><span></span></div>
+      <div class="cms-index-list-head"><span>标题</span><span>类型</span><span>状态</span><span></span></div>
       <div data-post-list></div>
     </div>
     <span class="cms-save-state" data-post-save-state hidden></span>

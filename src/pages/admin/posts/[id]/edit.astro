@@ -37,17 +37,6 @@ const tagOptions = Array.from(new Set([
   ...(post.tags || []),
 ])).filter(Boolean).sort((a, b) => a.localeCompare(b, 'zh-CN'));
 const tagOptionsJson = JSON.stringify(tagOptions).replaceAll('<', '\\u003c');
-const categoryOptions = Array.from(new Set([
-  post.category,
-  ...postRepository.list({ filter: 'all' }).items.map((item) => item.category),
-  'AI Knowledge',
-  'Frontend',
-  'Automation',
-  'Notes',
-  'Reading',
-  'Cinema',
-  '随记',
-].filter(Boolean))).sort((a, b) => a.localeCompare(b));
 ---
 
 <BaseLayout title={`Dev Notes CMS | ${post.title}`} chrome={false} shell={false} assistant={false}>
@@ -134,11 +123,10 @@ const categoryOptions = Array.from(new Set([
                 </div>
               </label>
               <label class="post-property">
-                <span>分类</span>
-                <select name="category">
-                  {categoryOptions.map((category) => (
-                    <option value={category} selected={category === post.category}>{category}</option>
-                  ))}
+                <span>类型</span>
+                <select name="kind">
+                  <option value="technical" selected={post.kind === 'technical'}>技术笔记</option>
+                  <option value="reflection" selected={post.kind === 'reflection'}>随记</option>
                 </select>
               </label>
               <label class="post-property">

@@ -13,6 +13,8 @@ test('writing index filters technical notes and reflections in place', () => {
   assert.match(writingPage, /data-writing-filter="technical"/);
   assert.match(writingPage, /data-writing-filter="reflection"/);
   assert.match(writingPage, /data-writing-kind=/);
+  assert.match(writingPage, /post\.kind/);
+  assert.doesNotMatch(writingPage, /writingKind\(post\.data\.category\)/);
   assert.match(writingPage, /data-writing-count/);
   assert.match(writingPage, /history\.replaceState/);
   assert.match(writingPage, /prefers-reduced-motion: reduce/);
@@ -23,15 +25,21 @@ test('writing index filters technical notes and reflections in place', () => {
 });
 
 test('admin can create and edit reflection posts without a separate module', () => {
-  assert.match(editorPage, /'随记'/);
-  assert.match(adminPage, /data-post-category="随记"/);
+  assert.match(editorPage, /name="kind"/);
+  assert.match(editorPage, /value="technical"/);
+  assert.match(editorPage, /value="reflection"/);
+  assert.doesNotMatch(editorPage, /name="category"/);
+  assert.doesNotMatch(editorPage, /categoryOptions/);
+  assert.match(adminPage, /data-post-kind="reflection"/);
+  assert.match(adminPage, /data-post-kind="technical"/);
   assert.match(adminPage, /data-post-kind-filter/);
   assert.match(adminPage, /<option value="all">/);
   assert.match(adminPage, /<option value="technical">/);
   assert.match(adminPage, /<option value="reflection">/);
   assert.match(adminClient, /querySelectorAll\('\[data-create-post\]'\)/);
-  assert.match(adminClient, /button\.dataset\.postCategory/);
-  assert.match(adminClient, /category === '随记'/);
+  assert.match(adminClient, /button\.dataset\.postKind/);
+  assert.match(adminClient, /item\.kind === 'reflection'/);
+  assert.doesNotMatch(adminClient, /item\.category === '随记'/);
   assert.match(adminClient, /kind:\s*'all'/);
   assert.match(adminClient, /state\.kind === 'reflection'/);
   assert.match(adminClient, /kindSelect\.value/);

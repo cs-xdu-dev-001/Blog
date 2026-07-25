@@ -17,7 +17,7 @@ export const GET: APIRoute = () => {
       slug: post.slug,
       title: post.title,
       description: post.description,
-      category: post.category,
+      category: post.kindLabel,
       date: post.date,
     })),
   });

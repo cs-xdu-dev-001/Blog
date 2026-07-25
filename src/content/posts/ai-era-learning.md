@@ -2,7 +2,8 @@
 title: "AI 时代的技术学习流程"
 description: "把学习一个技术领域拆成资料收集、结构化阅读、实践验证和知识沉淀四个阶段。"
 date: 2026-04-28
-category: "AI Knowledge"
+kind: "technical"
+tags: ["AI Knowledge"]
 featured: true
 ---
 

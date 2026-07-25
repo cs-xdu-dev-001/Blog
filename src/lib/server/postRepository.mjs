@@ -86,6 +86,48 @@ function parseTags(value) {
   }
 }
 
+function normalizePostKind(value, category = '') {
+  const kind = String(value || '').trim().toLowerCase();
+  if (kind === 'reflection') return 'reflection';
+  if (kind === 'technical') return 'technical';
+
+  const legacyCategory = String(category || '').trim().toLowerCase();
+  return legacyCategory === '随记' ? 'reflection' : 'technical';
+}
+
+function categoryForPostKind(kind) {
+  return kind === 'reflection' ? '随记' : 'Notes';
+}
+
+function labelForPostKind(kind) {
+  return kind === 'reflection' ? '随记' : '技术笔记';
+}
+
+function legacyCategoryTag(value) {
+  const category = String(value || '').trim();
+  const genericCategories = new Set(['', 'notes', '技术', '技术笔记', '随记']);
+  return genericCategories.has(category.toLocaleLowerCase('zh-CN')) ? '' : category;
+}
+
+function preparePostTaxonomy(input = {}, existing = null) {
+  const sourceCategory = Object.hasOwn(input, 'category')
+    ? input.category
+    : existing?.category;
+  const kind = normalizePostKind(input.kind, sourceCategory);
+  const sourceTags = Object.hasOwn(input, 'tags') ? input.tags : existing?.tags;
+  const legacyTag = legacyCategoryTag(sourceCategory);
+  const tags = normalizeTags([
+    ...parseTags(sourceTags),
+    ...(legacyTag ? [legacyTag] : []),
+  ]);
+
+  return {
+    kind,
+    category: categoryForPostKind(kind),
+    tags,
+  };
+}
+
 function normalizeVisibility(value) {
   return String(value || '').trim().toLowerCase() === 'locked' ? 'locked' : 'public';
 }
@@ -119,6 +161,8 @@ function preparePostContent(input = {}, existing = null) {
 function normalize(row, topicSlugs = [], { unlockKey = '' } = {}) {
   if (!row) return null;
   const tags = parseTags(row.tags);
+  const kind = normalizePostKind('', row.category);
+  const kindLabel = labelForPostKind(kind);
   const visibility = normalizeVisibility(row.visibility);
   const locked = visibility === 'locked';
   const key = normalizeLockedNoteKey(unlockKey);
@@ -147,10 +191,14 @@ function normalize(row, topicSlugs = [], { unlockKey = '' } = {}) {
     published: Number(row.published || 0),
     topicSlugs,
     tags,
+    kind,
+    kindLabel,
     data: {
       title: row.title,
       description,
-      category: row.category,
+      category: kindLabel,
+      kind,
+      kindLabel,
       date: new Date(row.date),
       featured: Boolean(row.featured),
       tags,
@@ -184,8 +232,36 @@ function parseFrontmatter(raw) {
 export function createPostRepository({ dbPath } = {}) {
   const db = openDatabase(dbPath);
 
+  function migrateLegacyCategories() {
+    const rows = db.prepare(`
+      SELECT id, category, tags
+      FROM blog_posts
+      WHERE TRIM(COALESCE(category, '')) NOT IN ('Notes', '随记')
+    `).all();
+    if (!rows.length) return;
+    const update = db.prepare(`
+      UPDATE blog_posts
+      SET category = @category, tags = @tags
+      WHERE id = @id
+    `);
+    const migrate = db.transaction((items) => {
+      items.forEach((row) => {
+        const taxonomy = preparePostTaxonomy({}, row);
+        const tags = JSON.stringify(taxonomy.tags);
+        if (row.category === taxonomy.category && row.tags === tags) return;
+        update.run({
+          id: row.id,
+          category: taxonomy.category,
+          tags,
+        });
+      });
+    });
+    migrate(rows);
+  }
+
   function initialize() {
     initializeSchema(db);
+    migrateLegacyCategories();
   }
 
   function uniqueSlug(base, id = null) {
@@ -275,6 +351,7 @@ export function createPostRepository({ dbPath } = {}) {
       if (!title) throw new Error('title is required');
       const slug = uniqueSlug(input.slug || title);
       const content = preparePostContent(input);
+      const taxonomy = preparePostTaxonomy(input);
       const result = db.prepare(`
         INSERT INTO blog_posts
           (slug, title, description, category, tags, body, visibility, encrypted_description, encrypted_body, date, featured, published)
@@ -284,8 +361,8 @@ export function createPostRepository({ dbPath } = {}) {
         slug,
         title,
         description: content.description,
-        category: String(input.category || 'Notes').trim(),
-        tags: JSON.stringify(normalizeTags(input.tags || [])),
+        category: taxonomy.category,
+        tags: JSON.stringify(taxonomy.tags),
         body: content.body,
         visibility: content.visibility,
         encryptedDescription: content.encryptedDescription,
@@ -304,6 +381,7 @@ export function createPostRepository({ dbPath } = {}) {
       if (!title) throw new Error('title is required');
       const slug = slugifyPost(input.slug || title);
       const content = preparePostContent(input);
+      const taxonomy = preparePostTaxonomy(input);
       db.prepare(`
         INSERT INTO blog_posts
           (slug, title, description, category, tags, body, visibility, encrypted_description, encrypted_body, date, featured, published)
@@ -326,8 +404,8 @@ export function createPostRepository({ dbPath } = {}) {
         slug,
         title,
         description: content.description,
-        category: String(input.category || 'Notes').trim(),
-        tags: JSON.stringify(normalizeTags(input.tags || [])),
+        category: taxonomy.category,
+        tags: JSON.stringify(taxonomy.tags),
         body: content.body,
         visibility: content.visibility,
         encryptedDescription: content.encryptedDescription,
@@ -352,7 +430,8 @@ export function createPostRepository({ dbPath } = {}) {
           title: data.title || path.basename(file, '.md'),
           description: data.description || '',
           date: data.date,
-          category: data.category || 'Notes',
+          kind: data.kind,
+          category: data.category,
           tags: data.tags || [],
           featured: Boolean(data.featured),
           published: true,
@@ -470,6 +549,7 @@ export function createPostRepository({ dbPath } = {}) {
       if (!title) throw new Error('title is required');
       const slug = uniqueSlug(input.slug || existing.slug || title, id);
       const content = preparePostContent(input, existing);
+      const taxonomy = preparePostTaxonomy(input, existing);
       db.prepare(`
         UPDATE blog_posts SET
           slug = @slug,
@@ -491,8 +571,8 @@ export function createPostRepository({ dbPath } = {}) {
         slug,
         title,
         description: content.description,
-        category: String(input.category || 'Notes').trim(),
-        tags: JSON.stringify(Object.hasOwn(input, 'tags') ? normalizeTags(input.tags) : existing.tags),
+        category: taxonomy.category,
+        tags: JSON.stringify(taxonomy.tags),
         body: content.body,
         visibility: content.visibility,
         encryptedDescription: content.encryptedDescription,

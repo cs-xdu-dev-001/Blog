@@ -13,9 +13,8 @@ const requestedFilter = Astro.url.searchParams.get('type') || 'all';
 const initialFilter = writingFilters.some((item) => item.key === requestedFilter)
   ? requestedFilter
   : 'all';
-const writingKind = (category) => String(category || '').trim() === '随记' ? 'reflection' : 'technical';
 const initialCount = posts.filter((post) => (
-  initialFilter === 'all' || writingKind(post.data.category) === initialFilter
+  initialFilter === 'all' || post.kind === initialFilter
 )).length;
 
 const formatDate = (date) =>
@@ -36,7 +35,7 @@ const formatDate = (date) =>
   </header>
 
   <div class="writing-index-head">
-    <nav class="writing-filter" aria-label="笔记分类">
+    <nav class="writing-filter" aria-label="笔记类型">
       <button
         type="button"
         class:list={['writing-filter-button', { 'is-active': initialFilter === 'all' }]}
@@ -48,7 +47,7 @@ const formatDate = (date) =>
         class:list={['writing-filter-button', { 'is-active': initialFilter === 'technical' }]}
         data-writing-filter="technical"
         aria-pressed={initialFilter === 'technical' ? 'true' : 'false'}
-      >技术</button>
+      >技术笔记</button>
       <button
         type="button"
         class:list={['writing-filter-button', { 'is-active': initialFilter === 'reflection' }]}
@@ -61,7 +60,7 @@ const formatDate = (date) =>
 
   <section class="writing-list" aria-label="全部笔记">
     {posts.map((post, index) => {
-      const kind = writingKind(post.data.category);
+      const kind = post.kind;
       const isHidden = initialFilter !== 'all' && kind !== initialFilter;
       return (
         <a
@@ -78,7 +77,7 @@ const formatDate = (date) =>
           </span>
           <span class="writing-row-meta">
             <b>{formatDate(post.data.date)}</b>
-            <i>{post.data.category}</i>
+            <i>{post.kindLabel}</i>
           </span>
           <span class="writing-row-arrow" aria-hidden="true">↗</span>
         </a>

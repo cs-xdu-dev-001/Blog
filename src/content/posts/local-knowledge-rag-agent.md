@@ -2,7 +2,8 @@
 title: "个人知识库、RAG 和 Agent 的关系"
 description: "把 Notion 和本地笔记整理成可检索、可引用、可执行的个人知识系统。"
 date: 2026-04-26
-category: "AI Knowledge"
+kind: "technical"
+tags: ["AI Knowledge"]
 featured: true
 ---
 

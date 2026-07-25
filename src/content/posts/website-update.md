@@ -2,7 +2,8 @@
 title: "网站更新流程"
 description: "一次手动更新静态网站的流程，包含修改、构建、同步和权限处理。"
 date: 2025-08-31
-category: "Operations"
+kind: "technical"
+tags: ["Operations"]
 featured: false
 ---
 

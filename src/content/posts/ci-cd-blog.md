@@ -2,7 +2,8 @@
 title: "博客 CI/CD 准备"
 description: "为服务器配置专用 GitHub SSH 密钥，给后续自动部署打基础。"
 date: 2026-04-21
-category: "Automation"
+kind: "technical"
+tags: ["Automation"]
 featured: true
 ---
 

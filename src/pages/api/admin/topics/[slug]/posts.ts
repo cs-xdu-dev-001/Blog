@@ -9,7 +9,9 @@ function publicPost(post) {
     slug: post.slug,
     title: post.title,
     description: post.description,
-    category: post.category,
+    kind: post.kind,
+    kindLabel: post.kindLabel,
+    tags: post.tags,
     date: post.date,
     published: Boolean(post.published),
   };

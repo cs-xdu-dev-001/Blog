@@ -100,7 +100,8 @@ function renderPosts() {
   `).join('') : '<div class="cms-index-empty">暂无关联笔记</div>';
   const query = state.query.toLowerCase();
   const available = query
-    ? state.available.filter((post) => [post.title, post.category, post.description].some((value) => String(value || '').toLowerCase().includes(query)))
+    ? state.available.filter((post) => [post.title, post.kindLabel, post.description, ...(post.tags || [])]
+      .some((value) => String(value || '').toLowerCase().includes(query)))
     : state.available;
   availableEl.innerHTML = available.length ? available.map((post) => `
     <div class="cms-related-row" data-available-id="${post.id}">

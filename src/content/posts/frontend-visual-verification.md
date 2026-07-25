@@ -2,7 +2,8 @@
 title: "前端页面为什么要用截图验证"
 description: "用真实浏览器检查排版、溢出、移动端断行和视觉层级，避免只在代码里想象 UI。"
 date: 2026-04-22
-category: "Frontend"
+kind: "technical"
+tags: ["Frontend"]
 featured: false
 ---
 

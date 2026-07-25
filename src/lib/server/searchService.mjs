@@ -29,7 +29,7 @@ function formatDate(value) {
 }
 
 function postResult(item) {
-  const category = item.category || item.data?.category || '笔记';
+  const category = item.kindLabel || item.data?.kindLabel || '笔记';
   const tags = Array.isArray(item.tags) ? item.tags : item.data?.tags || [];
   const date = formatDate(item.date || item.data?.date);
   const locked = Boolean(item.locked);
@@ -107,8 +107,8 @@ export function createSearchService({
         item.data?.title,
         item.locked ? '' : item.description,
         item.locked ? '' : item.data?.description,
-        item.category,
-        item.data?.category,
+        item.kindLabel,
+        item.data?.kindLabel,
         ...(Array.isArray(item.tags) ? item.tags : []),
         ...(Array.isArray(item.data?.tags) ? item.data.tags : []),
         item.locked ? '' : item.body,
@@ -133,7 +133,7 @@ export function createSearchService({
 
       const categories = new Map();
       postItems.forEach((item) => {
-        const category = String(item.category || item.data?.category || '').trim();
+        const category = String(item.kindLabel || item.data?.kindLabel || '').trim();
         const tags = Array.isArray(item.tags) && item.tags.length
           ? item.tags
           : Array.isArray(item.data?.tags) && item.data.tags.length

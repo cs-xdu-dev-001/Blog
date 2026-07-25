@@ -2,7 +2,8 @@
 title: "爬取个人博客页面"
 description: "用 Python requests 和 BeautifulSoup 抓取博客页面，并处理中文编码问题。"
 date: 2025-08-31
-category: "Python"
+kind: "technical"
+tags: ["Python"]
 featured: false
 ---
 

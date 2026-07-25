@@ -23,7 +23,7 @@ const formatDate = (date: Date) =>
           {formatDate(post.data.date)}
         </span>
         <span class="article-row-category">
-          {post.data.category}
+          {post.kindLabel || post.data.kindLabel || post.data.category}
         </span>
         <span class="article-row-title">
           {post.data.title}
