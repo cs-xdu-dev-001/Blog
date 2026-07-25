@@ -980,6 +980,12 @@ button:focus-visible {
   color: rgba(38, 53, 72, 0.82);
 }
 
+@media (min-width: 1201px) {
+  .qzq-socials {
+    margin-right: -10px;
+  }
+}
+
 .qzq-socials a,
 .qzq-socials button {
   display: grid;
