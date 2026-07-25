@@ -171,7 +171,16 @@ const tagOptionsJson = JSON.stringify(tagOptions).replaceAll('<', '\\u003c');
       <section class="post-editor-main">
         <section class="post-editor-pane post-editor-write post-editor-wysiwyg">
           <textarea class="post-editor-textarea" name="body" hidden data-markdown-input>{post.body || ''}</textarea>
-          <div class="post-editor-milkdown" data-milkdown-editor></div>
+          <div
+            class="post-editor-milkdown"
+            data-milkdown-editor
+            data-editor-state="idle"
+            tabindex="0"
+            aria-label="正文编辑器"
+            aria-busy="true"
+          >
+            <span class="post-editor-loading">编辑器加载中</span>
+          </div>
         </section>
 
         <article class="post-editor-pane post-editor-preview article-prose" data-markdown-preview></article>
@@ -182,7 +191,7 @@ const tagOptionsJson = JSON.stringify(tagOptions).replaceAll('<', '\\u003c');
     <script type="application/json" id="post-tag-options-data" set:html={tagOptionsJson}></script>
     <script is:inline src="/admin-post-editor.js"></script>
     <script>
-      import '../../../../scripts/admin-post-milkdown.js';
+      import '../../../../scripts/admin-post-milkdown-loader.js';
     </script>
   </main>
 </BaseLayout>

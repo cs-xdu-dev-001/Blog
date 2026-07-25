@@ -8591,6 +8591,55 @@ button:focus-visible {
   overflow: hidden;
 }
 
+.post-editor-milkdown[data-editor-state="idle"],
+.post-editor-milkdown[data-editor-state="loading"],
+.post-editor-milkdown[data-editor-state="error"] {
+  display: grid;
+  place-items: center;
+}
+
+.post-editor-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--cms-text-soft);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.post-editor-loading::before {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--cms-line-strong);
+  border-top-color: var(--cms-accent);
+  border-radius: 50%;
+  content: "";
+  animation: post-editor-loading-spin 0.7s linear infinite;
+}
+
+.post-editor-load-retry {
+  border: 1px solid var(--cms-line-strong);
+  border-radius: 6px;
+  background: var(--cms-surface-raised);
+  color: var(--cms-text);
+  padding: 9px 14px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@keyframes post-editor-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .post-editor-loading::before {
+    animation: none;
+  }
+}
+
 .post-editor-milkdown .milkdown {
   --crepe-color-background: var(--cms-surface);
   --crepe-color-on-background: var(--cms-text-strong);

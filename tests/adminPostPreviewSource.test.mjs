@@ -11,6 +11,8 @@ test('admin post editor previews through the frontend markdown renderer', () => 
   const client = read('public/admin-post-editor.js');
   const milkdownClientPath = new URL('../src/scripts/admin-post-milkdown.js', import.meta.url);
   const milkdownClient = fs.existsSync(milkdownClientPath) ? fs.readFileSync(milkdownClientPath, 'utf8') : '';
+  const milkdownLoaderPath = new URL('../src/scripts/admin-post-milkdown-loader.js', import.meta.url);
+  const milkdownLoader = fs.existsSync(milkdownLoaderPath) ? fs.readFileSync(milkdownLoaderPath, 'utf8') : '';
   const apiUrl = new URL('../src/pages/api/admin/posts/preview.ts', import.meta.url);
   const imageApiUrl = new URL('../src/pages/api/admin/posts/image.ts', import.meta.url);
   const api = fs.existsSync(apiUrl) ? fs.readFileSync(apiUrl, 'utf8') : '';
@@ -26,9 +28,11 @@ test('admin post editor previews through the frontend markdown renderer', () => 
   assert.match(page, />摘要</);
   assert.match(page, /post-description-input[^>]*name="description"/);
   assert.match(page, /data-milkdown-editor/);
-  assert.match(page, /admin-post-milkdown\.js/);
+  assert.match(page, /admin-post-milkdown-loader\.js/);
+  assert.doesNotMatch(page, /import '\.\.\/\.\.\/\.\.\/\.\.\/scripts\/admin-post-milkdown\.js'/);
   assert.match(page, /data-markdown-input[^>]*hidden|hidden[^>]*data-markdown-input/);
   assert.equal(fs.existsSync(milkdownClientPath), true);
+  assert.equal(fs.existsSync(milkdownLoaderPath), true);
   assert.equal(fs.existsSync(apiUrl), true);
   assert.equal(fs.existsSync(imageApiUrl), true);
   assert.match(api, /markdownToHtml/);
@@ -66,6 +70,8 @@ test('admin post editor previews through the frontend markdown renderer', () => 
   assert.match(client, /setPointerCapture/);
   assert.doesNotMatch(client, /post-table-editor-backdrop/);
   assert.match(milkdownClient, /@milkdown\/crepe/);
+  assert.match(milkdownClient, /export async function bootMilkdown/);
+  assert.doesNotMatch(milkdownClient, /\nbootMilkdown\(\);\s*$/);
   assert.match(milkdownClient, /@milkdown\/crepe\/builder/);
   assert.match(milkdownClient, /new CrepeBuilder/);
   assert.match(milkdownClient, /addFeature\(table\)/);
@@ -81,6 +87,10 @@ test('admin post editor previews through the frontend markdown renderer', () => 
   assert.match(milkdownClient, /crepe\.editor\.action\(insert\(/);
   assert.match(milkdownClient, /'X-Image-Name':\s*encodeURIComponent/);
   assert.match(milkdownClient, /body:\s*file/);
+  assert.match(milkdownLoader, /import\('\.\/admin-post-milkdown\.js'\)/);
+  assert.match(milkdownLoader, /requestIdleCallback/);
+  assert.match(milkdownLoader, /addEventListener\('pointerdown'/);
+  assert.match(milkdownLoader, /data-editor-retry/);
   assert.match(client, /'X-Image-Name':\s*encodeURIComponent/);
   assert.match(client, /body:\s*file/);
   assert.match(imageApi, /saveImageVariants/);

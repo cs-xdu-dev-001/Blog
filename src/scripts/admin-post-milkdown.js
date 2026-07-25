@@ -86,8 +86,12 @@ function syncMarkdown(markdown) {
   input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
-async function bootMilkdown() {
+export async function bootMilkdown() {
   if (!root || !input) return;
+  if (root.dataset.milkdownReady === 'true') return window.__postMilkdownEditor;
+
+  root.replaceChildren();
+  root.removeAttribute('tabindex');
 
   const crepe = new CrepeBuilder({
     root,
@@ -142,11 +146,10 @@ async function bootMilkdown() {
     }, true);
     root.dataset.milkdownReady = 'true';
     window.__postMilkdownEditor = crepe;
+    return crepe;
   } catch (error) {
     root.dataset.milkdownError = 'true';
     setStatus('EDITOR FAILED');
-    console.error(error);
+    throw error;
   }
 }
-
-bootMilkdown();
