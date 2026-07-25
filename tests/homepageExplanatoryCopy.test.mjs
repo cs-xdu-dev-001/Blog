@@ -25,6 +25,21 @@ test('homepage keeps the writing entry but omits the duplicate note index sectio
   assert.doesNotMatch(homepage, /const featured\s*=|const highlightPosts\s*=/);
 });
 
+test('homepage moves the about entry from text navigation into the icon tools', () => {
+  const homepage = fs.readFileSync(new URL('../src/pages/index.astro', import.meta.url), 'utf8');
+  const navLinks = homepage.match(/<div class="qzq-nav-links">([\s\S]*?)<\/div>/)?.[1] || '';
+  const socials = homepage.match(/<div class="qzq-socials"[\s\S]*?<\/div>/)?.[0] || '';
+
+  assert.doesNotMatch(navLinks, /href="\/about"/);
+  assert.match(socials, /class="qzq-about-link"/);
+  assert.match(socials, /href="\/about"/);
+  assert.match(socials, /aria-label="关于"/);
+  assert.ok(
+    socials.indexOf('data-global-search-open') < socials.indexOf('class="qzq-about-link"'),
+    'search should appear before the about shortcut',
+  );
+});
+
 test('homepage hero keeps the original orange dev notes plate', () => {
   const homepage = fs.readFileSync(new URL('../src/pages/index.astro', import.meta.url), 'utf8');
   const styles = fs.readFileSync(new URL('../src/styles/global.css', import.meta.url), 'utf8');

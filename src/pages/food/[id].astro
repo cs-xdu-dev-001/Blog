@@ -1,0 +1,59 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { markdownToHtml } from '../../lib/server/markdownRenderer.mjs';
+import { foodRepository } from '../../lib/server/foodRepository.mjs';
+
+export const prerender = false;
+
+const rawId = String(Astro.params.id || '');
+const id = /^\d+$/.test(rawId) ? Number(rawId) : 0;
+const item = id ? foodRepository.getPublic(id) : null;
+if (!item) return new Response('Not Found', { status: 404 });
+
+const content = markdownToHtml(item.comment || '');
+const imageSrcset = item.image_small_path
+  ? `${item.image_small_path} 480w, ${item.image_path} 960w`
+  : undefined;
+---
+
+<BaseLayout
+  title={`${item.title} | 美食 | Dev Notes`}
+  description={[item.dish, item.area, item.comment].filter(Boolean).join('，').slice(0, 150)}
+  type="article"
+  image={item.image_path || undefined}
+  imageWidth={item.image_width || undefined}
+  imageHeight={item.image_height || undefined}
+>
+  <main class="food-detail-shell">
+    <a class="food-detail-back" href="/food">返回美食</a>
+    <article class="food-detail-paper">
+      <header class="food-detail-header">
+        <figure class={item.image_path ? 'has-image' : ''}>
+          {item.image_path ? (
+            <img
+              src={item.image_path}
+              srcset={imageSrcset}
+              sizes="(max-width: 760px) 92vw, 620px"
+              width={item.image_width || 960}
+              height={item.image_height || 720}
+              alt={`${item.title}${item.dish ? `的${item.dish}` : ''}`}
+              decoding="async"
+            />
+          ) : <span aria-hidden="true">食</span>}
+        </figure>
+        <div>
+          <span>{item.status}</span>
+          <h1>{item.title}</h1>
+          {item.dish && <p>{item.dish}</p>}
+          <dl>
+            {item.area && <div><dt>地点</dt><dd>{item.area}</dd></div>}
+            {item.rating && <div><dt>评分</dt><dd>{item.rating}</dd></div>}
+            {item.visit_date && <div><dt>到访</dt><dd>{item.visit_date}</dd></div>}
+            <div><dt>再去</dt><dd>{item.would_revisit ? '会' : '未定'}</dd></div>
+          </dl>
+        </div>
+      </header>
+      {item.comment && <section class="food-detail-body article-prose" set:html={content.html}></section>}
+    </article>
+  </main>
+</BaseLayout>

@@ -24,6 +24,7 @@ if (root) {
     post: '文',
     reading: '书',
     watch: '影',
+    food: '食',
     tag: '#',
   };
 

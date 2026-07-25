@@ -69,6 +69,31 @@ export function initializeSchema(db) {
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS food_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      dish TEXT NOT NULL DEFAULT '',
+      area TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT '想去',
+      rating TEXT NOT NULL DEFAULT '',
+      visit_date TEXT NOT NULL DEFAULT '',
+      comment TEXT NOT NULL DEFAULT '',
+      would_revisit INTEGER NOT NULL DEFAULT 0,
+      image_path TEXT NOT NULL DEFAULT '',
+      image_small_path TEXT NOT NULL DEFAULT '',
+      image_original_path TEXT NOT NULL DEFAULT '',
+      image_width INTEGER NOT NULL DEFAULT 0,
+      image_height INTEGER NOT NULL DEFAULT 0,
+      is_featured INTEGER NOT NULL DEFAULT 0,
+      published INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_food_items_public_order
+      ON food_items(published, is_featured DESC, visit_date DESC, sort_order ASC, id DESC);
+
     CREATE TABLE IF NOT EXISTS blog_posts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       slug TEXT NOT NULL UNIQUE,
@@ -161,6 +186,14 @@ export function initializeSchema(db) {
   ensureColumn(db, 'reading_items', 'image_width', 'INTEGER NOT NULL DEFAULT 0');
   ensureColumn(db, 'reading_items', 'image_height', 'INTEGER NOT NULL DEFAULT 0');
   ensureColumn(db, 'reading_items', 'published', 'INTEGER NOT NULL DEFAULT 1');
+  ensureColumn(db, 'food_items', 'image_small_path', "TEXT NOT NULL DEFAULT ''");
+  ensureColumn(db, 'food_items', 'image_original_path', "TEXT NOT NULL DEFAULT ''");
+  ensureColumn(db, 'food_items', 'image_width', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn(db, 'food_items', 'image_height', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn(db, 'food_items', 'would_revisit', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn(db, 'food_items', 'is_featured', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn(db, 'food_items', 'published', 'INTEGER NOT NULL DEFAULT 1');
+  ensureColumn(db, 'food_items', 'sort_order', 'INTEGER NOT NULL DEFAULT 0');
   ensureColumn(db, 'blog_posts', 'tags', "TEXT NOT NULL DEFAULT '[]'");
   ensureColumn(db, 'blog_posts', 'visibility', "TEXT NOT NULL DEFAULT 'public'");
   ensureColumn(db, 'blog_posts', 'encrypted_description', "TEXT NOT NULL DEFAULT ''");

@@ -137,6 +137,7 @@ export const defaultSiteConfig = {
 export const defaultSections = [
   { key: 'topics', title: '主线', eyebrow: 'Stories / Systems / Code', navLabel: '主线', navSmall: '4', sortOrder: 10 },
   { key: 'watch', title: '影像档案', eyebrow: '影像轨道', navLabel: '影像', navSmall: 'auto', sortOrder: 30 },
+  { key: 'food', title: '美食', eyebrow: 'Food notes', navLabel: '美食', navSmall: 'auto', sortOrder: 35 },
   { key: 'reading', title: '阅读书架', eyebrow: 'Reading shelf', navLabel: '书架', navSmall: 'auto', sortOrder: 40 },
   { key: 'statistics', title: '统计', eyebrow: '个人坐标', navLabel: '统计', navSmall: '∞', sortOrder: 50 },
   { key: 'about', title: '关于', eyebrow: 'About', navLabel: '关于', navSmall: 'me', sortOrder: 60 },

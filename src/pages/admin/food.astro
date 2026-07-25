@@ -1,0 +1,36 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Dev Notes CMS | 美食" active="food" dataAttr="data-food-admin">
+  <div slot="search" class="cms-admin-breadcrumb"><a href="/admin/posts">内容</a><span>/</span><a href="/admin/food" aria-current="page">美食</a></div>
+  <a slot="actions" href="/#food" target="_blank" rel="noreferrer">预览美食</a>
+
+  <section class="cms-index-shell">
+    <header class="cms-index-head">
+      <h1>美食</h1>
+      <span class="cms-index-summary" data-food-summary>正在读取</span>
+    </header>
+    <div class="cms-index-toolbar">
+      <input type="search" placeholder="搜索店名、菜品、商圈和记录" data-food-search />
+      <div class="cms-filter-group" aria-label="美食筛选">
+        <button type="button" data-filter="all" class="active">全部</button>
+        <button type="button" data-filter="eaten">吃过</button>
+        <button type="button" data-filter="frequent">常去</button>
+        <button type="button" data-filter="wanted">想去</button>
+        <button type="button" data-filter="featured">首页精选</button>
+        <button type="button" data-filter="draft">未发布</button>
+      </div>
+      <a class="cms-primary-action" href="/admin/food/new">新增美食</a>
+    </div>
+    <div class="cms-index-list">
+      <div class="cms-index-list-head"><span>店铺与菜品</span><span>商圈</span><span>状态</span><span></span></div>
+      <div data-food-list></div>
+      <div class="cms-index-error" data-food-error hidden>
+        <span>读取失败</span>
+        <button class="cms-button" type="button" data-food-retry>重新读取</button>
+      </div>
+    </div>
+  </section>
+  <script is:inline src="/admin-food.js"></script>
+</AdminLayout>

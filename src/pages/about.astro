@@ -26,7 +26,6 @@ const aboutParagraphs = String(siteConfig.aboutBody || '').split(/\n{2,}/).filte
         <a class="qzq-nav-item" href="/#watch"><span>{sections.watch?.navLabel || '影像'}</span><small>{navSmall('watch', 'film')}</small></a>
         <a class="qzq-nav-item" href="/#reading"><span>{sections.reading?.navLabel || '书架'}</span><small>{navSmall('reading', 'book')}</small></a>
         <a class="qzq-nav-item" href="/#statistics"><span>{sections.statistics?.navLabel || '统计'}</span><small>{navSmall('statistics', '∞')}</small></a>
-        <a class="qzq-nav-item" href="/about"><span>{sections.about?.navLabel || '关于'}</span><small>{navSmall('about', 'me')}</small></a>
       </div>
       <div class="qzq-socials" aria-label="站点工具">
         <button type="button" class="global-search-trigger" data-global-search-open aria-label="打开全站搜索">
@@ -35,6 +34,12 @@ const aboutParagraphs = String(siteConfig.aboutBody || '').split(/\n{2,}/).filte
             <path d="m16 16 5 5"></path>
           </svg>
         </button>
+        <a class="qzq-about-link" href="/about" aria-label="关于" title="关于" aria-current="page">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="8" r="4"></circle>
+            <path d="M4.5 21a7.5 7.5 0 0 1 15 0"></path>
+          </svg>
+        </a>
       </div>
     </nav>
 

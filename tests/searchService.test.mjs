@@ -26,6 +26,9 @@ function createService() {
     { id: 1, title: '主角', type: '剧集', status: '已看', rating: '4.5', quote: '台上繁华', comment: '人物命运', image_path: '/watch/protagonist-960.webp', image_small_path: '/watch/protagonist-480.webp', is_activity_featured: 1 },
     { id: 2, title: '大江大河', type: '剧集', status: '在看', rating: '', quote: '', comment: '改革叙事', image_path: '/watch/river-960.webp', image_small_path: '/watch/river-480.webp', is_activity_featured: 1 },
   ];
+  const foodItems = [
+    { id: 1, title: '长安小馆', dish: '油泼面', area: '西安·雁塔', status: '常去', rating: '4.6', comment: '面条筋道', image_path: '/food/noodle-960.webp', image_small_path: '/food/noodle-480.webp', published: 1 },
+  ];
 
   return createSearchService({
     posts: {
@@ -41,13 +44,19 @@ function createService() {
       },
     },
     watch: { list: () => ({ items: watchItems }) },
+    food: {
+      list: ({ publishedOnly } = {}) => {
+        assert.equal(publishedOnly, true);
+        return { items: foodItems };
+      },
+    },
   });
 }
 
-test('search service groups public posts, reading, watch, and expandable tags', () => {
+test('search service groups public posts, reading, watch, food, and expandable tags', () => {
   const result = createService().search('AI');
 
-  assert.deepEqual(result.groups.map((group) => group.key), ['posts', 'reading', 'watch', 'tags']);
+  assert.deepEqual(result.groups.map((group) => group.key), ['posts', 'reading', 'watch', 'food', 'tags']);
   assert.equal(result.groups.find((group) => group.key === 'posts').items[0].href, '/posts/ai-note');
   const reading = result.groups.find((group) => group.key === 'reading').items[0];
   assert.equal(reading.href, '/reading/wave-top');
@@ -64,6 +73,7 @@ test('empty search returns recent posts, active reading, and active watch only',
   assert.ok(result.groups.find((group) => group.key === 'posts').items.length > 0);
   assert.deepEqual(result.groups.find((group) => group.key === 'reading').items.map((item) => item.title), ['浪潮之巅']);
   assert.deepEqual(result.groups.find((group) => group.key === 'watch').items.map((item) => item.title), ['大江大河']);
+  assert.deepEqual(result.groups.find((group) => group.key === 'food').items.map((item) => item.title), ['长安小馆']);
   assert.deepEqual(result.groups.find((group) => group.key === 'tags').items, []);
 });
 
@@ -75,4 +85,10 @@ test('search service matches watch metadata and caps each result group', () => {
   assert.deepEqual(watch.items.map((item) => item.title), ['主角', '大江大河']);
   assert.equal(watch.items[0].image, '/watch/protagonist-480.webp');
   assert.equal(posts.items.length, 6);
+});
+
+test('search service matches food names, dishes, and places', () => {
+  const food = createService().search('油泼面').groups.find((group) => group.key === 'food');
+  assert.equal(food.items[0].href, '/food/1');
+  assert.equal(food.items[0].image, '/food/noodle-480.webp');
 });

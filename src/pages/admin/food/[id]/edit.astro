@@ -1,0 +1,54 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import { requireAdmin } from '../../../../lib/server/auth.mjs';
+import { foodRepository } from '../../../../lib/server/foodRepository.mjs';
+
+if (!requireAdmin(Astro)) return Astro.redirect('/admin/login');
+const id = Number(Astro.params.id);
+const item = Number.isFinite(id) ? foodRepository.get(id) : null;
+if (!item) return Astro.redirect('/admin/food');
+const editorJson = JSON.stringify({ mode: 'edit', item }).replaceAll('<', '\\u003c');
+const imagePath = item.image_small_path || item.image_path || '';
+---
+
+<AdminLayout title={`Dev Notes CMS | ${item.title}`} active="food" dataAttr="data-food-editor-page">
+  <div slot="search" class="cms-admin-breadcrumb"><a href="/admin/food">美食</a><span>/</span>{item.title}</div>
+  {item.published ? <a slot="actions" href={`/food/${item.id}`} target="_blank" rel="noreferrer">前台查看</a> : null}
+
+  <section class="cms-editor-page" data-food-editor-page>
+    <header class="cms-editor-topbar">
+      <h1>{item.title}</h1>
+      <div class="cms-editor-actions">
+        <span class="cms-save-state cms-editor-save-state" data-food-editor-state data-state="idle" role="status" aria-live="polite">已就绪</span>
+        <a class="cms-button" href="/admin/food">返回</a>
+        <button class="cms-danger-action" type="button" data-delete-food>删除</button>
+        <button class="cms-primary-action" type="submit" form="food-editor-form" data-save-food>保存</button>
+      </div>
+    </header>
+    <form id="food-editor-form" class="cms-editor-form" data-food-editor-form>
+      <div class="cms-editor-media">
+        <label class="cms-cover-upload cms-food-upload" style={imagePath ? `background-image:url('${imagePath}')` : ''}>
+          <span>{imagePath ? '更换图片' : '上传图片'}</span>
+          <input type="file" accept="image/jpeg,image/png,image/webp,image/avif" data-food-image />
+        </label>
+        <div class="cms-field-grid">
+          <label class="cms-field full"><span>店名</span><input name="title" value={item.title} required /></label>
+          <label class="cms-field"><span>代表菜</span><input name="dish" value={item.dish || ''} /></label>
+          <label class="cms-field"><span>商圈或地点</span><input name="area" value={item.area || ''} /></label>
+          <label class="cms-field"><span>状态</span><select name="status"><option selected={item.status === '想去'}>想去</option><option selected={item.status === '吃过'}>吃过</option><option selected={item.status === '常去'}>常去</option></select></label>
+          <label class="cms-field"><span>个人评分</span><input name="rating" value={item.rating || ''} placeholder="例如4.6" /></label>
+          <label class="cms-field"><span>到访日期</span><input name="visit_date" type="date" value={item.visit_date || ''} /></label>
+          <label class="cms-field"><span>排序</span><input name="sort_order" type="number" value={item.sort_order || 0} /></label>
+        </div>
+      </div>
+      <label class="cms-field full"><span>我的记录</span><textarea name="comment" class="cms-long-text" placeholder="支持Markdown">{item.comment || ''}</textarea></label>
+      <div class="cms-check-row">
+        <label><input type="checkbox" name="would_revisit" checked={Boolean(item.would_revisit)} />还会再去</label>
+        <label><input type="checkbox" name="is_featured" checked={Boolean(item.is_featured)} />首页精选</label>
+        <label><input type="checkbox" name="published" checked={Boolean(item.published)} />发布</label>
+      </div>
+    </form>
+  </section>
+  <script type="application/json" id="food-editor-data" set:html={editorJson}></script>
+  <script is:inline src="/admin-food-editor.js"></script>
+</AdminLayout>

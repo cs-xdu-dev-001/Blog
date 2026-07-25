@@ -1,0 +1,30 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+const editorJson = JSON.stringify({ mode: 'create' });
+---
+
+<AdminLayout title="Dev Notes CMS | 新增美食" active="food" dataAttr="data-food-create-page">
+  <div slot="search" class="cms-admin-breadcrumb"><a href="/admin/food">美食</a><span>/</span>新增</div>
+  <section class="cms-editor-page" data-food-create-page>
+    <header class="cms-editor-topbar">
+      <h1>新增美食</h1>
+      <div class="cms-editor-actions">
+        <a class="cms-button" href="/admin/food">取消</a>
+        <button class="cms-primary-action" type="submit" form="food-create-form">创建</button>
+      </div>
+    </header>
+    <form id="food-create-form" class="cms-editor-form" data-food-create-form>
+      <div class="cms-field-grid">
+        <label class="cms-field full"><span>店名</span><input name="title" required autofocus /></label>
+        <label class="cms-field"><span>代表菜</span><input name="dish" /></label>
+        <label class="cms-field"><span>状态</span><select name="status"><option>想去</option><option>吃过</option><option>常去</option></select></label>
+      </div>
+      <div class="cms-check-row">
+        <label><input type="checkbox" name="published" checked />发布</label>
+      </div>
+      <span class="cms-save-state" data-food-editor-state></span>
+    </form>
+  </section>
+  <script type="application/json" id="food-editor-data" set:html={editorJson}></script>
+  <script is:inline src="/admin-food-editor.js"></script>
+</AdminLayout>

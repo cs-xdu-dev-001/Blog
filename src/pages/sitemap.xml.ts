@@ -4,6 +4,7 @@ import { postRepository } from '../lib/server/postRepository.mjs';
 import { readingRepository } from '../lib/server/readingRepository.mjs';
 import { siteConfigRepository } from '../lib/server/siteConfigRepository.mjs';
 import { watchRepository } from '../lib/server/watchRepository.mjs';
+import { foodRepository } from '../lib/server/foodRepository.mjs';
 
 export const prerender = false;
 
@@ -15,10 +16,12 @@ export const GET: APIRoute = () => {
   const topics = siteConfigRepository.listTopics();
   const books = readingRepository.list({ filter: 'all', limit: 500, publishedOnly: true }).items;
   const watchItems = watchRepository.list({ filter: 'all', limit: 500 }).items;
+  const foodItems = foodRepository.list({ filter: 'all', limit: 500, publishedOnly: true }).items;
   const entries = [
     { path: '/', changefreq: 'weekly', priority: 1 },
     { path: '/writing', changefreq: 'weekly', priority: 0.9 },
     { path: '/reading', changefreq: 'weekly', priority: 0.8 },
+    { path: '/food', changefreq: 'weekly', priority: 0.8 },
     { path: '/about', changefreq: 'monthly', priority: 0.6 },
     ...posts.map((post) => ({
       path: `/posts/${encodeURIComponent(post.slug)}`,
@@ -39,6 +42,12 @@ export const GET: APIRoute = () => {
     })),
     ...watchItems.map((item) => ({
       path: `/watch/${item.id}`,
+      lastmod: item.updated_at,
+      changefreq: 'monthly',
+      priority: 0.6,
+    })),
+    ...foodItems.map((item) => ({
+      path: `/food/${item.id}`,
       lastmod: item.updated_at,
       changefreq: 'monthly',
       priority: 0.6,

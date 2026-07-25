@@ -1,6 +1,7 @@
 import { postRepository } from './postRepository.mjs';
 import { readingRepository } from './readingRepository.mjs';
 import { watchRepository } from './watchRepository.mjs';
+import { foodRepository } from './foodRepository.mjs';
 
 const GROUP_LIMIT = 6;
 const TAG_LIMIT = 4;
@@ -69,6 +70,18 @@ function watchResult(item) {
   };
 }
 
+function foodResult(item) {
+  return {
+    id: `food:${item.id}`,
+    type: 'food',
+    title: item.title,
+    meta: [item.dish, item.area, item.rating ? `${item.rating}分` : ''].filter(Boolean).join(' · '),
+    excerpt: cleanText(item.comment),
+    image: item.image_small_path || item.image_path || '',
+    href: `/food/${item.id}`,
+  };
+}
+
 function group(key, label, items) {
   return { key, label, items };
 }
@@ -77,26 +90,29 @@ export function createSearchService({
   posts = postRepository,
   reading = readingRepository,
   watch = watchRepository,
+  food = foodRepository,
 } = {}) {
   function readPublicData() {
     const postItems = posts.list({ filter: 'published', limit: 500 }).items
       .filter((item) => item.published === undefined || Number(item.published) === 1);
     const readingItems = reading.list({ limit: 500, publishedOnly: true }).items;
     const watchItems = watch.list({ limit: 1000 }).items;
-    return { postItems, readingItems, watchItems };
+    const foodItems = food.list({ limit: 500, publishedOnly: true }).items;
+    return { postItems, readingItems, watchItems, foodItems };
   }
 
   return {
     search(queryInput = '') {
       const query = String(queryInput || '').trim().slice(0, 100);
       const needle = query.toLocaleLowerCase('zh-CN');
-      const { postItems, readingItems, watchItems } = readPublicData();
+      const { postItems, readingItems, watchItems, foodItems } = readPublicData();
 
       if (!needle) {
         const groups = [
           group('posts', '笔记', postItems.slice(0, GROUP_LIMIT).map(postResult)),
           group('reading', '书籍', readingItems.filter((item) => item.status === 'reading').slice(0, GROUP_LIMIT).map(readingResult)),
           group('watch', '影像', watchItems.filter((item) => item.status === '在看').slice(0, GROUP_LIMIT).map(watchResult)),
+          group('food', '美食', foodItems.slice(0, GROUP_LIMIT).map(foodResult)),
           group('tags', '标签', []),
         ];
         return { query, total: groups.reduce((sum, item) => sum + item.items.length, 0), groups };
@@ -128,6 +144,14 @@ export function createSearchService({
         item.status,
         item.rating,
         item.quote,
+        item.comment,
+      ]).includes(needle));
+      const matchedFood = foodItems.filter((item) => searchable([
+        item.title,
+        item.dish,
+        item.area,
+        item.status,
+        item.rating,
         item.comment,
       ]).includes(needle));
 
@@ -165,6 +189,7 @@ export function createSearchService({
         group('posts', '笔记', matchedPosts.slice(0, GROUP_LIMIT).map(postResult)),
         group('reading', '书籍', matchedReading.slice(0, GROUP_LIMIT).map(readingResult)),
         group('watch', '影像', matchedWatch.slice(0, GROUP_LIMIT).map(watchResult)),
+        group('food', '美食', matchedFood.slice(0, GROUP_LIMIT).map(foodResult)),
         group('tags', '标签', matchedTags),
       ];
       return { query, total: groups.reduce((sum, item) => sum + item.items.length, 0), groups };
