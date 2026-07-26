@@ -9307,6 +9307,16 @@ html[data-admin-theme="light"] .post-editor-milkdown .milkdown {
   letter-spacing: 0;
 }
 
+.post-editor-milkdown .milkdown-toolbar .toolbar-item.is-ai {
+  background: var(--cms-active-bg);
+  color: var(--cms-accent);
+}
+
+.post-editor-milkdown .milkdown-toolbar .toolbar-item.is-ai:hover {
+  background: var(--cms-accent);
+  color: #fff;
+}
+
 .post-editor-ai-palette {
   position: fixed;
   z-index: 80;
@@ -9408,9 +9418,11 @@ html[data-admin-theme="light"] .post-editor-milkdown .milkdown {
   z-index: 79;
   right: 24px;
   bottom: 22px;
-  left: max(304px, 24px);
+  display: grid;
+  width: min(1080px, calc(100vw - 48px));
+  height: min(560px, calc(100vh - 48px));
   overflow: hidden;
-  max-height: min(520px, calc(100vh - 120px));
+  grid-template-rows: auto minmax(0, 1fr);
   border: 1px solid var(--cms-line-strong);
   border-radius: 10px;
   background: var(--cms-surface);
@@ -9430,6 +9442,13 @@ html[data-admin-theme="light"] .post-editor-milkdown .milkdown {
   gap: 14px;
   border-bottom: 1px solid var(--cms-line);
   padding: 8px 10px 8px 16px;
+  cursor: move;
+  touch-action: none;
+  user-select: none;
+}
+
+.post-editor-ai-review.is-dragging {
+  user-select: none;
 }
 
 .post-editor-ai-review-title {
@@ -9484,7 +9503,8 @@ html[data-admin-theme="light"] .post-editor-milkdown .milkdown {
 }
 
 .post-editor-ai-review-state {
-  min-height: 180px;
+  min-height: 0;
+  overflow: auto;
   padding: 72px 24px;
   color: var(--cms-text-soft);
   font-size: 15px;
@@ -9494,13 +9514,16 @@ html[data-admin-theme="light"] .post-editor-milkdown .milkdown {
 
 .post-editor-ai-review-compare {
   display: grid;
-  max-height: min(450px, calc(100vh - 176px));
+  min-height: 0;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .post-editor-ai-review-compare > section {
-  overflow: auto;
   min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   padding: 16px 20px 22px;
 }
 

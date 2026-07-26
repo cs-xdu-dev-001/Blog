@@ -63,6 +63,45 @@ test('admin writing assistant reports missing API configuration without a fallba
   });
 });
 
+test('admin writing assistant uses streaming for responses-only gateways', async () => {
+  const originalFetch = globalThis.fetch;
+  let requestBody;
+  globalThis.fetch = async (_url, options) => {
+    requestBody = JSON.parse(options.body);
+    return new Response([
+      'data: {"type":"response.output_text.delta","delta":"润色后的"}',
+      '',
+      'data: {"type":"response.output_text.delta","delta":"内容"}',
+      '',
+      'data: [DONE]',
+      '',
+    ].join('\n'), {
+      headers: { 'Content-Type': 'text/event-stream' },
+    });
+  };
+
+  try {
+    const result = await editAssistantMarkdown({
+      document: '原始内容',
+      instruction: '润色',
+    }, {
+      config: {
+        assistant: {
+          apiBaseUrl: 'https://example.com/v1',
+          apiKey: 'test-key',
+          model: 'test-model',
+          apiMode: 'responses',
+        },
+      },
+    });
+
+    assert.equal(requestBody.stream, true);
+    assert.deepEqual(result, { ok: true, text: '润色后的内容' });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('admin writing assistant keeps the original document unchanged until the result is accepted', () => {
   const endpoint = read('src/pages/api/admin/assistant/write.ts');
   const editor = read('src/scripts/admin-post-milkdown.js');
@@ -82,11 +121,21 @@ test('admin writing assistant keeps the original document unchanged until the re
   assert.match(editor, /data-ai-review-accept/);
   assert.match(editor, /data-ai-review-reject/);
   assert.match(editor, /data-ai-review-retry/);
+  assert.match(editor, /data-ai-review-drag-handle/);
+  assert.match(editor, /setPointerCapture/);
+  assert.match(editor, /addEventListener\('pointermove'/);
+  assert.match(editor, /Math\.max\(12,\s*Math\.min/);
   assert.match(editor, /replaceRange\(review\.result,\s*\{\s*from:\s*review\.from,\s*to:\s*review\.to\s*\}\)/);
   assert.match(editor, /crepe\.setReadonly\(true\)/);
   assert.match(editor, /crepe\.setReadonly\(false\)/);
+  assert.match(editor, /\[Crepe\.Feature\.Toolbar\]/);
+  assert.match(editor, /buildToolbar:\s*\(builder\)/);
+  assert.match(editor, /addItem\('ai'/);
+  assert.match(editor, /openAIPalette\?\.\(\)/);
   assert.match(editor, /event\.key === '\.'/);
   assert.match(editor, /\/ai/);
   assert.match(styles, /\.post-editor-ai-palette/);
   assert.match(styles, /\.post-editor-ai-review/);
+  assert.match(styles, /\.post-editor-ai-review-compare\s*>\s*section\s*\{[^}]*min-height:\s*0;[^}]*overflow:\s*auto;/s);
+  assert.match(styles, /\.post-editor-ai-review\s*>\s*header\s*\{[^}]*cursor:\s*move;/s);
 });

@@ -102,7 +102,7 @@ function createAIReview(crepe) {
   panel.hidden = true;
   panel.setAttribute('data-ai-review', '');
   panel.innerHTML = `
-    <header>
+    <header data-ai-review-drag-handle>
       <span class="post-editor-ai-review-title">${aiIcon}<strong data-ai-review-title>AI建议</strong></span>
       <div class="post-editor-ai-review-actions">
         <button type="button" data-ai-review-retry>重新生成</button>
@@ -125,6 +125,7 @@ function createAIReview(crepe) {
   (root.closest('.post-editor-page') || document.body).append(panel);
 
   const title = panel.querySelector('[data-ai-review-title]');
+  const dragHandle = panel.querySelector('[data-ai-review-drag-handle]');
   const stateEl = panel.querySelector('[data-ai-review-state]');
   const compare = panel.querySelector('[data-ai-review-compare]');
   const originalEl = panel.querySelector('[data-ai-review-original]');
@@ -134,6 +135,48 @@ function createAIReview(crepe) {
   const retryButton = panel.querySelector('[data-ai-review-retry]');
   let review = null;
   let abortController = null;
+  let dragState = null;
+
+  const stopDragging = (event) => {
+    if (!dragState || event.pointerId !== dragState.pointerId) return;
+    if (dragHandle.hasPointerCapture(event.pointerId)) {
+      dragHandle.releasePointerCapture(event.pointerId);
+    }
+    dragState = null;
+    panel.classList.remove('is-dragging');
+  };
+
+  dragHandle.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0 || event.target.closest('button')) return;
+    const rect = panel.getBoundingClientRect();
+    dragState = {
+      pointerId: event.pointerId,
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+      width: rect.width,
+      height: rect.height,
+    };
+    panel.style.left = `${rect.left}px`;
+    panel.style.top = `${rect.top}px`;
+    panel.style.right = 'auto';
+    panel.style.bottom = 'auto';
+    panel.style.width = `${rect.width}px`;
+    dragHandle.setPointerCapture(event.pointerId);
+    panel.classList.add('is-dragging');
+    event.preventDefault();
+  });
+
+  dragHandle.addEventListener('pointermove', (event) => {
+    if (!dragState || event.pointerId !== dragState.pointerId) return;
+    const maxLeft = Math.max(12, window.innerWidth - dragState.width - 12);
+    const maxTop = Math.max(12, window.innerHeight - dragState.height - 12);
+    const left = Math.max(12, Math.min(event.clientX - dragState.offsetX, maxLeft));
+    const top = Math.max(12, Math.min(event.clientY - dragState.offsetY, maxTop));
+    panel.style.left = `${left}px`;
+    panel.style.top = `${top}px`;
+  });
+  dragHandle.addEventListener('pointerup', stopDragging);
+  dragHandle.addEventListener('pointercancel', stopDragging);
 
   const setLoading = (loading) => {
     panel.classList.toggle('is-loading', loading);
@@ -392,12 +435,23 @@ function syncMarkdown(markdown) {
   input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
+function labelAIToolbarButton() {
+  document.querySelectorAll('.milkdown-toolbar').forEach((toolbar) => {
+    const button = toolbar.querySelector('.toolbar-item:last-child');
+    if (!button) return;
+    button.classList.add('is-ai');
+    button.setAttribute('aria-label', 'AI编辑');
+    button.setAttribute('title', 'AI编辑');
+  });
+}
+
 export async function bootMilkdown() {
   if (!root || !input) return;
   if (root.dataset.milkdownReady === 'true') return window.__postMilkdownEditor;
 
   root.replaceChildren();
   root.removeAttribute('tabindex');
+  let openAIPalette = null;
 
   const crepe = new Crepe({
     root,
@@ -422,6 +476,16 @@ export async function bootMilkdown() {
       [Crepe.Feature.Placeholder]: {
         text: '开始写正文',
       },
+      [Crepe.Feature.Toolbar]: {
+        aiIcon,
+        buildToolbar: (builder) => {
+          builder.addGroup('ai-tools', 'AI').addItem('ai', {
+            icon: aiIcon,
+            active: () => false,
+            onRun: () => openAIPalette?.(),
+          });
+        },
+      },
       [Crepe.Feature.CodeMirror]: {
         languages: [],
         copyText: '复制',
@@ -442,9 +506,12 @@ export async function bootMilkdown() {
     await crepe.create();
     const aiReview = createAIReview(crepe);
     const aiPalette = createAIPalette(crepe, aiReview);
+    openAIPalette = aiPalette.open;
     root.addEventListener('paste', (event) => {
       void insertClipboardImages(event, crepe);
     }, true);
+    root.addEventListener('pointerup', () => requestAnimationFrame(labelAIToolbarButton), true);
+    root.addEventListener('keyup', () => requestAnimationFrame(labelAIToolbarButton), true);
     root.addEventListener('keydown', (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key === '.') {
         event.preventDefault();

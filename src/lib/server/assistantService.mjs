@@ -487,7 +487,7 @@ function writingAssistantRequestBody(instruction, target, config, { hasSelection
     ? {
         model: assistantModel(config),
         max_output_tokens: maxTokens,
-        stream: false,
+        stream: true,
         input: [
           { role: 'system', content: [{ type: 'input_text', text: systemText }] },
           { role: 'user', content: [{ type: 'input_text', text: userText }] },
