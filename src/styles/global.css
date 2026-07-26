@@ -9291,6 +9291,7 @@ html[data-admin-theme="light"] .post-editor-milkdown .milkdown {
 
 .post-editor-milkdown .milkdown-slash-menu,
 .post-editor-milkdown .milkdown-toolbar,
+.post-editor-milkdown .milkdown-ai-instruction > .ai-instruction,
 .post-editor-milkdown .milkdown-link-preview > .link-preview,
 .post-editor-milkdown .milkdown-link-edit > .link-edit {
   border: 1px solid var(--cms-line);
@@ -9304,6 +9305,239 @@ html[data-admin-theme="light"] .post-editor-milkdown .milkdown {
   color: var(--cms-muted);
   font-size: 12px;
   letter-spacing: 0;
+}
+
+.post-editor-ai-palette {
+  position: fixed;
+  z-index: 80;
+  display: grid;
+  gap: 7px;
+  border: 1px solid var(--cms-line-strong);
+  border-radius: 8px;
+  background: var(--cms-surface);
+  padding: 8px;
+  color: var(--cms-text);
+  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.3);
+}
+
+.post-editor-ai-palette[hidden] {
+  display: none;
+}
+
+.post-editor-ai-palette form {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 38px;
+  gap: 7px;
+  border: 1px solid var(--cms-line);
+  border-radius: 7px;
+  background: var(--cms-surface-raised);
+  padding: 3px 4px 3px 9px;
+}
+
+.post-editor-ai-icon {
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  color: var(--cms-accent);
+}
+
+.post-editor-ai-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.post-editor-ai-palette input {
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--cms-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.post-editor-ai-palette input::placeholder {
+  color: var(--cms-faint);
+}
+
+.post-editor-ai-palette form button,
+.post-editor-ai-actions button {
+  border: 1px solid var(--cms-line);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--cms-text-soft);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 780;
+  cursor: pointer;
+}
+
+.post-editor-ai-palette form button {
+  min-height: 28px;
+  border-color: var(--cms-accent);
+  background: var(--cms-accent);
+  padding: 0 10px;
+  color: #fff;
+}
+
+.post-editor-ai-actions {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.post-editor-ai-actions button {
+  min-width: 0;
+  min-height: 30px;
+  padding: 0 6px;
+  white-space: nowrap;
+}
+
+.post-editor-ai-actions button:hover {
+  border-color: var(--cms-line-strong);
+  background: var(--cms-active-bg);
+  color: var(--cms-text);
+}
+
+.post-editor-ai-review {
+  position: fixed;
+  z-index: 79;
+  right: 24px;
+  bottom: 22px;
+  left: max(304px, 24px);
+  overflow: hidden;
+  max-height: min(520px, calc(100vh - 120px));
+  border: 1px solid var(--cms-line-strong);
+  border-radius: 10px;
+  background: var(--cms-surface);
+  color: var(--cms-text);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.3);
+}
+
+.post-editor-ai-review[hidden] {
+  display: none;
+}
+
+.post-editor-ai-review > header {
+  display: flex;
+  min-height: 54px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid var(--cms-line);
+  padding: 8px 10px 8px 16px;
+}
+
+.post-editor-ai-review-title {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}
+
+.post-editor-ai-review-title svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  color: var(--cms-accent);
+}
+
+.post-editor-ai-review-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+.post-editor-ai-review-actions button {
+  min-height: 34px;
+  border: 1px solid var(--cms-line);
+  border-radius: 7px;
+  background: transparent;
+  padding: 0 13px;
+  color: var(--cms-text-soft);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 760;
+  cursor: pointer;
+}
+
+.post-editor-ai-review-actions button:hover:not(:disabled) {
+  border-color: var(--cms-line-strong);
+  background: var(--cms-active-bg);
+  color: var(--cms-text);
+}
+
+.post-editor-ai-review-actions button.is-primary {
+  border-color: var(--cms-accent);
+  background: var(--cms-accent);
+  color: #fff;
+}
+
+.post-editor-ai-review-actions button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.post-editor-ai-review-state {
+  min-height: 180px;
+  padding: 72px 24px;
+  color: var(--cms-text-soft);
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.post-editor-ai-review-compare {
+  display: grid;
+  max-height: min(450px, calc(100vh - 176px));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.post-editor-ai-review-compare > section {
+  overflow: auto;
+  min-width: 0;
+  padding: 16px 20px 22px;
+}
+
+.post-editor-ai-review-compare > section + section {
+  border-left: 1px solid var(--cms-line);
+  background: var(--cms-surface-raised);
+}
+
+.post-editor-ai-review-compare > section > strong {
+  position: sticky;
+  z-index: 1;
+  top: -16px;
+  display: block;
+  margin: -16px -20px 12px;
+  border-bottom: 1px solid var(--cms-line);
+  background: var(--cms-surface);
+  padding: 10px 20px;
+  font-size: 13px;
+}
+
+.post-editor-ai-review-compare > section + section > strong {
+  background: var(--cms-surface-raised);
+}
+
+.post-editor-ai-review .article-prose {
+  max-width: none;
+  color: var(--cms-text);
+  font-size: 15px;
+  line-height: 1.72;
+}
+
+.post-editor-ai-review .article-prose > :first-child {
+  margin-top: 0;
+}
+
+.post-editor-ai-review .article-prose > :last-child {
+  margin-bottom: 0;
 }
 
 .post-editor-milkdown .milkdown-image-block img.is-image-error {
