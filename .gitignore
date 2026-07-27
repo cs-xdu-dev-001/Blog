@@ -9,6 +9,7 @@ reference-*.json
 reference-*.png
 reference-*.js
 .superpowers/
+.worktrees/
 /data/
 /blog-runtime.tgz
 public/uploads/
