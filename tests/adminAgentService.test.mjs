@@ -1,0 +1,153 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import test from 'node:test';
+import { runAdminAgent } from '../src/lib/server/adminAgentService.mjs';
+
+const config = {
+  assistant: {
+    apiBaseUrl: 'https://example.com/v1',
+    apiKey: 'test-key',
+    model: 'test-model',
+    apiMode: 'chat',
+  },
+};
+
+test('admin agent rejects an empty message', async () => {
+  const result = await runAdminAgent({}, { config });
+
+  assert.deepEqual(result, {
+    ok: false,
+    status: 400,
+    code: 'INVALID_REQUEST',
+    error: '请输入消息',
+  });
+});
+
+test('admin agent limits history and note context before calling the model', async () => {
+  let captured;
+  const history = Array.from({ length: 12 }, (_, index) => ({
+    role: index % 2 ? 'assistant' : 'user',
+    content: `message-${index}`,
+  }));
+
+  const result = await runAdminAgent({
+    message: '帮我分析',
+    title: '测试笔记',
+    document: 'a'.repeat(35000),
+    selection: 'b'.repeat(13000),
+    history,
+  }, {
+    config,
+    requestText: async (input) => {
+      captured = input;
+      return { ok: true, text: '{"message":"可以","proposal":null}' };
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(captured.messages.length, 9);
+  assert.deepEqual(
+    captured.messages.slice(0, 8).map((message) => message.content),
+    history.slice(-8).map((message) => message.content),
+  );
+  assert.equal(captured.messages.at(-1).role, 'user');
+  assert.match(captured.messages.at(-1).content, /测试笔记/);
+  assert.equal(captured.messages.at(-1).content.includes('a'.repeat(30000)), true);
+  assert.equal(captured.messages.at(-1).content.includes('a'.repeat(30001)), false);
+  assert.equal(captured.messages.at(-1).content.includes('b'.repeat(12000)), true);
+  assert.equal(captured.messages.at(-1).content.includes('b'.repeat(12001)), false);
+});
+
+test('admin agent returns a normal answer without a proposal', async () => {
+  const result = await runAdminAgent({
+    message: '解释这一段',
+    document: '正文',
+  }, {
+    config,
+    requestText: async () => ({
+      ok: true,
+      text: '```json\n{"message":"这段内容在说明测试流程。","proposal":null}\n```',
+    }),
+  });
+
+  assert.deepEqual(result, {
+    ok: true,
+    message: '这段内容在说明测试流程。',
+    proposal: null,
+  });
+});
+
+test('admin agent returns a reviewable Markdown proposal', async () => {
+  const result = await runAdminAgent({
+    message: '把选中内容改成二级标题',
+    document: '# 正文',
+    selection: '原内容',
+  }, {
+    config,
+    requestText: async () => ({
+      ok: true,
+      text: JSON.stringify({
+        message: '已生成修改建议。',
+        proposal: { scope: 'selection', markdown: '## 新结构' },
+      }),
+    }),
+  });
+
+  assert.deepEqual(result, {
+    ok: true,
+    message: '已生成修改建议。',
+    proposal: {
+      scope: 'selection',
+      markdown: '## 新结构',
+    },
+  });
+});
+
+test('admin agent prompt requires an edit proposal for direct editing requests', async () => {
+  let captured;
+  await runAdminAgent({
+    message: '直接修改左边的正文',
+    document: '# 原正文',
+  }, {
+    config,
+    requestText: async (input) => {
+      captured = input;
+      return {
+        ok: true,
+        text: '{"message":"已生成修改建议。","proposal":{"scope":"document","markdown":"# 新正文"}}',
+      };
+    },
+  });
+
+  assert.match(captured.systemText, /不得回答.*不能修改/);
+  assert.match(captured.systemText, /必须返回proposal/);
+});
+
+test('admin agent rejects an invalid structured response', async () => {
+  const result = await runAdminAgent({
+    message: '润色',
+    document: '正文',
+  }, {
+    config,
+    requestText: async () => ({ ok: true, text: 'not json' }),
+  });
+
+  assert.deepEqual(result, {
+    ok: false,
+    status: 502,
+    code: 'AGENT_RESPONSE_INVALID',
+    error: '模型返回格式异常，请重试',
+  });
+});
+
+test('admin agent endpoint requires admin access and forwards abort signals', () => {
+  const url = new URL('../src/pages/api/admin/assistant/agent.ts', import.meta.url);
+  const source = fs.existsSync(url) ? fs.readFileSync(url, 'utf8') : '';
+
+  assert.match(source, /requireAdmin\(context\)/);
+  assert.match(source, /runAdminAgent/);
+  assert.match(source, /signal:\s*context\.request\.signal/);
+  assert.match(source, /message:\s*result\.message/);
+  assert.match(source, /proposal:\s*result\.proposal/);
+  assert.match(source, /status:\s*405/);
+});

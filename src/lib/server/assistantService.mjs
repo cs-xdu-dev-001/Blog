@@ -470,6 +470,109 @@ async function readModelAnswer(response, config) {
   }
 }
 
+export async function requestAssistantText({
+  systemText,
+  messages = [],
+  maxTokens = 2400,
+  config = siteConfigRepository.getSiteConfig(),
+  signal,
+} = {}) {
+  const apiKey = assistantApiKey(config);
+  if (!apiKey) {
+    return {
+      ok: false,
+      status: 503,
+      code: 'ASSISTANT_NOT_CONFIGURED',
+      error: 'AI接口尚未配置',
+    };
+  }
+
+  const normalizedMessages = Array.isArray(messages)
+    ? messages
+        .filter((message) => message && conversationRoles.has(message.role))
+        .map((message) => ({
+          role: message.role,
+          content: String(message.content ?? '').replaceAll('\0', '').trim().slice(0, 45000),
+        }))
+        .filter((message) => message.content)
+        .slice(-12)
+    : [];
+  const tokenLimit = Math.max(256, Math.min(4000, Number(maxTokens) || 2400));
+  const mode = assistantApiMode(config);
+  const body = mode === 'responses'
+    ? {
+        model: assistantModel(config),
+        max_output_tokens: tokenLimit,
+        stream: true,
+        input: [
+          { role: 'system', content: [{ type: 'input_text', text: String(systemText || '') }] },
+          ...normalizedMessages.map((message) => ({
+            role: message.role,
+            content: [{
+              type: message.role === 'assistant' ? 'output_text' : 'input_text',
+              text: message.content,
+            }],
+          })),
+        ],
+      }
+    : {
+        model: assistantModel(config),
+        max_tokens: tokenLimit,
+        temperature: 0.35,
+        stream: false,
+        messages: [
+          { role: 'system', content: String(systemText || '') },
+          ...normalizedMessages,
+        ],
+      };
+
+  try {
+    const response = await fetch(assistantEndpoint(config), assistantFetchOptions(config, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+      signal,
+    }));
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status === 429 ? 429 : 502,
+        code: response.status === 429 ? 'RATE_LIMITED' : 'UPSTREAM_HTTP_ERROR',
+        error: response.status === 429 ? '模型请求过多，请稍后重试' : `模型服务暂时不可用（HTTP ${response.status}）`,
+      };
+    }
+
+    const text = await readModelAnswer(response, config);
+    return text
+      ? { ok: true, text }
+      : {
+          ok: false,
+          status: 502,
+          code: 'EMPTY_RESPONSE',
+          error: '模型没有返回可用内容',
+        };
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      return {
+        ok: false,
+        status: 499,
+        code: 'REQUEST_ABORTED',
+        error: '已取消',
+      };
+    }
+    return {
+      ok: false,
+      status: 502,
+      code: 'ASSISTANT_UNAVAILABLE',
+      error: 'AI助手暂时不可用',
+    };
+  }
+}
+
 function writingAssistantRequestBody(instruction, target, config, { hasSelection = false } = {}) {
   const maxTokens = Math.max(512, Math.min(4000, Number(config.assistant?.maxAnswerLength || 2400)));
   const systemText = [

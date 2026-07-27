@@ -114,13 +114,12 @@ test('admin writing assistant keeps the original document unchanged until the re
   assert.match(editor, /import\s+\{\s*Crepe\s*\}\s+from\s+'@milkdown\/crepe'/);
   assert.doesNotMatch(editor, /\[Crepe\.Feature\.AI\]:\s*true/);
   assert.doesNotMatch(editor, /callCommand\('RunAI'/);
-  assert.match(editor, /\/api\/admin\/assistant\/write/);
+  assert.doesNotMatch(editor, /\/api\/admin\/assistant\/write/);
   assert.match(editor, /data-ai-review/);
   assert.match(editor, /data-ai-review-original/);
   assert.match(editor, /data-ai-review-result/);
   assert.match(editor, /data-ai-review-accept/);
   assert.match(editor, /data-ai-review-reject/);
-  assert.match(editor, /data-ai-review-retry/);
   assert.match(editor, /data-ai-review-drag-handle/);
   assert.match(editor, /setPointerCapture/);
   assert.match(editor, /addEventListener\('pointermove'/);
@@ -131,10 +130,10 @@ test('admin writing assistant keeps the original document unchanged until the re
   assert.match(editor, /\[Crepe\.Feature\.Toolbar\]/);
   assert.match(editor, /buildToolbar:\s*\(builder\)/);
   assert.match(editor, /addItem\('ai'/);
-  assert.match(editor, /openAIPalette\?\.\(\)/);
+  assert.match(editor, /admin-agent:open/);
   assert.match(editor, /event\.key === '\.'/);
   assert.match(editor, /\/ai/);
-  assert.match(styles, /\.post-editor-ai-palette/);
+  assert.doesNotMatch(editor, /createAIPalette/);
   assert.match(styles, /\.post-editor-ai-review/);
   assert.match(styles, /\.post-editor-ai-review-compare\s*>\s*section\s*\{[^}]*min-height:\s*0;[^}]*overflow:\s*auto;/s);
   assert.match(styles, /\.post-editor-ai-review\s*>\s*header\s*\{[^}]*cursor:\s*move;/s);

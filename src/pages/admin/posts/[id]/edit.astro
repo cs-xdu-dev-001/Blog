@@ -40,13 +40,29 @@ const tagOptionsJson = JSON.stringify(tagOptions).replaceAll('<', '\\u003c');
 ---
 
 <BaseLayout title={`Dev Notes CMS | ${post.title}`} chrome={false} shell={false} assistant={false}>
-  <main class="post-editor-page" data-post-editor-page>
+  <main
+    class="post-editor-page"
+    data-post-editor-page
+    data-agent-editor-locked={post.locked && !post.lockedContentUnlocked ? 'true' : 'false'}
+  >
     <header class="post-editor-topbar">
       <a class="post-editor-back" href="/admin/posts">← 返回笔记列表</a>
       <div class="post-editor-status">
         <span data-editor-status>READY</span>
       </div>
       <div class="post-editor-actions">
+        <button
+          type="button"
+          class="post-editor-agent-toggle"
+          data-admin-agent-toggle
+          aria-label="打开Agent"
+          title="Agent（Ctrl+.）"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3 13.8 8.2 19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"></path>
+            <path d="m18.5 16 .7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7.7-2.1Z"></path>
+          </svg>
+        </button>
         <button type="button" data-preview-link>前台预览</button>
         <button type="button" class="danger" data-delete-post>删除</button>
         <button type="button" class="primary" data-save-post>保存</button>
@@ -187,11 +203,36 @@ const tagOptionsJson = JSON.stringify(tagOptions).replaceAll('<', '\\u003c');
       </section>
     </section>
 
+    <aside class="post-editor-agent-panel" data-admin-agent-panel hidden aria-label="Agent">
+      <div class="post-editor-agent-resize" data-admin-agent-resize></div>
+      <header>
+        <strong>Agent</strong>
+        <div>
+          <button type="button" data-admin-agent-clear>清空</button>
+          <button type="button" data-admin-agent-close aria-label="收起Agent" title="收起">×</button>
+        </div>
+      </header>
+      <div class="post-editor-agent-messages" data-admin-agent-messages aria-live="polite"></div>
+      <form class="post-editor-agent-form" data-admin-agent-form>
+        <textarea
+          rows="3"
+          data-admin-agent-input
+          placeholder="询问或修改当前笔记"
+          aria-label="给Agent发送消息"
+        ></textarea>
+        <div>
+          <button type="button" data-admin-agent-stop hidden>停止</button>
+          <button type="submit" class="primary">发送</button>
+        </div>
+      </form>
+    </aside>
+
     <script type="application/json" id="post-editor-data" set:html={postJson}></script>
     <script type="application/json" id="post-tag-options-data" set:html={tagOptionsJson}></script>
     <script is:inline src="/admin-post-editor.js"></script>
     <script>
       import '../../../../scripts/admin-post-milkdown-loader.js';
+      import '../../../../scripts/admin-post-agent.js';
     </script>
   </main>
 </BaseLayout>

@@ -1,6 +1,5 @@
 import { Crepe } from '@milkdown/crepe';
 import { editorViewCtx, serializerCtx } from '@milkdown/kit/core';
-import { AllSelection, TextSelection } from '@milkdown/kit/prose/state';
 import { insert, replaceRange } from '@milkdown/utils';
 import '@milkdown/crepe/theme/common/reset.css';
 import '@milkdown/crepe/theme/common/block-edit.css';
@@ -25,31 +24,8 @@ const aiIcon = `
   </svg>
 `;
 
-const aiActions = [
-  { id: 'polish', label: '润色', prompt: '润色这段内容，提升表达准确性和可读性，保留原意与Markdown结构。' },
-  { id: 'shorten', label: '精简', prompt: '精简这段内容，删除重复表达，保留关键信息与Markdown结构。' },
-  { id: 'expand', label: '扩写', prompt: '扩写这段内容，补足必要细节，保持原有语气与Markdown结构。' },
-  { id: 'continue', label: '续写', prompt: '根据已有内容自然续写，只返回新增的Markdown内容。' },
-  { id: 'format', label: '修复格式', prompt: '修复这段内容的Markdown格式，不改变事实与表达含义。' },
-];
-
 function setStatus(text) {
   if (statusEl) statusEl.textContent = text;
-}
-
-function selectAITarget(crepe, shouldInsert) {
-  if (shouldInsert) return;
-  crepe.editor.action((ctx) => {
-    const view = ctx.get(editorViewCtx);
-    const { selection, doc } = view.state;
-    if (!selection.empty) return;
-    const from = selection.$from.start();
-    const to = selection.$from.end();
-    const nextSelection = to > from
-      ? TextSelection.create(doc, from, to)
-      : new AllSelection(doc);
-    view.dispatch(view.state.tr.setSelection(nextSelection));
-  });
 }
 
 function serializeSelection(ctx, view) {
@@ -58,7 +34,15 @@ function serializeSelection(ctx, view) {
   const { from, to } = state.selection;
   const document = serializer(state.doc);
   if (state.selection.empty) {
-    return { document, selection: '', original: '', from, to };
+    return {
+      document,
+      selection: '',
+      original: '',
+      from,
+      to,
+      documentFrom: 0,
+      documentTo: state.doc.content.size,
+    };
   }
 
   const slice = state.doc.slice(from, to);
@@ -69,11 +53,18 @@ function serializeSelection(ctx, view) {
     if (paragraph) wrapper = schema.topNodeType.createAndFill(null, paragraph);
   }
   const selection = wrapper ? serializer(wrapper) : state.doc.textBetween(from, to);
-  return { document, selection, original: selection, from, to };
+  return {
+    document,
+    selection,
+    original: selection,
+    from,
+    to,
+    documentFrom: 0,
+    documentTo: state.doc.content.size,
+  };
 }
 
-function captureAITarget(crepe, shouldInsert) {
-  selectAITarget(crepe, shouldInsert);
+function captureAITarget(crepe) {
   let target = null;
   crepe.editor.action((ctx) => {
     const view = ctx.get(editorViewCtx);
@@ -105,7 +96,6 @@ function createAIReview(crepe) {
     <header data-ai-review-drag-handle>
       <span class="post-editor-ai-review-title">${aiIcon}<strong data-ai-review-title>AI建议</strong></span>
       <div class="post-editor-ai-review-actions">
-        <button type="button" data-ai-review-retry>重新生成</button>
         <button type="button" data-ai-review-reject>放弃</button>
         <button type="button" class="is-primary" data-ai-review-accept>接纳</button>
       </div>
@@ -132,9 +122,7 @@ function createAIReview(crepe) {
   const resultEl = panel.querySelector('[data-ai-review-result]');
   const acceptButton = panel.querySelector('[data-ai-review-accept]');
   const rejectButton = panel.querySelector('[data-ai-review-reject]');
-  const retryButton = panel.querySelector('[data-ai-review-retry]');
   let review = null;
-  let abortController = null;
   let dragState = null;
 
   const stopDragging = (event) => {
@@ -181,7 +169,6 @@ function createAIReview(crepe) {
   const setLoading = (loading) => {
     panel.classList.toggle('is-loading', loading);
     acceptButton.disabled = loading || !review?.result;
-    retryButton.disabled = loading;
     stateEl.hidden = !loading;
     compare.hidden = loading;
     if (loading) stateEl.textContent = '正在生成建议';
@@ -197,8 +184,6 @@ function createAIReview(crepe) {
   };
 
   const close = ({ restoreStatus = true } = {}) => {
-    abortController?.abort();
-    abortController = null;
     panel.hidden = true;
     restoreEditor();
     if (restoreStatus) setStatus(review?.previousStatus || 'READY');
@@ -207,7 +192,7 @@ function createAIReview(crepe) {
 
   const render = async () => {
     if (!review) return;
-    const original = review.original || (review.shouldInsert ? '当前位置后插入' : '');
+    const original = review.original || '';
     const [originalHtml, resultHtml] = await Promise.all([
       renderAIReviewMarkdown(original),
       renderAIReviewMarkdown(review.result),
@@ -217,156 +202,44 @@ function createAIReview(crepe) {
     resultEl.innerHTML = resultHtml;
   };
 
-  const request = async () => {
-    if (!review) return;
-    abortController?.abort();
-    abortController = new AbortController();
-    review.result = '';
-    title.textContent = review.label ? `${review.label}结果` : 'AI建议';
-    panel.hidden = false;
-    setLoading(true);
-    setStatus('AI WORKING');
-
-    try {
-      const response = await fetch('/api/admin/assistant/write', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        signal: abortController.signal,
-        body: JSON.stringify({
-          document: review.document,
-          selection: review.selection,
-          instruction: review.instruction,
-        }),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data.text) {
-        throw new Error(data.error || `AI请求失败（${response.status}）`);
-      }
-      review.result = String(data.text);
-      await render();
-      setLoading(false);
-      setStatus('AI REVIEW');
-    } catch (error) {
-      if (error?.name === 'AbortError') return;
-      stateEl.hidden = false;
-      compare.hidden = true;
-      stateEl.textContent = error instanceof Error ? error.message : 'AI请求失败';
-      panel.classList.remove('is-loading');
-      retryButton.disabled = false;
-      acceptButton.disabled = true;
-      setStatus('AI FAILED');
-    }
-  };
-
-  const open = (target, instruction, label, shouldInsert) => {
-    if (!target) return;
+  const openResult = (target, result, label = 'AI建议') => {
+    if (!target || !String(result || '').trim()) return;
     review = {
       ...target,
-      instruction,
       label,
-      shouldInsert,
-      result: '',
+      result: String(result),
       previousStatus: statusEl?.textContent || 'READY',
     };
+    title.textContent = label;
+    panel.hidden = false;
     crepe.setReadonly(true);
-    void request();
+    setLoading(false);
+    setStatus('AI REVIEW');
+    void render().catch((error) => {
+      stateEl.hidden = false;
+      compare.hidden = true;
+      stateEl.textContent = error instanceof Error ? error.message : '结果预览失败';
+      acceptButton.disabled = true;
+    });
   };
+  const open = openResult;
 
   acceptButton.addEventListener('click', () => {
     if (!review?.result) return;
     crepe.editor.action(replaceRange(review.result, { from: review.from, to: review.to }));
     panel.hidden = true;
-    abortController = null;
     review = null;
     restoreEditor();
     setStatus('UNSAVED');
   });
   rejectButton.addEventListener('click', () => close());
-  retryButton.addEventListener('click', () => void request());
   panel.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
     event.preventDefault();
     close();
   });
 
-  return { open, close };
-}
-
-function createAIPalette(crepe, aiReview) {
-  const palette = document.createElement('div');
-  palette.className = 'post-editor-ai-palette';
-  palette.hidden = true;
-  palette.innerHTML = `
-    <form data-ai-palette-form>
-      <span class="post-editor-ai-icon">${aiIcon}</span>
-      <input type="text" autocomplete="off" placeholder="告诉AI如何处理" aria-label="AI编辑指令" data-ai-palette-input>
-      <button type="submit" aria-label="执行AI编辑">发送</button>
-    </form>
-    <div class="post-editor-ai-actions" aria-label="AI快捷操作">
-      ${aiActions.map((action) => `<button type="button" data-ai-action="${action.id}">${action.label}</button>`).join('')}
-    </div>
-  `;
-  (root.closest('.post-editor-page') || document.body).append(palette);
-
-  const form = palette.querySelector('[data-ai-palette-form]');
-  const promptInput = palette.querySelector('[data-ai-palette-input]');
-
-  const close = ({ restoreFocus = true } = {}) => {
-    palette.hidden = true;
-    if (restoreFocus) {
-      crepe.editor.action((ctx) => ctx.get(editorViewCtx).focus());
-    }
-  };
-
-  const run = (instruction, label = '') => {
-    const value = String(instruction || '').trim();
-    if (!value) return;
-    const shouldInsert = /续写|继续写|接着写|continue/i.test(value);
-    const target = captureAITarget(crepe, shouldInsert);
-    close({ restoreFocus: false });
-    aiReview.open(target, value, label || value, shouldInsert);
-  };
-
-  const position = () => {
-    palette.hidden = false;
-    crepe.editor.action((ctx) => {
-      const view = ctx.get(editorViewCtx);
-      const rect = view.coordsAtPos(view.state.selection.to);
-      const width = Math.min(380, window.innerWidth - 24);
-      const left = Math.min(
-        Math.max(12, rect.left - (width / 2)),
-        Math.max(12, window.innerWidth - width - 12),
-      );
-      const top = Math.min(Math.max(68, rect.bottom + 12), window.innerHeight - 190);
-      palette.style.width = `${width}px`;
-      palette.style.left = `${left}px`;
-      palette.style.top = `${top}px`;
-    });
-    requestAnimationFrame(() => promptInput?.focus());
-  };
-
-  form?.addEventListener('submit', (event) => {
-    event.preventDefault();
-    run(promptInput?.value);
-  });
-  palette.querySelectorAll('[data-ai-action]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const action = aiActions.find((item) => item.id === button.dataset.aiAction);
-      if (action) run(action.prompt, action.label);
-    });
-  });
-  palette.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      close();
-    }
-  });
-  document.addEventListener('pointerdown', (event) => {
-    if (!palette.hidden && !palette.contains(event.target)) close({ restoreFocus: false });
-  }, true);
-
-  return { open: position, close, run };
+  return { open, openResult, close };
 }
 
 function removeSlashAI(crepe) {
@@ -451,7 +324,7 @@ export async function bootMilkdown() {
 
   root.replaceChildren();
   root.removeAttribute('tabindex');
-  let openAIPalette = null;
+  const openAdminAgent = () => document.dispatchEvent(new CustomEvent('admin-agent:open'));
 
   const crepe = new Crepe({
     root,
@@ -482,7 +355,7 @@ export async function bootMilkdown() {
           builder.addGroup('ai-tools', 'AI').addItem('ai', {
             icon: aiIcon,
             active: () => false,
-            onRun: () => openAIPalette?.(),
+            onRun: openAdminAgent,
           });
         },
       },
@@ -505,8 +378,19 @@ export async function bootMilkdown() {
   try {
     await crepe.create();
     const aiReview = createAIReview(crepe);
-    const aiPalette = createAIPalette(crepe, aiReview);
-    openAIPalette = aiPalette.open;
+    window.__postAgentBridge = {
+      captureContext: () => captureAITarget(crepe),
+      reviewProposal: (target, proposal) => {
+        if (!target || !proposal?.markdown) return;
+        const isDocument = proposal.scope === 'document';
+        aiReview.openResult({
+          ...target,
+          original: isDocument ? target.document : target.selection,
+          from: isDocument ? target.documentFrom : target.from,
+          to: isDocument ? target.documentTo : target.to,
+        }, proposal.markdown, 'Agent修改');
+      },
+    };
     root.addEventListener('paste', (event) => {
       void insertClipboardImages(event, crepe);
     }, true);
@@ -515,12 +399,12 @@ export async function bootMilkdown() {
     root.addEventListener('keydown', (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key === '.') {
         event.preventDefault();
-        aiPalette.open();
+        openAdminAgent();
         return;
       }
       if (event.key === 'Enter' && !event.isComposing && removeSlashAI(crepe)) {
         event.preventDefault();
-        requestAnimationFrame(() => aiPalette.open());
+        requestAnimationFrame(openAdminAgent);
       }
     }, true);
     root.dataset.milkdownReady = 'true';
