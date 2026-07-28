@@ -9396,6 +9396,7 @@ button:focus-visible {
 }
 
 .post-editor-write {
+  --selection-review-height: clamp(220px, 38%, 340px);
   position: relative;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -9439,7 +9440,12 @@ button:focus-visible {
   min-height: 0;
   overflow: hidden;
   opacity: 1;
-  transition: opacity 120ms ease;
+  transition: inset 160ms ease, opacity 120ms ease;
+}
+
+.post-editor-write.has-selection-review .post-editor-milkdown {
+  inset: var(--selection-review-height) 0 0;
+  height: auto;
 }
 
 .post-editor-milkdown[data-editor-state="idle"],
@@ -9665,21 +9671,34 @@ html[data-admin-theme="light"] .post-editor-milkdown .milkdown {
 }
 
 .post-editor-ai-review.is-selection {
-  inset: auto;
-  height: auto;
-  min-height: 240px;
-  border: 1px solid var(--cms-line-strong);
-  border-radius: 10px;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.2);
+  inset: 0 0 auto;
+  height: var(--selection-review-height);
+  min-height: 0;
+  border-bottom: 1px solid var(--cms-line-strong);
+  border-radius: 17px 17px 0 0;
+  box-shadow: none;
 }
 
 .post-editor-ai-review.is-selection .post-editor-ai-review-document {
-  padding: 18px;
+  padding: 14px 18px 18px;
 }
 
 .post-editor-ai-review.is-selection .post-editor-ai-review-note,
 .post-editor-ai-review.is-selection .post-ai-review-change {
   width: 100%;
+}
+
+.post-editor-ai-review.is-selection .post-ai-review-change {
+  grid-template-columns: minmax(0, 1fr);
+  border-left-color: var(--cms-success);
+}
+
+.post-editor-ai-review.is-selection .post-ai-review-removed {
+  display: none;
+}
+
+.post-editor-ai-review.is-selection .post-ai-review-added {
+  border-left: 0;
 }
 
 .post-editor-ai-review > header {

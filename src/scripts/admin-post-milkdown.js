@@ -157,34 +157,6 @@ function createAIReview(crepe) {
   let review = null;
   let activeReviewId = null;
 
-  const positionSelectionReview = () => {
-    if (!review || review.scope !== 'selection') return;
-    const hostRect = reviewHost.getBoundingClientRect();
-    const maxWidth = Math.max(320, hostRect.width - 32);
-    const width = Math.min(720, maxWidth);
-    const maxHeight = Math.min(440, Math.max(240, hostRect.height - 32));
-    let anchor = {
-      left: hostRect.left + 16,
-      top: hostRect.top + 16,
-      bottom: hostRect.top + 16,
-    };
-    try {
-      crepe.editor.action((ctx) => {
-        anchor = ctx.get(editorViewCtx).coordsAtPos(review.from);
-      });
-    } catch {
-      // Fall back to the editor's top-left corner when the selection is no longer measurable.
-    }
-    const left = Math.max(16, Math.min(anchor.left - hostRect.left, hostRect.width - width - 16));
-    let top = anchor.bottom - hostRect.top + 10;
-    if (top + maxHeight > hostRect.height - 16) {
-      top = Math.max(16, anchor.top - hostRect.top - maxHeight - 10);
-    }
-    panel.style.left = `${Math.round(left)}px`;
-    panel.style.top = `${Math.round(top)}px`;
-    panel.style.width = `${Math.round(width)}px`;
-    panel.style.maxHeight = `${Math.round(maxHeight)}px`;
-  };
   const setLoading = (loading) => {
     panel.classList.toggle('is-loading', loading);
     acceptButton.disabled = loading || !review?.result;
@@ -205,7 +177,18 @@ function createAIReview(crepe) {
 
   const resetReviewPanel = () => {
     panel.classList.remove('is-selection');
+    reviewHost.classList.remove('has-selection-review');
     panel.removeAttribute('style');
+  };
+
+  const revealSelection = () => {
+    if (review?.scope !== 'selection') return;
+    requestAnimationFrame(() => {
+      crepe.editor.action((ctx) => {
+        const view = ctx.get(editorViewCtx);
+        view.dispatch(view.state.tr.scrollIntoView());
+      });
+    });
   };
 
   const close = ({ restoreStatus = true } = {}) => {
@@ -220,6 +203,13 @@ function createAIReview(crepe) {
   const render = async () => {
     if (!review) return;
     const original = review.original || '';
+    if (review.scope === 'selection') {
+      const resultHtml = await renderAIReviewMarkdown(review.result);
+      if (!review) return;
+      originalEl.replaceChildren();
+      resultEl.innerHTML = resultHtml;
+      return;
+    }
     const [originalHtml, resultHtml] = await Promise.all([
       renderAIReviewMarkdown(original),
       renderAIReviewMarkdown(review.result),
@@ -242,10 +232,12 @@ function createAIReview(crepe) {
     title.textContent = label;
     noteEl.textContent = String(message || '').trim();
     noteEl.hidden = !noteEl.textContent;
-    panel.classList.toggle('is-selection', review.scope === 'selection');
+    const isSelection = review.scope === 'selection';
+    panel.classList.toggle('is-selection', isSelection);
+    reviewHost.classList.toggle('has-selection-review', isSelection);
     panel.hidden = false;
-    positionSelectionReview();
     crepe.setReadonly(true);
+    revealSelection();
     setLoading(false);
     setStatus('AI REVIEW');
     void render().catch((error) => {
