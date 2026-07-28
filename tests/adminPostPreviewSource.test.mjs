@@ -86,8 +86,9 @@ test('admin post editor previews through the frontend markdown renderer', () => 
   assert.match(milkdownClient, /crepe\.editor\.action\(insert\(/);
   assert.match(milkdownClient, /'X-Image-Name':\s*encodeURIComponent/);
   assert.match(milkdownClient, /body:\s*file/);
-  assert.match(milkdownLoader, /import\('\.\/admin-post-milkdown\.js'\)/);
-  assert.match(milkdownLoader, /requestIdleCallback/);
+  assert.match(milkdownLoader, /let editorModulePromise = import\('\.\/admin-post-milkdown\.js'\)/);
+  assert.doesNotMatch(milkdownLoader, /requestIdleCallback/);
+  assert.match(milkdownLoader, /requestAnimationFrame\(loadFromInteraction\)/);
   assert.match(milkdownLoader, /addEventListener\('pointerdown'/);
   assert.match(milkdownLoader, /data-editor-retry/);
   assert.match(client, /'X-Image-Name':\s*encodeURIComponent/);

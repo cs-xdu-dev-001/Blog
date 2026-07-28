@@ -1,4 +1,5 @@
 const root = document.querySelector('[data-milkdown-editor]');
+let editorModulePromise = import('./admin-post-milkdown.js');
 let loadPromise = null;
 
 function setEditorState(state) {
@@ -15,6 +16,7 @@ function renderRetry() {
   button.setAttribute('data-editor-retry', 'true');
   button.textContent = '重新加载编辑器';
   button.addEventListener('click', () => {
+    editorModulePromise = import('./admin-post-milkdown.js');
     loadPromise = null;
     void loadEditor().catch(() => {});
   }, { once: true });
@@ -26,7 +28,7 @@ async function loadEditor() {
   if (loadPromise) return loadPromise;
 
   setEditorState('loading');
-  loadPromise = import('./admin-post-milkdown.js')
+  loadPromise = editorModulePromise
     .then(({ bootMilkdown }) => bootMilkdown())
     .then(() => {
       setEditorState('ready');
@@ -53,12 +55,5 @@ if (root) {
     });
   });
 
-  const loadWhenIdle = () => {
-    if (root.offsetParent !== null) loadFromInteraction();
-  };
-  if ('requestIdleCallback' in window) {
-    window.requestIdleCallback(loadWhenIdle, { timeout: 800 });
-  } else {
-    window.setTimeout(loadWhenIdle, 120);
-  }
+  requestAnimationFrame(loadFromInteraction);
 }
