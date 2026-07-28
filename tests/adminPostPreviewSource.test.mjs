@@ -13,6 +13,9 @@ test('admin post editor previews through the frontend markdown renderer', () => 
   const milkdownClient = fs.existsSync(milkdownClientPath) ? fs.readFileSync(milkdownClientPath, 'utf8') : '';
   const milkdownLoaderPath = new URL('../src/scripts/admin-post-milkdown-loader.js', import.meta.url);
   const milkdownLoader = fs.existsSync(milkdownLoaderPath) ? fs.readFileSync(milkdownLoaderPath, 'utf8') : '';
+  const languageCatalogPath = new URL('../src/scripts/codemirror-language-data.js', import.meta.url);
+  const languageCatalog = fs.existsSync(languageCatalogPath) ? fs.readFileSync(languageCatalogPath, 'utf8') : '';
+  const astroConfig = read('astro.config.mjs');
   const apiUrl = new URL('../src/pages/api/admin/posts/preview.ts', import.meta.url);
   const imageApiUrl = new URL('../src/pages/api/admin/posts/image.ts', import.meta.url);
   const api = fs.existsSync(apiUrl) ? fs.readFileSync(apiUrl, 'utf8') : '';
@@ -33,6 +36,7 @@ test('admin post editor previews through the frontend markdown renderer', () => 
   assert.match(page, /data-markdown-input[^>]*hidden|hidden[^>]*data-markdown-input/);
   assert.equal(fs.existsSync(milkdownClientPath), true);
   assert.equal(fs.existsSync(milkdownLoaderPath), true);
+  assert.equal(fs.existsSync(languageCatalogPath), true);
   assert.equal(fs.existsSync(apiUrl), true);
   assert.equal(fs.existsSync(imageApiUrl), true);
   assert.match(api, /markdownToHtml/);
@@ -70,6 +74,23 @@ test('admin post editor previews through the frontend markdown renderer', () => 
   assert.match(client, /setPointerCapture/);
   assert.doesNotMatch(client, /post-table-editor-backdrop/);
   assert.match(milkdownClient, /@milkdown\/crepe/);
+  assert.match(milkdownClient, /codemirror-language-data/);
+  assert.match(milkdownClient, /languages:\s*codeLanguages/);
+  assert.match(astroConfig, /@codemirror\/language-data/);
+  assert.match(astroConfig, /codemirror-language-data\.js/);
+  for (const language of [
+    '@codemirror/lang-javascript',
+    '@codemirror/lang-python',
+    '@codemirror/lang-sql',
+    '@codemirror/lang-json',
+    '@codemirror/lang-html',
+    '@codemirror/lang-css',
+    '@codemirror/lang-markdown',
+    '@codemirror/legacy-modes/mode/shell',
+  ]) {
+    assert.match(languageCatalog, new RegExp(language.replaceAll('/', '\\/')));
+  }
+  assert.doesNotMatch(languageCatalog, /legacy-modes\/mode\/apl/);
   assert.match(milkdownClient, /export async function bootMilkdown/);
   assert.doesNotMatch(milkdownClient, /\nbootMilkdown\(\);\s*$/);
   assert.match(milkdownClient, /import\s+\{\s*Crepe\s*\}\s+from\s+'@milkdown\/crepe'/);

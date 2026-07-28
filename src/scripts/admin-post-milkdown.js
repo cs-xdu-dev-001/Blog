@@ -1,6 +1,8 @@
 import { Crepe } from '@milkdown/crepe';
 import { editorViewCtx, serializerCtx } from '@milkdown/kit/core';
 import { insert, replaceRange } from '@milkdown/utils';
+import { reviewIsCurrent } from './admin-agent-review.js';
+import { languages as codeLanguages } from './codemirror-language-data.js';
 import '@milkdown/crepe/theme/common/reset.css';
 import '@milkdown/crepe/theme/common/block-edit.css';
 import '@milkdown/crepe/theme/common/code-mirror.css';
@@ -33,15 +35,20 @@ function serializeSelection(ctx, view) {
   const { state } = view;
   const { from, to } = state.selection;
   const document = serializer(state.doc);
+  const snapshot = {
+    id: crypto.randomUUID(),
+    document,
+    sourceDocument: document,
+    documentFrom: 0,
+    documentTo: state.doc.content.size,
+  };
   if (state.selection.empty) {
     return {
-      document,
+      ...snapshot,
       selection: '',
       original: '',
       from,
       to,
-      documentFrom: 0,
-      documentTo: state.doc.content.size,
     };
   }
 
@@ -54,13 +61,11 @@ function serializeSelection(ctx, view) {
   }
   const selection = wrapper ? serializer(wrapper) : state.doc.textBetween(from, to);
   return {
-    document,
+    ...snapshot,
     selection,
     original: selection,
     from,
     to,
-    documentFrom: 0,
-    documentTo: state.doc.content.size,
   };
 }
 
@@ -96,19 +101,21 @@ function createAIReview(crepe) {
     <header data-ai-review-drag-handle>
       <span class="post-editor-ai-review-title">${aiIcon}<strong data-ai-review-title>AI建议</strong></span>
       <div class="post-editor-ai-review-actions">
-        <button type="button" data-ai-review-reject>放弃</button>
-        <button type="button" class="is-primary" data-ai-review-accept>接纳</button>
+        <button type="button" class="is-icon" data-ai-review-reject aria-label="放弃修改" title="放弃修改">✕</button>
+        <button type="button" class="is-icon is-primary" data-ai-review-accept aria-label="接纳修改" title="接纳修改">✓</button>
       </div>
     </header>
     <div class="post-editor-ai-review-state" data-ai-review-state hidden></div>
-    <div class="post-editor-ai-review-compare" data-ai-review-compare>
-      <section>
-        <strong>原文</strong>
-        <div class="article-prose" data-ai-review-original></div>
-      </section>
-      <section>
-        <strong>AI结果</strong>
-        <div class="article-prose" data-ai-review-result></div>
+    <div class="post-editor-ai-review-document" data-ai-review-document>
+      <section class="post-ai-review-change">
+        <div class="post-ai-review-removed">
+          <strong>原文</strong>
+          <div class="article-prose" data-ai-review-original></div>
+        </div>
+        <div class="post-ai-review-added">
+          <strong>修改后</strong>
+          <div class="article-prose" data-ai-review-result></div>
+        </div>
       </section>
     </div>
   `;
@@ -117,12 +124,13 @@ function createAIReview(crepe) {
   const title = panel.querySelector('[data-ai-review-title]');
   const dragHandle = panel.querySelector('[data-ai-review-drag-handle]');
   const stateEl = panel.querySelector('[data-ai-review-state]');
-  const compare = panel.querySelector('[data-ai-review-compare]');
+  const reviewDocument = panel.querySelector('[data-ai-review-document]');
   const originalEl = panel.querySelector('[data-ai-review-original]');
   const resultEl = panel.querySelector('[data-ai-review-result]');
   const acceptButton = panel.querySelector('[data-ai-review-accept]');
   const rejectButton = panel.querySelector('[data-ai-review-reject]');
   let review = null;
+  let activeReviewId = null;
   let dragState = null;
 
   const stopDragging = (event) => {
@@ -169,8 +177,9 @@ function createAIReview(crepe) {
   const setLoading = (loading) => {
     panel.classList.toggle('is-loading', loading);
     acceptButton.disabled = loading || !review?.result;
+    rejectButton.disabled = loading;
     stateEl.hidden = !loading;
-    compare.hidden = loading;
+    reviewDocument.hidden = loading;
     if (loading) stateEl.textContent = '正在生成建议';
   };
 
@@ -188,6 +197,7 @@ function createAIReview(crepe) {
     restoreEditor();
     if (restoreStatus) setStatus(review?.previousStatus || 'READY');
     review = null;
+    activeReviewId = null;
   };
 
   const render = async () => {
@@ -206,10 +216,12 @@ function createAIReview(crepe) {
     if (!target || !String(result || '').trim()) return;
     review = {
       ...target,
+      id: target.id || crypto.randomUUID(),
       label,
       result: String(result),
       previousStatus: statusEl?.textContent || 'READY',
     };
+    activeReviewId = review.id;
     title.textContent = label;
     panel.hidden = false;
     crepe.setReadonly(true);
@@ -217,7 +229,7 @@ function createAIReview(crepe) {
     setStatus('AI REVIEW');
     void render().catch((error) => {
       stateEl.hidden = false;
-      compare.hidden = true;
+      reviewDocument.hidden = true;
       stateEl.textContent = error instanceof Error ? error.message : '结果预览失败';
       acceptButton.disabled = true;
     });
@@ -226,9 +238,25 @@ function createAIReview(crepe) {
 
   acceptButton.addEventListener('click', () => {
     if (!review?.result) return;
+    let currentDocument = '';
+    let documentSize = 0;
+    crepe.editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx);
+      currentDocument = ctx.get(serializerCtx)(view.state.doc);
+      documentSize = view.state.doc.content.size;
+    });
+    if (!reviewIsCurrent(review, { activeReviewId, currentDocument, documentSize })) {
+      panel.hidden = true;
+      review = null;
+      activeReviewId = null;
+      restoreEditor();
+      setStatus('审阅已过期，请重新生成');
+      return;
+    }
     crepe.editor.action(replaceRange(review.result, { from: review.from, to: review.to }));
     panel.hidden = true;
     review = null;
+    activeReviewId = null;
     restoreEditor();
     setStatus('UNSAVED');
   });
@@ -360,7 +388,7 @@ export async function bootMilkdown() {
         },
       },
       [Crepe.Feature.CodeMirror]: {
-        languages: [],
+        languages: codeLanguages,
         copyText: '复制',
         searchPlaceholder: '搜索语言',
         noResultText: '无结果',

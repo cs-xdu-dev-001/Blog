@@ -135,6 +135,8 @@ test('admin writing assistant keeps the original document unchanged until the re
   assert.match(editor, /\/ai/);
   assert.doesNotMatch(editor, /createAIPalette/);
   assert.match(styles, /\.post-editor-ai-review/);
-  assert.match(styles, /\.post-editor-ai-review-compare\s*>\s*section\s*\{[^}]*min-height:\s*0;[^}]*overflow:\s*auto;/s);
+  assert.match(styles, /\.post-editor-ai-review\s*\{[^}]*height:\s*auto;[^}]*max-height:\s*min\(560px,\s*calc\(100vh - 48px\)\);/s);
+  assert.match(styles, /\.post-editor-ai-review-document\s*\{[^}]*min-height:\s*0;[^}]*overflow:\s*auto;/s);
+  assert.match(styles, /\.post-ai-review-change/);
   assert.match(styles, /\.post-editor-ai-review\s*>\s*header\s*\{[^}]*cursor:\s*move;/s);
 });

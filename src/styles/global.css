@@ -9523,7 +9523,8 @@ html[data-admin-theme="light"] .post-editor-milkdown .milkdown {
   bottom: 22px;
   display: grid;
   width: min(1080px, calc(100vw - 48px));
-  height: min(560px, calc(100vh - 48px));
+  height: auto;
+  max-height: min(560px, calc(100vh - 48px));
   overflow: hidden;
   grid-template-rows: auto minmax(0, 1fr);
   border: 1px solid var(--cms-line-strong);
@@ -9600,6 +9601,14 @@ html[data-admin-theme="light"] .post-editor-milkdown .milkdown {
   color: #fff;
 }
 
+.post-editor-ai-review-actions button.is-icon {
+  width: 34px;
+  min-width: 34px;
+  padding: 0;
+  font-size: 17px;
+  line-height: 1;
+}
+
 .post-editor-ai-review-actions button:disabled {
   cursor: default;
   opacity: 0.45;
@@ -9615,40 +9624,53 @@ html[data-admin-theme="light"] .post-editor-milkdown .milkdown {
   text-align: center;
 }
 
-.post-editor-ai-review-compare {
-  display: grid;
-  min-height: 0;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.post-editor-ai-review-compare > section {
-  min-width: 0;
+.post-editor-ai-review-document {
   min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
-  padding: 16px 20px 22px;
-}
-
-.post-editor-ai-review-compare > section + section {
-  border-left: 1px solid var(--cms-line);
   background: var(--cms-surface-raised);
+  padding: 26px;
 }
 
-.post-editor-ai-review-compare > section > strong {
-  position: sticky;
-  z-index: 1;
-  top: -16px;
-  display: block;
-  margin: -16px -20px 12px;
-  border-bottom: 1px solid var(--cms-line);
+.post-ai-review-change {
+  width: min(100%, 860px);
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--cms-line);
+  border-left: 3px solid var(--cms-accent);
+  border-radius: 8px;
   background: var(--cms-surface);
-  padding: 10px 20px;
-  font-size: 13px;
 }
 
-.post-editor-ai-review-compare > section + section > strong {
-  background: var(--cms-surface-raised);
+.post-ai-review-removed,
+.post-ai-review-added {
+  padding: 18px 20px 20px;
+}
+
+.post-ai-review-added {
+  border-top: 1px solid var(--cms-line);
+  background: color-mix(in srgb, var(--cms-success) 7%, var(--cms-surface));
+}
+
+.post-ai-review-removed {
+  background: color-mix(in srgb, var(--cms-danger) 5%, var(--cms-surface));
+}
+
+.post-ai-review-removed > strong,
+.post-ai-review-added > strong {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--cms-text-soft);
+  font-size: 14px;
+}
+
+.post-ai-review-removed > strong {
+  color: var(--cms-danger);
+}
+
+.post-ai-review-added > strong {
+  color: var(--cms-success);
 }
 
 .post-editor-ai-review .article-prose {
