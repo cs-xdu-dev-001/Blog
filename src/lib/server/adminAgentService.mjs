@@ -122,3 +122,51 @@ export async function runAdminAgent(input = {}, {
   }
   return { ok: true, ...parsed };
 }
+
+export async function* streamAdminAgent(input = {}, options = {}) {
+  const selection = cleanText(input.selection, limits.selection);
+  yield {
+    event: 'phase',
+    data: {
+      id: 'context',
+      label: selection ? '读取选中内容' : '读取当前笔记',
+      status: 'done',
+    },
+  };
+  yield {
+    event: 'phase',
+    data: {
+      id: 'intent',
+      label: '分析修改目标',
+      status: 'done',
+    },
+  };
+  yield {
+    event: 'phase',
+    data: {
+      id: 'generate',
+      label: '生成修改建议',
+      status: 'active',
+    },
+  };
+
+  const result = await runAdminAgent(input, options);
+  if (!result.ok) {
+    yield {
+      event: 'error',
+      data: {
+        code: result.code,
+        message: result.error,
+        retryable: result.status >= 500,
+      },
+    };
+    return;
+  }
+  yield {
+    event: 'result',
+    data: {
+      message: result.message,
+      proposal: result.proposal,
+    },
+  };
+}

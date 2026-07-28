@@ -13,6 +13,9 @@ test('post editor contains one docked admin agent panel', () => {
   assert.match(page, /data-admin-agent-toggle/);
   assert.match(page, /data-admin-agent-panel/);
   assert.match(page, /data-admin-agent-messages/);
+  assert.match(page, /data-admin-agent-empty/);
+  assert.match(page, /data-admin-agent-empty-title/);
+  assert.match(page, /data-admin-agent-context/);
   assert.match(page, /data-admin-agent-form/);
   assert.match(page, /data-admin-agent-input/);
   assert.match(page, /data-admin-agent-stop/);
@@ -42,6 +45,16 @@ test('admin agent client supports context, cancellation, review, and bounded his
   assert.match(client, /已接纳修改/);
   assert.match(client, /data-agent-undo/);
   assert.match(client, /__postAgentBridge\?\.undoLastChange/);
+  assert.match(client, /response\.body\?\.getReader\(\)/);
+  assert.match(client, /eventType === 'phase'/);
+  assert.match(client, /eventType === 'result'/);
+  assert.match(client, /data-admin-agent-trace/);
+  assert.match(client, /reviewProposal\(target,\s*result\.proposal,\s*result\.message\)/);
+  assert.match(client, /admin-agent:selection-change/);
+  assert.match(client, /已选内容 · \$\{length\}字/);
+  assert.match(client, /想对选中内容做什么？/);
+  assert.match(client, /询问或修改选中内容/);
+  assert.doesNotMatch(client, /action\.textContent = '查看修改'/);
 });
 
 test('locked notes must be unlocked before the agent reads or edits their body', () => {

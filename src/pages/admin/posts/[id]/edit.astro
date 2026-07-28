@@ -216,14 +216,26 @@ const tagOptionsJson = JSON.stringify(tagOptions).replaceAll('<', '\\u003c');
           <button type="button" data-admin-agent-close aria-label="收起Agent" title="收起">×</button>
         </div>
       </header>
-      <div class="post-editor-agent-messages" data-admin-agent-messages aria-live="polite"></div>
+      <div class="post-editor-agent-messages" data-admin-agent-messages aria-live="polite">
+        <section class="post-editor-agent-empty" data-admin-agent-empty>
+          <span class="post-editor-agent-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 3 13.8 8.2 19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"></path>
+            </svg>
+          </span>
+          <strong data-admin-agent-empty-title>想对当前笔记做什么？</strong>
+          <div class="post-editor-agent-commands" aria-label="编辑操作">
+            <button type="button" data-admin-agent-command="polish">润色表达</button>
+            <button type="button" data-admin-agent-command="continue">继续写作</button>
+            <button type="button" data-admin-agent-command="shorten">压缩内容</button>
+            <button type="button" data-admin-agent-command="rewrite">重新改写</button>
+            <button type="button" data-admin-agent-command="structure">整理结构</button>
+          </div>
+        </section>
+      </div>
       <form class="post-editor-agent-form" data-admin-agent-form>
-        <div class="post-editor-agent-commands" aria-label="编辑操作">
-          <button type="button" data-admin-agent-command="polish">润色</button>
-          <button type="button" data-admin-agent-command="continue">续写</button>
-          <button type="button" data-admin-agent-command="shorten">缩写</button>
-          <button type="button" data-admin-agent-command="rewrite">改写</button>
-          <button type="button" data-admin-agent-command="structure">整理</button>
+        <div class="post-editor-agent-context">
+          <span data-admin-agent-context>当前笔记</span>
         </div>
         <textarea
           rows="3"
@@ -231,7 +243,7 @@ const tagOptionsJson = JSON.stringify(tagOptions).replaceAll('<', '\\u003c');
           placeholder="询问或修改当前笔记"
           aria-label="给Agent发送消息"
         ></textarea>
-        <div>
+        <div class="post-editor-agent-form-actions">
           <select data-admin-agent-scope aria-label="修改范围">
             <option value="auto">智能范围</option>
             <option value="selection">选中内容</option>

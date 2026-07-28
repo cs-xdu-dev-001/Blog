@@ -120,10 +120,7 @@ test('admin writing assistant keeps the original document unchanged until the re
   assert.match(editor, /data-ai-review-result/);
   assert.match(editor, /data-ai-review-accept/);
   assert.match(editor, /data-ai-review-reject/);
-  assert.match(editor, /data-ai-review-drag-handle/);
-  assert.match(editor, /setPointerCapture/);
-  assert.match(editor, /addEventListener\('pointermove'/);
-  assert.match(editor, /Math\.max\(12,\s*Math\.min/);
+  assert.match(editor, /root\.closest\('\.post-editor-write'\)/);
   assert.match(editor, /replaceRange\(review\.result,\s*\{\s*from:\s*review\.from,\s*to:\s*review\.to\s*\}\)/);
   assert.match(editor, /crepe\.setReadonly\(true\)/);
   assert.match(editor, /crepe\.setReadonly\(false\)/);
@@ -135,8 +132,8 @@ test('admin writing assistant keeps the original document unchanged until the re
   assert.match(editor, /\/ai/);
   assert.doesNotMatch(editor, /createAIPalette/);
   assert.match(styles, /\.post-editor-ai-review/);
-  assert.match(styles, /\.post-editor-ai-review\s*\{[^}]*height:\s*auto;[^}]*max-height:\s*min\(560px,\s*calc\(100vh - 48px\)\);/s);
+  assert.match(styles, /\.post-editor-ai-review\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;/s);
   assert.match(styles, /\.post-editor-ai-review-document\s*\{[^}]*min-height:\s*0;[^}]*overflow:\s*auto;/s);
   assert.match(styles, /\.post-ai-review-change/);
-  assert.match(styles, /\.post-editor-ai-review\s*>\s*header\s*\{[^}]*cursor:\s*move;/s);
+  assert.match(styles, /\.post-editor-ai-review\s*>\s*header\s*\{[^}]*cursor:\s*default;/s);
 });

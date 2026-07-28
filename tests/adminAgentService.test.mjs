@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
-import { runAdminAgent } from '../src/lib/server/adminAgentService.mjs';
+import {
+  runAdminAgent,
+  streamAdminAgent,
+} from '../src/lib/server/adminAgentService.mjs';
 
 const config = {
   assistant: {
@@ -168,9 +171,33 @@ test('admin agent endpoint requires admin access and forwards abort signals', ()
   const source = fs.existsSync(url) ? fs.readFileSync(url, 'utf8') : '';
 
   assert.match(source, /requireAdmin\(context\)/);
-  assert.match(source, /runAdminAgent/);
+  assert.match(source, /streamAdminAgent/);
   assert.match(source, /signal:\s*context\.request\.signal/);
-  assert.match(source, /message:\s*result\.message/);
-  assert.match(source, /proposal:\s*result\.proposal/);
+  assert.match(source, /text\/event-stream/);
+  assert.match(source, /encodeAssistantSse/);
   assert.match(source, /status:\s*405/);
+});
+
+test('admin agent stream exposes progress without leaking private reasoning', async () => {
+  const events = [];
+  for await (const event of streamAdminAgent({
+    message: '润色',
+    document: '原文',
+  }, {
+    config,
+    requestText: async () => ({
+      ok: true,
+      text: '{"message":"已完成","proposal":{"scope":"document","markdown":"新文"}}',
+    }),
+  })) {
+    events.push(event);
+  }
+
+  assert.deepEqual(
+    events.filter((event) => event.event === 'phase').map((event) => event.data.label),
+    ['读取当前笔记', '分析修改目标', '生成修改建议'],
+  );
+  assert.equal(events.at(-1).event, 'result');
+  assert.equal(events.at(-1).data.message, '已完成');
+  assert.equal(JSON.stringify(events).includes('chain-of-thought'), false);
 });

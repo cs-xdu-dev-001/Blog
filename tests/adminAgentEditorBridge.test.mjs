@@ -12,6 +12,11 @@ test('Milkdown exposes immutable context and review hooks to the admin agent', (
   assert.match(editor, /captureContext/);
   assert.match(editor, /reviewProposal/);
   assert.match(editor, /aiReview\.openResult/);
+  assert.match(editor, /data-ai-review-note/);
+  assert.match(editor, /reviewProposal:\s*\(target,\s*proposal,\s*message/);
+  assert.match(editor, /root\.closest\('\.post-editor-write'\)/);
+  assert.match(editor, /coordsAtPos\(review\.from\)/);
+  assert.match(editor, /classList\.toggle\('is-selection'/);
   assert.match(editor, /crypto\.randomUUID\(\)/);
   assert.match(editor, /sourceDocument:\s*document/);
   assert.match(editor, /reviewIsCurrent\(review,\s*\{\s*activeReviewId,\s*currentDocument,\s*documentSize\s*\}\)/);
@@ -22,12 +27,16 @@ test('Milkdown exposes immutable context and review hooks to the admin agent', (
   assert.match(editor, />✓<\/button>/);
   assert.match(editor, /post-ai-review-change/);
   assert.match(editor, /new CustomEvent\('admin-agent:proposal-applied'/);
+  assert.match(editor, /listener\.selectionUpdated/);
+  assert.match(editor, /new CustomEvent\('admin-agent:selection-change'/);
+  assert.match(editor, /length:\s*Array\.from\(selection\)\.length/);
   assert.match(editor, /scope:\s*review\.scope/);
   assert.match(editor, /undoLastChange/);
   assert.match(editor, /undo\(view\.state,\s*view\.dispatch\)/);
   assert.match(styles, /\.post-ai-review-change/);
   assert.match(styles, /\.post-ai-review-removed/);
   assert.match(styles, /\.post-ai-review-added/);
+  assert.match(styles, /\.post-editor-ai-review\.is-selection/);
   assert.match(editor, /return\s*\{\s*open,\s*openResult,\s*close\s*\}/);
 });
 

@@ -80,6 +80,18 @@ function serializeSelection(ctx, view) {
   };
 }
 
+function notifyAgentSelection(selectionState) {
+  const { from, to, empty } = selectionState;
+  const selection = empty ? '' : selectionState.$from.doc.textBetween(from, to, ' ').trim();
+  document.dispatchEvent(new CustomEvent('admin-agent:selection-change', {
+    detail: {
+      hasSelection: !empty,
+      length: Array.from(selection).length,
+      preview: selection.replace(/\s+/g, ' ').slice(0, 80),
+    },
+  }));
+}
+
 function captureAITarget(crepe) {
   let target = null;
   crepe.editor.action((ctx) => {
@@ -118,6 +130,7 @@ function createAIReview(crepe) {
     </header>
     <div class="post-editor-ai-review-state" data-ai-review-state hidden></div>
     <div class="post-editor-ai-review-document" data-ai-review-document>
+      <p class="post-editor-ai-review-note" data-ai-review-note hidden></p>
       <section class="post-ai-review-change">
         <div class="post-ai-review-removed">
           <strong>原文</strong>
@@ -130,61 +143,48 @@ function createAIReview(crepe) {
       </section>
     </div>
   `;
-  (root.closest('.post-editor-page') || document.body).append(panel);
+  const reviewHost = root.closest('.post-editor-write') || document.body;
+  reviewHost.append(panel);
 
   const title = panel.querySelector('[data-ai-review-title]');
-  const dragHandle = panel.querySelector('[data-ai-review-drag-handle]');
   const stateEl = panel.querySelector('[data-ai-review-state]');
   const reviewDocument = panel.querySelector('[data-ai-review-document]');
+  const noteEl = panel.querySelector('[data-ai-review-note]');
   const originalEl = panel.querySelector('[data-ai-review-original]');
   const resultEl = panel.querySelector('[data-ai-review-result]');
   const acceptButton = panel.querySelector('[data-ai-review-accept]');
   const rejectButton = panel.querySelector('[data-ai-review-reject]');
   let review = null;
   let activeReviewId = null;
-  let dragState = null;
 
-  const stopDragging = (event) => {
-    if (!dragState || event.pointerId !== dragState.pointerId) return;
-    if (dragHandle.hasPointerCapture(event.pointerId)) {
-      dragHandle.releasePointerCapture(event.pointerId);
-    }
-    dragState = null;
-    panel.classList.remove('is-dragging');
-  };
-
-  dragHandle.addEventListener('pointerdown', (event) => {
-    if (event.button !== 0 || event.target.closest('button')) return;
-    const rect = panel.getBoundingClientRect();
-    dragState = {
-      pointerId: event.pointerId,
-      offsetX: event.clientX - rect.left,
-      offsetY: event.clientY - rect.top,
-      width: rect.width,
-      height: rect.height,
+  const positionSelectionReview = () => {
+    if (!review || review.scope !== 'selection') return;
+    const hostRect = reviewHost.getBoundingClientRect();
+    const maxWidth = Math.max(320, hostRect.width - 32);
+    const width = Math.min(720, maxWidth);
+    const maxHeight = Math.min(440, Math.max(240, hostRect.height - 32));
+    let anchor = {
+      left: hostRect.left + 16,
+      top: hostRect.top + 16,
+      bottom: hostRect.top + 16,
     };
-    panel.style.left = `${rect.left}px`;
-    panel.style.top = `${rect.top}px`;
-    panel.style.right = 'auto';
-    panel.style.bottom = 'auto';
-    panel.style.width = `${rect.width}px`;
-    dragHandle.setPointerCapture(event.pointerId);
-    panel.classList.add('is-dragging');
-    event.preventDefault();
-  });
-
-  dragHandle.addEventListener('pointermove', (event) => {
-    if (!dragState || event.pointerId !== dragState.pointerId) return;
-    const maxLeft = Math.max(12, window.innerWidth - dragState.width - 12);
-    const maxTop = Math.max(12, window.innerHeight - dragState.height - 12);
-    const left = Math.max(12, Math.min(event.clientX - dragState.offsetX, maxLeft));
-    const top = Math.max(12, Math.min(event.clientY - dragState.offsetY, maxTop));
-    panel.style.left = `${left}px`;
-    panel.style.top = `${top}px`;
-  });
-  dragHandle.addEventListener('pointerup', stopDragging);
-  dragHandle.addEventListener('pointercancel', stopDragging);
-
+    try {
+      crepe.editor.action((ctx) => {
+        anchor = ctx.get(editorViewCtx).coordsAtPos(review.from);
+      });
+    } catch {
+      // Fall back to the editor's top-left corner when the selection is no longer measurable.
+    }
+    const left = Math.max(16, Math.min(anchor.left - hostRect.left, hostRect.width - width - 16));
+    let top = anchor.bottom - hostRect.top + 10;
+    if (top + maxHeight > hostRect.height - 16) {
+      top = Math.max(16, anchor.top - hostRect.top - maxHeight - 10);
+    }
+    panel.style.left = `${Math.round(left)}px`;
+    panel.style.top = `${Math.round(top)}px`;
+    panel.style.width = `${Math.round(width)}px`;
+    panel.style.maxHeight = `${Math.round(maxHeight)}px`;
+  };
   const setLoading = (loading) => {
     panel.classList.toggle('is-loading', loading);
     acceptButton.disabled = loading || !review?.result;
@@ -203,8 +203,14 @@ function createAIReview(crepe) {
     }
   };
 
+  const resetReviewPanel = () => {
+    panel.classList.remove('is-selection');
+    panel.removeAttribute('style');
+  };
+
   const close = ({ restoreStatus = true } = {}) => {
     panel.hidden = true;
+    resetReviewPanel();
     restoreEditor();
     if (restoreStatus) setStatus(review?.previousStatus || 'READY');
     review = null;
@@ -223,7 +229,7 @@ function createAIReview(crepe) {
     resultEl.innerHTML = resultHtml;
   };
 
-  const openResult = (target, result, label = 'AI建议') => {
+  const openResult = (target, result, label = 'AI建议', message = '') => {
     if (!target || !String(result || '').trim()) return;
     review = {
       ...target,
@@ -234,7 +240,11 @@ function createAIReview(crepe) {
     };
     activeReviewId = review.id;
     title.textContent = label;
+    noteEl.textContent = String(message || '').trim();
+    noteEl.hidden = !noteEl.textContent;
+    panel.classList.toggle('is-selection', review.scope === 'selection');
     panel.hidden = false;
+    positionSelectionReview();
     crepe.setReadonly(true);
     setLoading(false);
     setStatus('AI REVIEW');
@@ -258,6 +268,7 @@ function createAIReview(crepe) {
     });
     if (!reviewIsCurrent(review, { activeReviewId, currentDocument, documentSize })) {
       panel.hidden = true;
+      resetReviewPanel();
       review = null;
       activeReviewId = null;
       restoreEditor();
@@ -269,6 +280,7 @@ function createAIReview(crepe) {
       detail: { scope: review.scope },
     }));
     panel.hidden = true;
+    resetReviewPanel();
     review = null;
     activeReviewId = null;
     restoreEditor();
@@ -422,6 +434,9 @@ export async function bootMilkdown() {
     listener.markdownUpdated((_ctx, markdown) => {
       syncMarkdown(markdown);
     });
+    listener.selectionUpdated((_ctx, selection) => {
+      notifyAgentSelection(selection);
+    });
   });
 
   try {
@@ -442,7 +457,7 @@ export async function bootMilkdown() {
         });
         return undone;
       },
-      reviewProposal: (target, proposal) => {
+      reviewProposal: (target, proposal, message = '') => {
         if (!target || !proposal?.markdown) return;
         const isDocument = proposal.scope === 'document';
         aiReview.openResult({
@@ -451,7 +466,7 @@ export async function bootMilkdown() {
           original: isDocument ? target.document : target.selection,
           from: isDocument ? target.documentFrom : target.from,
           to: isDocument ? target.documentTo : target.to,
-        }, proposal.markdown, 'Agent修改');
+        }, proposal.markdown, 'Agent修改', message);
       },
     };
     root.addEventListener('paste', (event) => {
