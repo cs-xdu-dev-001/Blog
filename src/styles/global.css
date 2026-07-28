@@ -8600,6 +8600,17 @@ button:focus-visible {
   padding: 12px;
 }
 
+.post-editor-agent-commands {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.post-editor-agent-commands button {
+  min-width: 0;
+  padding: 0 6px;
+}
+
 .post-editor-agent-form textarea {
   width: 100%;
   min-height: 78px;
@@ -8622,6 +8633,19 @@ button:focus-visible {
 
 .post-editor-agent-form > div {
   justify-content: flex-end;
+}
+
+.post-editor-agent-form select {
+  min-height: 34px;
+  margin-right: auto;
+  border: 1px solid var(--cms-line);
+  border-radius: 7px;
+  outline: 0;
+  background: var(--cms-surface-raised);
+  color: var(--cms-text-soft);
+  padding: 0 28px 0 9px;
+  font: inherit;
+  font-size: 14px;
 }
 
 .post-editor-meta {

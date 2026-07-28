@@ -17,6 +17,12 @@ test('post editor contains one docked admin agent panel', () => {
   assert.match(page, /data-admin-agent-input/);
   assert.match(page, /data-admin-agent-stop/);
   assert.match(page, /data-admin-agent-clear/);
+  assert.match(page, /data-admin-agent-command="polish"/);
+  assert.match(page, /data-admin-agent-command="continue"/);
+  assert.match(page, /data-admin-agent-command="shorten"/);
+  assert.match(page, /data-admin-agent-command="rewrite"/);
+  assert.match(page, /data-admin-agent-command="structure"/);
+  assert.match(page, /data-admin-agent-scope/);
   assert.match(page, /admin-post-agent\.js/);
 });
 
@@ -31,6 +37,11 @@ test('admin agent client supports context, cancellation, review, and bounded his
   assert.match(client, /\.slice\(-8\)/);
   assert.match(client, /admin-agent:open/);
   assert.match(client, /data-admin-agent-resize/);
+  assert.match(client, /scopePreference:\s*scopeSelect\?\.value/);
+  assert.match(client, /admin-agent:proposal-applied/);
+  assert.match(client, /已接纳修改/);
+  assert.match(client, /data-agent-undo/);
+  assert.match(client, /__postAgentBridge\?\.undoLastChange/);
 });
 
 test('locked notes must be unlocked before the agent reads or edits their body', () => {

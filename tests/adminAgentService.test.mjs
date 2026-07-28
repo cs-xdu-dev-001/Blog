@@ -123,6 +123,29 @@ test('admin agent prompt requires an edit proposal for direct editing requests',
   assert.match(captured.systemText, /必须返回proposal/);
 });
 
+test('admin agent honors an explicit editing scope', async () => {
+  let captured;
+  const result = await runAdminAgent({
+    message: '润色',
+    document: '# 原正文',
+    selection: '原句',
+    scopePreference: 'document',
+  }, {
+    config,
+    requestText: async (input) => {
+      captured = input;
+      return {
+        ok: true,
+        text: '{"message":"已生成修改建议。","proposal":{"scope":"document","markdown":"# 新正文"}}',
+      };
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.match(captured.messages.at(-1).content, /本次操作范围：整篇正文/);
+  assert.match(captured.systemText, /明确指定整篇正文时，proposal\.scope必须为document/);
+});
+
 test('admin agent rejects an invalid structured response', async () => {
   const result = await runAdminAgent({
     message: '润色',

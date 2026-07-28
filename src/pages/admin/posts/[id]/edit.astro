@@ -218,6 +218,13 @@ const tagOptionsJson = JSON.stringify(tagOptions).replaceAll('<', '\\u003c');
       </header>
       <div class="post-editor-agent-messages" data-admin-agent-messages aria-live="polite"></div>
       <form class="post-editor-agent-form" data-admin-agent-form>
+        <div class="post-editor-agent-commands" aria-label="编辑操作">
+          <button type="button" data-admin-agent-command="polish">润色</button>
+          <button type="button" data-admin-agent-command="continue">续写</button>
+          <button type="button" data-admin-agent-command="shorten">缩写</button>
+          <button type="button" data-admin-agent-command="rewrite">改写</button>
+          <button type="button" data-admin-agent-command="structure">整理</button>
+        </div>
         <textarea
           rows="3"
           data-admin-agent-input
@@ -225,6 +232,11 @@ const tagOptionsJson = JSON.stringify(tagOptions).replaceAll('<', '\\u003c');
           aria-label="给Agent发送消息"
         ></textarea>
         <div>
+          <select data-admin-agent-scope aria-label="修改范围">
+            <option value="auto">智能范围</option>
+            <option value="selection">选中内容</option>
+            <option value="document">整篇正文</option>
+          </select>
           <button type="button" data-admin-agent-stop hidden>停止</button>
           <button type="submit" class="primary">发送</button>
         </div>

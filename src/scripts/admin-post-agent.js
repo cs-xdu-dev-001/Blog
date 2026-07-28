@@ -8,8 +8,18 @@ const input = document.querySelector('[data-admin-agent-input]');
 const messagesEl = document.querySelector('[data-admin-agent-messages]');
 const stopButton = document.querySelector('[data-admin-agent-stop]');
 const resizeHandle = document.querySelector('[data-admin-agent-resize]');
+const scopeSelect = document.querySelector('[data-admin-agent-scope]');
+const commandButtons = document.querySelectorAll('[data-admin-agent-command]');
 const titleInput = document.querySelector('[name="title"]');
 const descriptionInput = document.querySelector('[name="description"]');
+
+const commandPrompts = {
+  polish: '润色内容，保持原意和事实不变，使表达更自然。',
+  continue: '沿用现有语气和结构续写内容。',
+  shorten: '压缩内容，删除重复表达，保留关键信息。',
+  rewrite: '重新组织并改写内容，使逻辑更清晰。',
+  structure: '整理内容结构，合理使用标题、列表和段落。',
+};
 
 let history = [];
 let abortController = null;
@@ -24,7 +34,7 @@ function setOpen(open) {
   if (open) requestAnimationFrame(() => input?.focus());
 }
 
-function addMessage(role, content, { proposal = null, target = null } = {}) {
+function addMessage(role, content, { proposal = null, target = null, undo = false } = {}) {
   if (!messagesEl) return;
   const article = document.createElement('article');
   article.className = `post-editor-agent-message is-${role}`;
@@ -41,6 +51,21 @@ function addMessage(role, content, { proposal = null, target = null } = {}) {
     });
     article.append(action);
   }
+  if (undo) {
+    messagesEl.querySelectorAll('[data-agent-undo]').forEach((button) => {
+      button.disabled = true;
+    });
+    const action = document.createElement('button');
+    action.type = 'button';
+    action.textContent = '撤销';
+    action.dataset.agentUndo = '';
+    action.addEventListener('click', () => {
+      if (!window.__postAgentBridge?.undoLastChange?.()) return;
+      body.textContent = '已撤销修改';
+      action.remove();
+    });
+    article.append(action);
+  }
   messagesEl.append(article);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
@@ -48,6 +73,8 @@ function addMessage(role, content, { proposal = null, target = null } = {}) {
 function setBusy(busy) {
   if (input) input.disabled = busy;
   if (stopButton) stopButton.hidden = !busy;
+  if (scopeSelect) scopeSelect.disabled = busy;
+  commandButtons.forEach((button) => { button.disabled = busy; });
   form?.querySelector('button[type="submit"]')?.toggleAttribute('disabled', busy);
 }
 
@@ -61,6 +88,10 @@ async function sendMessage(message) {
   const target = bridge?.captureContext?.();
   if (!target) {
     addMessage('error', '编辑器尚未就绪');
+    return;
+  }
+  if (scopeSelect?.value === 'selection' && !target.selection) {
+    addMessage('error', '请先在正文中选中要修改的内容');
     return;
   }
 
@@ -84,6 +115,7 @@ async function sendMessage(message) {
         description: descriptionInput?.value || '',
         document: target.document,
         selection: target.selection,
+        scopePreference: scopeSelect?.value || 'auto',
       }),
     });
     const data = await response.json().catch(() => ({}));
@@ -109,6 +141,9 @@ async function sendMessage(message) {
 toggle?.addEventListener('click', () => setOpen(panel?.hidden));
 closeButton?.addEventListener('click', () => setOpen(false));
 document.addEventListener('admin-agent:open', () => setOpen(true));
+document.addEventListener('admin-agent:proposal-applied', () => {
+  addMessage('assistant', '已接纳修改', { undo: true });
+});
 
 clearButton?.addEventListener('click', () => {
   abortController?.abort();
@@ -118,6 +153,13 @@ clearButton?.addEventListener('click', () => {
   input?.focus();
 });
 stopButton?.addEventListener('click', () => abortController?.abort());
+commandButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    const message = commandPrompts[button.dataset.adminAgentCommand];
+    if (!message || abortController) return;
+    void sendMessage(message);
+  });
+});
 
 form?.addEventListener('submit', (event) => {
   event.preventDefault();

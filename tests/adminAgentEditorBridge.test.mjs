@@ -21,6 +21,10 @@ test('Milkdown exposes immutable context and review hooks to the admin agent', (
   assert.match(editor, />✕<\/button>/);
   assert.match(editor, />✓<\/button>/);
   assert.match(editor, /post-ai-review-change/);
+  assert.match(editor, /new CustomEvent\('admin-agent:proposal-applied'/);
+  assert.match(editor, /scope:\s*review\.scope/);
+  assert.match(editor, /undoLastChange/);
+  assert.match(editor, /undo\(view\.state,\s*view\.dispatch\)/);
   assert.match(styles, /\.post-ai-review-change/);
   assert.match(styles, /\.post-ai-review-removed/);
   assert.match(styles, /\.post-ai-review-added/);

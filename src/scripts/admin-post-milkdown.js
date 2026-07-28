@@ -10,6 +10,7 @@ import { placeholder } from '@milkdown/crepe/feature/placeholder';
 import { table } from '@milkdown/crepe/feature/table';
 import { toolbar } from '@milkdown/crepe/feature/toolbar';
 import { editorViewCtx, serializerCtx } from '@milkdown/kit/core';
+import { undo } from '@milkdown/kit/prose/history';
 import { insert, replaceAll, replaceRange } from '@milkdown/utils';
 import { reviewIsCurrent } from './admin-agent-review.js';
 import { languages as codeLanguages } from './codemirror-language-data.js';
@@ -264,6 +265,9 @@ function createAIReview(crepe) {
       return;
     }
     crepe.editor.action(replaceRange(review.result, { from: review.from, to: review.to }));
+    document.dispatchEvent(new CustomEvent('admin-agent:proposal-applied', {
+      detail: { scope: review.scope },
+    }));
     panel.hidden = true;
     review = null;
     activeReviewId = null;
@@ -429,11 +433,21 @@ export async function bootMilkdown() {
     const aiReview = createAIReview(crepe);
     window.__postAgentBridge = {
       captureContext: () => captureAITarget(crepe),
+      undoLastChange: () => {
+        let undone = false;
+        crepe.editor.action((ctx) => {
+          const view = ctx.get(editorViewCtx);
+          undone = undo(view.state, view.dispatch);
+          if (undone) view.focus();
+        });
+        return undone;
+      },
       reviewProposal: (target, proposal) => {
         if (!target || !proposal?.markdown) return;
         const isDocument = proposal.scope === 'document';
         aiReview.openResult({
           ...target,
+          scope: proposal.scope,
           original: isDocument ? target.document : target.selection,
           from: isDocument ? target.documentFrom : target.from,
           to: isDocument ? target.documentTo : target.to,
