@@ -9396,7 +9396,6 @@ button:focus-visible {
 }
 
 .post-editor-write {
-  --selection-review-height: clamp(220px, 38%, 340px);
   position: relative;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -9440,12 +9439,7 @@ button:focus-visible {
   min-height: 0;
   overflow: hidden;
   opacity: 1;
-  transition: inset 160ms ease, opacity 120ms ease;
-}
-
-.post-editor-write.has-selection-review .post-editor-milkdown {
-  inset: var(--selection-review-height) 0 0;
-  height: auto;
+  transition: opacity 120ms ease;
 }
 
 .post-editor-milkdown[data-editor-state="idle"],
@@ -9670,37 +9664,6 @@ html[data-admin-theme="light"] .post-editor-milkdown .milkdown {
   display: none;
 }
 
-.post-editor-ai-review.is-selection {
-  inset: 0 0 auto;
-  height: var(--selection-review-height);
-  min-height: 0;
-  border-bottom: 1px solid var(--cms-line-strong);
-  border-radius: 17px 17px 0 0;
-  box-shadow: none;
-}
-
-.post-editor-ai-review.is-selection .post-editor-ai-review-document {
-  padding: 14px 18px 18px;
-}
-
-.post-editor-ai-review.is-selection .post-editor-ai-review-note,
-.post-editor-ai-review.is-selection .post-ai-review-change {
-  width: 100%;
-}
-
-.post-editor-ai-review.is-selection .post-ai-review-change {
-  grid-template-columns: minmax(0, 1fr);
-  border-left-color: var(--cms-success);
-}
-
-.post-editor-ai-review.is-selection .post-ai-review-removed {
-  display: none;
-}
-
-.post-editor-ai-review.is-selection .post-ai-review-added {
-  border-left: 0;
-}
-
 .post-editor-ai-review > header {
   display: flex;
   min-height: 54px;
@@ -9853,6 +9816,81 @@ html[data-admin-theme="light"] .post-editor-milkdown .milkdown {
 
 .post-editor-ai-review .article-prose > :first-child {
   margin-top: 0;
+}
+
+.post-ai-inline-source {
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--cms-accent) 15%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--cms-accent) 8%, transparent);
+}
+
+.post-ai-inline-review {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  width: 100%;
+  margin: 12px 0 22px;
+  border: 1px solid var(--cms-line);
+  border-left: 3px solid var(--cms-success);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--cms-success) 6%, var(--cms-surface));
+  padding: 14px 12px 14px 16px;
+}
+
+.post-ai-inline-review-body {
+  min-width: 0;
+}
+
+.post-ai-inline-review-body > p {
+  margin: 0 0 8px;
+  color: var(--cms-text-soft);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.post-ai-inline-review .article-prose {
+  max-width: none;
+  color: var(--cms-text);
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.post-ai-inline-review .article-prose > :first-child {
+  margin-top: 0;
+}
+
+.post-ai-inline-review .article-prose > :last-child {
+  margin-bottom: 0;
+}
+
+.post-ai-inline-review-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.post-ai-inline-review-actions button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--cms-line-strong);
+  border-radius: 7px;
+  background: var(--cms-surface);
+  color: var(--cms-text-soft);
+  font: inherit;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.post-ai-inline-review-actions button:hover {
+  background: var(--cms-active-bg);
+  color: var(--cms-text);
+}
+
+.post-ai-inline-review-actions button.is-primary {
+  border-color: var(--cms-accent);
+  background: var(--cms-accent);
+  color: #fff;
 }
 
 @media (max-width: 900px) {

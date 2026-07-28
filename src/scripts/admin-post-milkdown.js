@@ -11,7 +11,9 @@ import { table } from '@milkdown/crepe/feature/table';
 import { toolbar } from '@milkdown/crepe/feature/toolbar';
 import { editorViewCtx, serializerCtx } from '@milkdown/kit/core';
 import { undo } from '@milkdown/kit/prose/history';
-import { insert, replaceAll, replaceRange } from '@milkdown/utils';
+import { Plugin, PluginKey } from '@milkdown/kit/prose/state';
+import { Decoration, DecorationSet } from '@milkdown/kit/prose/view';
+import { $prose, insert, replaceAll, replaceRange } from '@milkdown/utils';
 import { reviewIsCurrent } from './admin-agent-review.js';
 import { languages as codeLanguages } from './codemirror-language-data.js';
 import '@milkdown/crepe/theme/common/reset.css';
@@ -115,6 +117,72 @@ async function renderAIReviewMarkdown(markdown) {
   return data.html;
 }
 
+const inlineAIReviewKey = new PluginKey('admin-inline-ai-review');
+
+function inlineReviewPosition(doc, to) {
+  const $to = doc.resolve(to);
+  for (let depth = $to.depth; depth > 0; depth -= 1) {
+    if ($to.node(depth).isBlock) return $to.after(depth);
+  }
+  return to;
+}
+
+function createInlineReviewDOM(review) {
+  const element = document.createElement('section');
+  element.className = 'post-ai-inline-review';
+  element.contentEditable = 'false';
+  element.innerHTML = `
+    <div class="post-ai-inline-review-body">
+      <p data-inline-review-message></p>
+      <div class="article-prose" data-inline-review-result></div>
+    </div>
+    <div class="post-ai-inline-review-actions">
+      <button type="button" data-inline-review-reject aria-label="放弃修改" title="放弃修改">✕</button>
+      <button type="button" class="is-primary" data-inline-review-accept aria-label="接纳修改" title="接纳修改">✓</button>
+    </div>
+  `;
+  const messageEl = element.querySelector('[data-inline-review-message]');
+  const resultEl = element.querySelector('[data-inline-review-result]');
+  messageEl.textContent = review.message;
+  messageEl.hidden = !review.message;
+  resultEl.innerHTML = review.html;
+  element.querySelector('[data-inline-review-reject]')?.addEventListener('click', review.onReject);
+  element.querySelector('[data-inline-review-accept]')?.addEventListener('click', review.onAccept);
+  return element;
+}
+
+const inlineAIReviewFeature = $prose(() => new Plugin({
+  key: inlineAIReviewKey,
+  state: {
+    init: () => null,
+    apply: (transaction, current) => {
+      const next = transaction.getMeta(inlineAIReviewKey);
+      if (next !== undefined) return next;
+      return transaction.docChanged ? null : current;
+    },
+  },
+  props: {
+    decorations(state) {
+      const review = inlineAIReviewKey.getState(state);
+      if (!review || review.from >= review.to || review.to > state.doc.content.size) {
+        return DecorationSet.empty;
+      }
+      return DecorationSet.create(state.doc, [
+        Decoration.inline(review.from, review.to, { class: 'post-ai-inline-source' }),
+        Decoration.widget(
+          inlineReviewPosition(state.doc, review.to),
+          () => createInlineReviewDOM(review),
+          {
+            key: `admin-inline-ai-review-${review.id}`,
+            side: 1,
+            stopEvent: () => true,
+          },
+        ),
+      ]);
+    },
+  },
+}));
+
 function createAIReview(crepe) {
   const panel = document.createElement('section');
   panel.className = 'post-editor-ai-review';
@@ -157,6 +225,30 @@ function createAIReview(crepe) {
   let review = null;
   let activeReviewId = null;
 
+  const clearInlineReview = () => {
+    crepe.editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx);
+      view.dispatch(view.state.tr.setMeta(inlineAIReviewKey, null));
+    });
+  };
+
+  const showInlineReview = (html, onAccept, onReject) => {
+    crepe.editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx);
+      view.dispatch(view.state.tr
+        .setMeta(inlineAIReviewKey, {
+          id: review.id,
+          from: review.from,
+          to: review.to,
+          html,
+          message: review.message,
+          onAccept,
+          onReject,
+        })
+        .scrollIntoView());
+    });
+  };
+
   const setLoading = (loading) => {
     panel.classList.toggle('is-loading', loading);
     acceptButton.disabled = loading || !review?.result;
@@ -176,19 +268,8 @@ function createAIReview(crepe) {
   };
 
   const resetReviewPanel = () => {
-    panel.classList.remove('is-selection');
-    reviewHost.classList.remove('has-selection-review');
+    clearInlineReview();
     panel.removeAttribute('style');
-  };
-
-  const revealSelection = () => {
-    if (review?.scope !== 'selection') return;
-    requestAnimationFrame(() => {
-      crepe.editor.action((ctx) => {
-        const view = ctx.get(editorViewCtx);
-        view.dispatch(view.state.tr.scrollIntoView());
-      });
-    });
   };
 
   const close = ({ restoreStatus = true } = {}) => {
@@ -200,56 +281,7 @@ function createAIReview(crepe) {
     activeReviewId = null;
   };
 
-  const render = async () => {
-    if (!review) return;
-    const original = review.original || '';
-    if (review.scope === 'selection') {
-      const resultHtml = await renderAIReviewMarkdown(review.result);
-      if (!review) return;
-      originalEl.replaceChildren();
-      resultEl.innerHTML = resultHtml;
-      return;
-    }
-    const [originalHtml, resultHtml] = await Promise.all([
-      renderAIReviewMarkdown(original),
-      renderAIReviewMarkdown(review.result),
-    ]);
-    if (!review) return;
-    originalEl.innerHTML = originalHtml;
-    resultEl.innerHTML = resultHtml;
-  };
-
-  const openResult = (target, result, label = 'AI建议', message = '') => {
-    if (!target || !String(result || '').trim()) return;
-    review = {
-      ...target,
-      id: target.id || crypto.randomUUID(),
-      label,
-      result: String(result),
-      previousStatus: statusEl?.textContent || 'READY',
-    };
-    activeReviewId = review.id;
-    title.textContent = label;
-    noteEl.textContent = String(message || '').trim();
-    noteEl.hidden = !noteEl.textContent;
-    const isSelection = review.scope === 'selection';
-    panel.classList.toggle('is-selection', isSelection);
-    reviewHost.classList.toggle('has-selection-review', isSelection);
-    panel.hidden = false;
-    crepe.setReadonly(true);
-    revealSelection();
-    setLoading(false);
-    setStatus('AI REVIEW');
-    void render().catch((error) => {
-      stateEl.hidden = false;
-      reviewDocument.hidden = true;
-      stateEl.textContent = error instanceof Error ? error.message : '结果预览失败';
-      acceptButton.disabled = true;
-    });
-  };
-  const open = openResult;
-
-  acceptButton.addEventListener('click', () => {
+  const acceptReview = () => {
     if (!review?.result) return;
     let currentDocument = '';
     let documentSize = 0;
@@ -277,7 +309,61 @@ function createAIReview(crepe) {
     activeReviewId = null;
     restoreEditor();
     setStatus('UNSAVED');
-  });
+  };
+
+  const render = async () => {
+    if (!review) return;
+    const original = review.original || '';
+    if (review.scope === 'selection') {
+      const resultHtml = await renderAIReviewMarkdown(review.result);
+      if (!review) return;
+      showInlineReview(resultHtml, acceptReview, () => close());
+      return;
+    }
+    const [originalHtml, resultHtml] = await Promise.all([
+      renderAIReviewMarkdown(original),
+      renderAIReviewMarkdown(review.result),
+    ]);
+    if (!review) return;
+    originalEl.innerHTML = originalHtml;
+    resultEl.innerHTML = resultHtml;
+  };
+
+  const openResult = (target, result, label = 'AI建议', message = '') => {
+    if (!target || !String(result || '').trim()) return;
+    review = {
+      ...target,
+      id: target.id || crypto.randomUUID(),
+      label,
+      result: String(result),
+      message: String(message || '').trim(),
+      previousStatus: statusEl?.textContent || 'READY',
+    };
+    activeReviewId = review.id;
+    title.textContent = label;
+    noteEl.textContent = String(message || '').trim();
+    noteEl.hidden = !noteEl.textContent;
+    const isSelection = review.scope === 'selection';
+    panel.hidden = isSelection;
+    crepe.setReadonly(true);
+    setLoading(false);
+    setStatus('AI REVIEW');
+    void render().catch((error) => {
+      if (isSelection) {
+        clearInlineReview();
+        restoreEditor();
+        setStatus(error instanceof Error ? error.message : '结果预览失败');
+        return;
+      }
+      stateEl.hidden = false;
+      reviewDocument.hidden = true;
+      stateEl.textContent = error instanceof Error ? error.message : '结果预览失败';
+      acceptButton.disabled = true;
+    });
+  };
+  const open = openResult;
+
+  acceptButton.addEventListener('click', acceptReview);
   rejectButton.addEventListener('click', () => close());
   panel.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
@@ -378,6 +464,7 @@ export async function bootMilkdown() {
     root,
     defaultValue: input.value || '',
   });
+  crepe.editor.use(inlineAIReviewFeature);
   crepe
     .addFeature(cursor)
     .addFeature(listItem)
