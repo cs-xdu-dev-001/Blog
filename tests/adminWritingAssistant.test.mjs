@@ -111,8 +111,8 @@ test('admin writing assistant keeps the original document unchanged until the re
   assert.match(endpoint, /editAssistantMarkdown/);
   assert.match(endpoint, /context\.request\.signal/);
 
-  assert.match(editor, /import\s+\{\s*Crepe\s*\}\s+from\s+'@milkdown\/crepe'/);
-  assert.doesNotMatch(editor, /\[Crepe\.Feature\.AI\]:\s*true/);
+  assert.match(editor, /import\s+\{\s*CrepeBuilder\s*\}\s+from\s+'@milkdown\/crepe\/builder'/);
+  assert.doesNotMatch(editor, /@milkdown\/crepe\/feature\/ai/);
   assert.doesNotMatch(editor, /callCommand\('RunAI'/);
   assert.doesNotMatch(editor, /\/api\/admin\/assistant\/write/);
   assert.match(editor, /data-ai-review/);
@@ -127,7 +127,7 @@ test('admin writing assistant keeps the original document unchanged until the re
   assert.match(editor, /replaceRange\(review\.result,\s*\{\s*from:\s*review\.from,\s*to:\s*review\.to\s*\}\)/);
   assert.match(editor, /crepe\.setReadonly\(true\)/);
   assert.match(editor, /crepe\.setReadonly\(false\)/);
-  assert.match(editor, /\[Crepe\.Feature\.Toolbar\]/);
+  assert.match(editor, /\.addFeature\(toolbar/);
   assert.match(editor, /buildToolbar:\s*\(builder\)/);
   assert.match(editor, /addItem\('ai'/);
   assert.match(editor, /admin-agent:open/);

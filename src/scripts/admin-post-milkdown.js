@@ -1,6 +1,16 @@
-import { Crepe } from '@milkdown/crepe';
+import { CrepeBuilder } from '@milkdown/crepe/builder';
+import { blockEdit } from '@milkdown/crepe/feature/block-edit';
+import { codeMirror } from '@milkdown/crepe/feature/code-mirror';
+import { cursor } from '@milkdown/crepe/feature/cursor';
+import { imageBlock } from '@milkdown/crepe/feature/image-block';
+import { latex } from '@milkdown/crepe/feature/latex';
+import { linkTooltip } from '@milkdown/crepe/feature/link-tooltip';
+import { listItem } from '@milkdown/crepe/feature/list-item';
+import { placeholder } from '@milkdown/crepe/feature/placeholder';
+import { table } from '@milkdown/crepe/feature/table';
+import { toolbar } from '@milkdown/crepe/feature/toolbar';
 import { editorViewCtx, serializerCtx } from '@milkdown/kit/core';
-import { insert, replaceRange } from '@milkdown/utils';
+import { insert, replaceAll, replaceRange } from '@milkdown/utils';
 import { reviewIsCurrent } from './admin-agent-review.js';
 import { languages as codeLanguages } from './codemirror-language-data.js';
 import '@milkdown/crepe/theme/common/reset.css';
@@ -350,52 +360,59 @@ export async function bootMilkdown() {
   if (!root || !input) return;
   if (root.dataset.milkdownReady === 'true') return window.__postMilkdownEditor;
 
+  const fallback = document.querySelector('[data-editor-fallback]');
+  const initialMarkdown = input.value;
   root.replaceChildren();
   root.removeAttribute('tabindex');
   const openAdminAgent = () => document.dispatchEvent(new CustomEvent('admin-agent:open'));
 
-  const crepe = new Crepe({
+  const crepe = new CrepeBuilder({
     root,
     defaultValue: input.value || '',
-    featureConfigs: {
-      [Crepe.Feature.ImageBlock]: {
-        blockUploadButton: '上传图片',
-        blockUploadPlaceholderText: '粘贴图片链接',
-        blockCaptionPlaceholderText: '图片说明',
-        inlineUploadButton: '上传图片',
-        inlineUploadPlaceholderText: '粘贴图片链接',
-        onUpload: async (file) => {
-          setStatus('UPLOADING IMAGE');
-          const imagePath = await uploadPostImage(file);
-          if (!imagePath) throw new Error('图片上传失败');
-          return imagePath;
-        },
-        onImageLoadError: (event) => {
-          event.currentTarget?.classList?.add('is-image-error');
-        },
-      },
-      [Crepe.Feature.Placeholder]: {
-        text: '开始写正文',
-      },
-      [Crepe.Feature.Toolbar]: {
-        aiIcon,
-        buildToolbar: (builder) => {
-          builder.addGroup('ai-tools', 'AI').addItem('ai', {
-            icon: aiIcon,
-            active: () => false,
-            onRun: openAdminAgent,
-          });
-        },
-      },
-      [Crepe.Feature.CodeMirror]: {
-        languages: codeLanguages,
-        copyText: '复制',
-        searchPlaceholder: '搜索语言',
-        noResultText: '无结果',
-        previewToggleText: (previewOnlyMode) => (previewOnlyMode ? '编辑' : '隐藏'),
-      },
-    },
   });
+  crepe
+    .addFeature(cursor)
+    .addFeature(listItem)
+    .addFeature(linkTooltip)
+    .addFeature(imageBlock, {
+      blockUploadButton: '上传图片',
+      blockUploadPlaceholderText: '粘贴图片链接',
+      blockCaptionPlaceholderText: '图片说明',
+      inlineUploadButton: '上传图片',
+      inlineUploadPlaceholderText: '粘贴图片链接',
+      onUpload: async (file) => {
+        setStatus('UPLOADING IMAGE');
+        const imagePath = await uploadPostImage(file);
+        if (!imagePath) throw new Error('图片上传失败');
+        return imagePath;
+      },
+      onImageLoadError: (event) => {
+        event.currentTarget?.classList?.add('is-image-error');
+      },
+    })
+    .addFeature(blockEdit)
+    .addFeature(placeholder, {
+      text: '开始写正文',
+    })
+    .addFeature(toolbar, {
+      aiIcon,
+      buildToolbar: (builder) => {
+        builder.addGroup('ai-tools', 'AI').addItem('ai', {
+          icon: aiIcon,
+          active: () => false,
+          onRun: openAdminAgent,
+        });
+      },
+    })
+    .addFeature(codeMirror, {
+      languages: codeLanguages,
+      copyText: '复制',
+      searchPlaceholder: '搜索语言',
+      noResultText: '无结果',
+      previewToggleText: (previewOnlyMode) => (previewOnlyMode ? '编辑' : '隐藏'),
+    })
+    .addFeature(table)
+    .addFeature(latex);
 
   crepe.on((listener) => {
     listener.markdownUpdated((_ctx, markdown) => {
@@ -405,6 +422,10 @@ export async function bootMilkdown() {
 
   try {
     await crepe.create();
+    if (input.value !== initialMarkdown) {
+      crepe.editor.action(replaceAll(input.value));
+    }
+    if (fallback) fallback.hidden = true;
     const aiReview = createAIReview(crepe);
     window.__postAgentBridge = {
       captureContext: () => captureAITarget(crepe),

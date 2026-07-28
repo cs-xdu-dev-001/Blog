@@ -186,17 +186,21 @@ const tagOptionsJson = JSON.stringify(tagOptions).replaceAll('<', '\\u003c');
 
       <section class="post-editor-main">
         <section class="post-editor-pane post-editor-write post-editor-wysiwyg">
-          <textarea class="post-editor-textarea" name="body" hidden data-markdown-input>{post.body || ''}</textarea>
+          <textarea
+            class="post-editor-textarea"
+            name="body"
+            data-markdown-input
+            data-editor-fallback
+            aria-label="正文"
+          >{post.body || ''}</textarea>
           <div
             class="post-editor-milkdown"
             data-milkdown-editor
             data-editor-state="idle"
-            tabindex="0"
+            tabindex="-1"
             aria-label="正文编辑器"
             aria-busy="true"
-          >
-            <span class="post-editor-loading">编辑器加载中</span>
-          </div>
+          ></div>
         </section>
 
         <article class="post-editor-pane post-editor-preview article-prose" data-markdown-preview></article>

@@ -9279,42 +9279,32 @@ button:focus-visible {
 
 .post-editor-wysiwyg {
   display: block;
+  position: relative;
   overflow: hidden;
 }
 
 .post-editor-milkdown {
+  position: absolute;
+  inset: 0;
   height: 100%;
   min-height: 0;
   overflow: hidden;
+  opacity: 1;
+  transition: opacity 120ms ease;
 }
 
 .post-editor-milkdown[data-editor-state="idle"],
 .post-editor-milkdown[data-editor-state="loading"],
 .post-editor-milkdown[data-editor-state="error"] {
-  display: grid;
-  place-items: center;
-}
-
-.post-editor-loading {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--cms-text-soft);
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.post-editor-loading::before {
-  width: 14px;
-  height: 14px;
-  border: 2px solid var(--cms-line-strong);
-  border-top-color: var(--cms-accent);
-  border-radius: 50%;
-  content: "";
-  animation: post-editor-loading-spin 0.7s linear infinite;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .post-editor-load-retry {
+  position: absolute;
+  z-index: 4;
+  top: 14px;
+  right: 14px;
   border: 1px solid var(--cms-line-strong);
   border-radius: 6px;
   background: var(--cms-surface-raised);
@@ -9323,18 +9313,6 @@ button:focus-visible {
   font: inherit;
   font-weight: 700;
   cursor: pointer;
-}
-
-@keyframes post-editor-loading-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .post-editor-loading::before {
-    animation: none;
-  }
 }
 
 .post-editor-milkdown .milkdown {

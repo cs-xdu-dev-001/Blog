@@ -1,6 +1,12 @@
 const root = document.querySelector('[data-milkdown-editor]');
-let editorModulePromise = import('./admin-post-milkdown.js');
+const fallback = document.querySelector('[data-editor-fallback]');
+let editorModulePromise = null;
 let loadPromise = null;
+
+function getEditorModule() {
+  editorModulePromise ??= import('./admin-post-milkdown.js');
+  return editorModulePromise;
+}
 
 function setEditorState(state) {
   if (!root) return;
@@ -10,17 +16,17 @@ function setEditorState(state) {
 
 function renderRetry() {
   if (!root) return;
+  root.parentElement?.querySelector('[data-editor-retry]')?.remove();
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'post-editor-load-retry';
   button.setAttribute('data-editor-retry', 'true');
   button.textContent = '重新加载编辑器';
   button.addEventListener('click', () => {
-    editorModulePromise = import('./admin-post-milkdown.js');
     loadPromise = null;
     void loadEditor().catch(() => {});
   }, { once: true });
-  root.replaceChildren(button);
+  root.parentElement?.append(button);
 }
 
 async function loadEditor() {
@@ -28,10 +34,14 @@ async function loadEditor() {
   if (loadPromise) return loadPromise;
 
   setEditorState('loading');
-  loadPromise = editorModulePromise
+  performance.mark('post-editor-load-start');
+  loadPromise = getEditorModule()
     .then(({ bootMilkdown }) => bootMilkdown())
     .then(() => {
       setEditorState('ready');
+      root.parentElement?.querySelector('[data-editor-retry]')?.remove();
+      performance.mark('post-editor-ready');
+      performance.measure('post-editor-load', 'post-editor-load-start', 'post-editor-ready');
     })
     .catch((error) => {
       setEditorState('error');
@@ -49,11 +59,17 @@ function loadFromInteraction() {
 if (root) {
   root.addEventListener('pointerdown', loadFromInteraction, { once: true, passive: true });
   root.addEventListener('focusin', loadFromInteraction, { once: true });
+  fallback?.addEventListener('pointerdown', loadFromInteraction, { once: true, passive: true });
+  fallback?.addEventListener('focusin', loadFromInteraction, { once: true });
   document.querySelectorAll('[data-editor-mode]').forEach((button) => {
     button.addEventListener('click', () => {
       if (button.dataset.editorMode !== 'preview') loadFromInteraction();
     });
   });
 
-  requestAnimationFrame(loadFromInteraction);
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(loadFromInteraction, { timeout: 300 });
+  } else {
+    window.setTimeout(loadFromInteraction, 0);
+  }
 }
