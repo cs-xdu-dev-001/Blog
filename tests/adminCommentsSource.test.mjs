@@ -17,7 +17,9 @@ test('admin shell exposes a dedicated comment management index', () => {
   assert.match(page, /data-comments-admin/);
   assert.match(page, /data-comments-list/);
   assert.match(page, /\/admin-comments\.js/);
-  assert.match(script, /fetch\('\/api\/admin\/comments'/);
+  assert.match(script, /'\/api\/admin\/comments'/);
+  assert.match(script, /'\/api\/admin\/comments\?refresh=1'/);
+  assert.match(script, /fetch\(url,/);
   assert.match(script, /method:\s*'DELETE'/);
   assert.match(script, /encodeURIComponent\(id\)/);
   assert.match(script, /window\.confirm/);

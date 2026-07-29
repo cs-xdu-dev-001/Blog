@@ -14,7 +14,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const adminHash = process.env.ADMIN_PASSWORD_HASH || (import.meta.env.DEV ? devPasswordHash : '');
 
   if (username !== adminUser || !adminHash || !verifyPassword(password, adminHash)) {
-    return new Response('Invalid credentials', { status: 401 });
+    return redirect('/admin/login?error=credentials', 303);
   }
 
   cookies.set(getSessionCookieName(), createSessionToken(username), {
@@ -25,5 +25,5 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     maxAge: 60 * 60 * 24 * 30,
   });
 
-  return redirect('/admin/watch');
+  return redirect('/admin/watch', 303);
 };

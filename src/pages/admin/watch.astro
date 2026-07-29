@@ -25,6 +25,9 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     </div>
     <div class="cms-index-list">
       <div class="cms-index-list-head"><span>影像</span><span>类型</span><span>状态</span><span></span></div>
+      <div class="cms-index-error" data-watch-error hidden>
+        <button class="cms-button" type="button" data-watch-retry>重新读取</button>
+      </div>
       <div data-watch-list></div>
     </div>
   </section>

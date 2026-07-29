@@ -276,3 +276,45 @@ test('GitHub comments identify GraphQL node limit errors', async () => {
       && error.message === 'GitHub留言查询超过节点上限',
   );
 });
+
+test('GitHub comments cache recent lists, share in-flight loads, and honor forced refresh', async () => {
+  let requests = 0;
+  let now = 1_000;
+  let releaseFirst;
+  const firstResponse = new Promise((resolve) => { releaseFirst = resolve; });
+  const service = createGithubCommentsService({
+    token: 'github_pat_secret',
+    cacheTtlMs: 5_000,
+    nowImpl: () => now,
+    fetchImpl: async () => {
+      requests += 1;
+      if (requests === 1) await firstResponse;
+      return Response.json({
+        data: {
+          repository: {
+            discussions: {
+              pageInfo: { hasNextPage: false, endCursor: null },
+              nodes: [],
+            },
+          },
+        },
+      });
+    },
+  });
+
+  const first = service.listComments({ repo, categoryId });
+  const joined = service.listComments({ repo, categoryId });
+  releaseFirst();
+  assert.deepEqual(await first, await joined);
+  assert.equal(requests, 1);
+
+  await service.listComments({ repo, categoryId });
+  assert.equal(requests, 1);
+
+  await service.listComments({ repo, categoryId, force: true });
+  assert.equal(requests, 2);
+
+  now += 6_000;
+  await service.listComments({ repo, categoryId });
+  assert.equal(requests, 3);
+});

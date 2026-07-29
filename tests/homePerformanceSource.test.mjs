@@ -8,6 +8,8 @@ const styles = fs.readFileSync(new URL('../src/styles/global.css', import.meta.u
 test('homepage watch archive renders a fixed card pool instead of the full duplicated archive', () => {
   assert.doesNotMatch(indexPage, /\[\.\.\.row\.items,\s*\.\.\.row\.items\]/);
   assert.match(indexPage, /const WATCH_TRACK_BATCH_SIZE = 12/);
+  assert.match(indexPage, /const WATCH_TRACK_CATALOG_SIZE = 48/);
+  assert.match(indexPage, /takeWatchBatch\(fullCatalog, catalogStart, WATCH_TRACK_CATALOG_SIZE\)/);
   assert.match(indexPage, /data-watch-catalog/);
   assert.match(indexPage, /decoding="async"/);
   assert.match(indexPage, /fetchpriority="low"/);

@@ -2,7 +2,9 @@ const page = document.querySelector('[data-site-section]');
 const section = page?.dataset.siteSection || 'site';
 const form = document.querySelector('[data-site-form]');
 const saveState = document.querySelector('[data-save-state]');
-const state = { config: null, sections: [] };
+const saveButtons = [...document.querySelectorAll('[type="submit"][form="site-settings-form"]')];
+const testAssistantButton = document.querySelector('[data-test-assistant]');
+const state = { config: null, sections: [], loaded: false, saving: false, dirty: false, savedSignature: '' };
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -14,7 +16,19 @@ function escapeHtml(value) {
 }
 
 function setStatus(text) {
-  if (saveState) saveState.textContent = text;
+  if (!saveState) return;
+  saveState.textContent = text;
+  saveState.dataset.state = text.includes('失败')
+    ? 'error'
+    : text.includes('未保存') || text.includes('新修改')
+      ? 'dirty'
+      : text.includes('正在')
+        ? 'saving'
+        : 'saved';
+}
+
+function setSaveDisabled(disabled) {
+  saveButtons.forEach((button) => { button.disabled = disabled; });
 }
 
 function getPath(object, path) {
@@ -64,6 +78,7 @@ function renderCommentsStatus() {
 }
 
 async function loadConfig() {
+  setSaveDisabled(true);
   setStatus('正在读取');
   const response = await fetch('/api/admin/site');
   if (!response.ok) throw new Error('读取失败');
@@ -71,7 +86,11 @@ async function loadConfig() {
   state.config = data.config || {};
   state.sections = data.sections || [];
   fillForm();
-  setStatus('已就绪');
+  state.loaded = true;
+  state.savedSignature = currentPayloadSignature();
+  state.dirty = false;
+  setSaveDisabled(false);
+  setStatus('已保存');
 }
 
 function sitePayload(values) {
@@ -151,42 +170,97 @@ function homeSections(values) {
   }));
 }
 
+function currentPayload() {
+  const values = new FormData(form);
+  return { config: sectionPayload(values), sections: homeSections(values) };
+}
+
+function currentPayloadSignature() {
+  return JSON.stringify(currentPayload());
+}
+
+function updateDirtyState() {
+  if (!state.loaded) return;
+  state.dirty = currentPayloadSignature() !== state.savedSignature;
+  setStatus(state.dirty ? '未保存' : '已保存');
+}
+
 form?.addEventListener('input', () => {
-  setStatus('未保存');
+  updateDirtyState();
   renderAboutPreview();
   renderCommentsStatus();
 });
 form?.addEventListener('submit', async (event) => {
   event.preventDefault();
-  const values = new FormData(form);
+  if (!state.loaded || state.saving) return;
+  const payload = currentPayload();
+  const submittedSignature = JSON.stringify(payload);
+  state.saving = true;
+  setSaveDisabled(true);
   setStatus('正在保存');
-  const response = await fetch('/api/admin/site', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ config: sectionPayload(values), sections: homeSections(values) }),
-  });
-  if (!response.ok) return setStatus('保存失败');
-  const data = await response.json();
-  state.config = data.config;
-  state.sections = data.sections;
-  fillForm();
-  setStatus('已保存');
+  try {
+    const response = await fetch('/api/admin/site', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw new Error('保存失败');
+    const data = await response.json();
+    state.config = data.config;
+    state.sections = data.sections;
+    if (currentPayloadSignature() === submittedSignature) {
+      fillForm();
+      state.savedSignature = currentPayloadSignature();
+      state.dirty = false;
+    } else {
+      state.savedSignature = submittedSignature;
+      state.dirty = true;
+    }
+    setStatus(state.dirty ? '有新修改未保存' : '已保存');
+  } catch {
+    state.dirty = true;
+    setStatus('保存失败');
+  } finally {
+    state.saving = false;
+    setSaveDisabled(false);
+  }
 });
 
-document.querySelector('[data-test-assistant]')?.addEventListener('click', async () => {
+testAssistantButton?.addEventListener('click', async () => {
   const target = document.querySelector('[data-assistant-test-result]');
   const assistant = assistantPayload(new FormData(form)).assistant;
+  testAssistantButton.disabled = true;
   setStatus('正在测试');
-  const response = await fetch('/api/admin/assistant/test', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ assistant }),
-  });
-  const result = await response.json().catch(() => ({}));
-  target.hidden = false;
-  target.classList.toggle('is-ok', response.ok && result.ok);
-  target.textContent = response.ok && result.ok ? `接口正常：${result.answer || '已响应'}` : `测试失败：${result.error || response.status}`;
-  setStatus(response.ok && result.ok ? '测试通过' : '测试失败');
+  try {
+    const response = await fetch('/api/admin/assistant/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assistant }),
+    });
+    const result = await response.json().catch(() => ({}));
+    target.hidden = false;
+    target.classList.toggle('is-ok', response.ok && result.ok);
+    target.textContent = response.ok && result.ok ? `接口正常：${result.answer || '已响应'}` : `测试失败：${result.error || response.status}`;
+  } catch {
+    target.hidden = false;
+    target.classList.remove('is-ok');
+    target.textContent = '测试失败：网络不可用';
+  } finally {
+    testAssistantButton.disabled = false;
+    setStatus(state.dirty ? '未保存' : '已保存');
+  }
+});
+
+window.addEventListener('beforeunload', (event) => {
+  if (!state.dirty && !state.saving) return;
+  event.preventDefault();
+  event.returnValue = '';
+});
+
+document.addEventListener('keydown', (event) => {
+  if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 's') return;
+  event.preventDefault();
+  if (state.loaded && !state.saving) form?.requestSubmit();
 });
 
 loadConfig().catch((error) => setStatus(error.message));

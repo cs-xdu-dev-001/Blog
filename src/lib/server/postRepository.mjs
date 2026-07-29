@@ -288,6 +288,21 @@ export function createPostRepository({ dbPath } = {}) {
     return normalize(row, row ? topicSlugsForPost(row.id) : [], options);
   }
 
+  function normalizeRowsWithTopics(rows, options = {}) {
+    if (!rows.length) return [];
+    const topicMap = new Map(rows.map((row) => [row.id, []]));
+    const placeholders = rows.map(() => '?').join(', ');
+    db.prepare(`
+      SELECT post_id, topic_slug
+      FROM post_topic_links
+      WHERE post_id IN (${placeholders})
+      ORDER BY post_id ASC, topic_slug ASC
+    `).all(...rows.map((row) => row.id)).forEach((link) => {
+      topicMap.get(link.post_id)?.push(link.topic_slug);
+    });
+    return rows.map((row) => normalize(row, topicMap.get(row.id) || [], options));
+  }
+
   function setPostTopics(postId, topicSlugs = []) {
     const slugs = normalizeTopicSlugs(topicSlugs);
     const tx = db.transaction((items) => {
@@ -479,13 +494,14 @@ export function createPostRepository({ dbPath } = {}) {
       if (safeFilter === 'published') where.push('p.published = 1');
       if (safeFilter === 'draft') where.push('p.published = 0');
       if (safeFilter === 'featured') where.push('p.featured = 1');
-      const items = db.prepare(`
+      const rows = db.prepare(`
         SELECT p.* FROM blog_posts p
         ${normalizedTopicSlug ? 'JOIN post_topic_links pt ON pt.post_id = p.id' : ''}
         ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
         ORDER BY ${normalizedTopicSlug ? 'pt.sort_order ASC, p.date DESC, p.id DESC' : 'p.date DESC, p.id DESC'}
         LIMIT @limit
-      `).all(params).map(normalizeWithTopics);
+      `).all(params);
+      const items = normalizeRowsWithTopics(rows);
       return { items, stats: this.stats() };
     },
 
@@ -533,11 +549,19 @@ export function createPostRepository({ dbPath } = {}) {
 
     stats() {
       initialize();
+      const row = db.prepare(`
+        SELECT
+          COUNT(*) AS total,
+          COALESCE(SUM(CASE WHEN published = 1 THEN 1 ELSE 0 END), 0) AS published,
+          COALESCE(SUM(CASE WHEN published = 0 THEN 1 ELSE 0 END), 0) AS draft,
+          COALESCE(SUM(CASE WHEN featured = 1 THEN 1 ELSE 0 END), 0) AS featured
+        FROM blog_posts
+      `).get();
       return {
-        total: db.prepare('SELECT COUNT(*) AS n FROM blog_posts').get().n,
-        published: db.prepare('SELECT COUNT(*) AS n FROM blog_posts WHERE published = 1').get().n,
-        draft: db.prepare('SELECT COUNT(*) AS n FROM blog_posts WHERE published = 0').get().n,
-        featured: db.prepare('SELECT COUNT(*) AS n FROM blog_posts WHERE featured = 1').get().n,
+        total: row.total,
+        published: row.published,
+        draft: row.draft,
+        featured: row.featured,
       };
     },
 

@@ -3,13 +3,18 @@ const data = JSON.parse(dataEl?.textContent || '{}');
 const form = document.querySelector('[data-topic-editor-form]');
 const stateEl = document.querySelector('[data-topic-editor-state]');
 const saveButton = document.querySelector('[data-save-topic]');
+const deleteTopicButton = document.querySelector('[data-delete-topic]');
 const linkedEl = document.querySelector('[data-linked-posts]');
 const availableEl = document.querySelector('[data-available-posts]');
 const availableSearch = document.querySelector('[data-available-search]');
 const linkedCount = document.querySelector('[data-linked-count]');
 const state = { item: data.item || null, linked: [], available: [], query: '', dirty: false };
 let isSaving = false;
+let isDeleting = false;
 let changeVersion = 0;
+let postsChangeVersion = 0;
+let postsSavePending = 0;
+let postsSaveQueue = Promise.resolve();
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -45,7 +50,7 @@ function formPayload() {
 
 async function saveTopic(event) {
   event.preventDefault();
-  if (isSaving) return;
+  if (isSaving || isDeleting) return;
   const payload = formPayload();
   if (!payload.title) return setStatus('名称不能为空', 'error');
   isSaving = true;
@@ -121,18 +126,34 @@ async function loadPosts() {
   renderPosts();
 }
 
-async function savePosts() {
-  const response = await fetch(`/api/admin/topics/${encodeURIComponent(state.item.slug)}/posts`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ postIds: state.linked.map((post) => post.id) }),
-  });
-  if (!response.ok) throw new Error('保存关联失败');
-  const result = await response.json();
-  state.linked = result.linked || [];
-  state.available = result.available || [];
-  setStatus('关联已保存');
-  renderPosts();
+function enqueuePostsSave() {
+  const version = ++postsChangeVersion;
+  const postIds = state.linked.map((post) => post.id);
+  postsSavePending += 1;
+  setStatus('正在保存关联', 'saving');
+  postsSaveQueue = postsSaveQueue
+    .catch(() => {})
+    .then(async () => {
+      const response = await fetch(`/api/admin/topics/${encodeURIComponent(state.item.slug)}/posts`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postIds }),
+      });
+      if (!response.ok) throw new Error(`保存关联失败（${response.status}）`);
+      const result = await response.json();
+      if (version !== postsChangeVersion) return;
+      state.linked = result.linked || [];
+      state.available = result.available || [];
+      setStatus(state.dirty ? '关联已保存，资料仍有更改' : '关联已保存', state.dirty ? 'dirty' : 'saved');
+      renderPosts();
+    })
+    .catch((error) => {
+      if (version === postsChangeVersion) setStatus(error?.message || '保存关联失败', 'error');
+    })
+    .finally(() => {
+      postsSavePending = Math.max(0, postsSavePending - 1);
+    });
+  return postsSaveQueue;
 }
 
 linkedEl?.addEventListener('click', (event) => {
@@ -148,7 +169,7 @@ linkedEl?.addEventListener('click', (event) => {
     [state.linked[index], state.linked[next]] = [state.linked[next], state.linked[index]];
   }
   renderPosts();
-  savePosts().catch((error) => setStatus(error.message));
+  enqueuePostsSave();
 });
 
 availableEl?.addEventListener('click', (event) => {
@@ -157,7 +178,7 @@ availableEl?.addEventListener('click', (event) => {
   const index = state.available.findIndex((post) => post.id === Number(row.dataset.availableId));
   state.linked.push(state.available.splice(index, 1)[0]);
   renderPosts();
-  savePosts().catch((error) => setStatus(error.message));
+  enqueuePostsSave();
 });
 
 availableSearch?.addEventListener('input', () => {
@@ -165,11 +186,26 @@ availableSearch?.addEventListener('input', () => {
   renderPosts();
 });
 
-document.querySelector('[data-delete-topic]')?.addEventListener('click', async () => {
+deleteTopicButton?.addEventListener('click', async () => {
+  if (isSaving || isDeleting) return;
+  if (postsSavePending > 0) return setStatus('关联仍在保存，请稍候', 'saving');
   if (!state.item || !window.confirm(`确认删除主线“${state.item.title}”？`)) return;
-  const response = await fetch(`/api/admin/topics/${encodeURIComponent(state.item.slug)}`, { method: 'DELETE' });
-  if (response.ok) window.location.href = '/admin/topics';
-  else setStatus('删除失败');
+  isDeleting = true;
+  deleteTopicButton.disabled = true;
+  if (saveButton) saveButton.disabled = true;
+  setStatus('正在删除', 'saving');
+  try {
+    const response = await fetch(`/api/admin/topics/${encodeURIComponent(state.item.slug)}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error(`删除失败（${response.status}）`);
+    state.dirty = false;
+    window.location.href = '/admin/topics';
+  } catch (error) {
+    setStatus(error?.message || '删除失败，请重试', 'error');
+  } finally {
+    isDeleting = false;
+    deleteTopicButton.disabled = false;
+    if (saveButton) saveButton.disabled = false;
+  }
 });
 
 form?.addEventListener('submit', saveTopic);
@@ -178,8 +214,13 @@ form?.addEventListener('input', () => {
   changeVersion += 1;
   setStatus('未保存', 'dirty');
 });
+window.addEventListener('keydown', (event) => {
+  if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 's') return;
+  event.preventDefault();
+  form?.requestSubmit();
+});
 window.addEventListener('beforeunload', (event) => {
-  if (!state.dirty) return;
+  if (!state.dirty && !isSaving && !isDeleting && postsSavePending === 0) return;
   event.preventDefault();
   event.returnValue = '';
 });

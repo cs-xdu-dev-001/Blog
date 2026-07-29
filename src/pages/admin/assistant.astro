@@ -6,7 +6,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
   <div slot="search" class="cms-admin-breadcrumb"><a href="/admin/site">站点</a><span>/</span><a href="/admin/assistant" aria-current="page">AI助手</a></div>
   <Fragment slot="actions"><button type="button" data-test-assistant>测试接口</button><button class="cms-primary-action" type="submit" form="site-settings-form">保存</button></Fragment>
   <section class="cms-settings-page" data-site-section="assistant">
-    <header><h1>AI助手</h1><span class="cms-save-state" data-save-state>正在读取</span></header>
+    <header><h1>AI助手</h1><span class="cms-save-state" data-save-state aria-live="polite">正在读取</span></header>
     <nav class="cms-settings-tabs"><a href="/admin/site">站点信息</a><a href="/admin/home">首页模块</a><a class="active" href="/admin/assistant">AI助手</a><a href="/admin/about">关于</a></nav>
     <form id="site-settings-form" class="cms-settings-form" data-site-form>
       <section class="cms-settings-section">

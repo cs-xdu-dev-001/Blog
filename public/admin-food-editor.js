@@ -3,8 +3,14 @@ const createForm = document.querySelector('[data-food-create-form]');
 const editForm = document.querySelector('[data-food-editor-form]');
 const stateEl = document.querySelector('[data-food-editor-state]');
 const saveButton = document.querySelector('[data-save-food]');
+const createButton = createForm?.querySelector('[type="submit"]');
+const imageInput = document.querySelector('[data-food-image]');
+const deleteButton = document.querySelector('[data-delete-food]');
 let dirty = false;
 let isSaving = false;
+let isCreating = false;
+let isUploading = false;
+let isDeleting = false;
 let changeVersion = 0;
 
 function setStatus(text, state = 'idle') {
@@ -22,21 +28,32 @@ function errorMessage(response, action) {
 
 createForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
+  if (isCreating) return;
+  isCreating = true;
+  if (createButton) createButton.disabled = true;
   const values = new FormData(createForm);
   setStatus('正在创建', 'saving');
-  const response = await fetch('/api/admin/food', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      title: values.get('title'),
-      dish: values.get('dish'),
-      status: values.get('status'),
-      published: values.get('published') === 'on',
-    }),
-  });
-  if (!response.ok) return setStatus(errorMessage(response, '创建'), 'error');
-  const data = await response.json();
-  window.location.href = `/admin/food/${data.item.id}/edit`;
+  try {
+    const response = await fetch('/api/admin/food', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: values.get('title'),
+        dish: values.get('dish'),
+        status: values.get('status'),
+        published: values.get('published') === 'on',
+      }),
+    });
+    if (!response.ok) throw new Error(errorMessage(response, '创建'));
+    const data = await response.json();
+    if (!data.item?.id) throw new Error('创建结果无效');
+    isCreating = false;
+    window.location.href = `/admin/food/${data.item.id}/edit`;
+  } catch (error) {
+    isCreating = false;
+    if (createButton) createButton.disabled = false;
+    setStatus(error instanceof Error ? error.message : '创建失败，请重试', 'error');
+  }
 });
 
 editForm?.addEventListener('input', () => {
@@ -45,9 +62,8 @@ editForm?.addEventListener('input', () => {
   setStatus('未保存', 'dirty');
 });
 
-editForm?.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  if (isSaving) return;
+async function saveEdits() {
+  if (!editForm || isSaving || isUploading || isDeleting) return false;
   isSaving = true;
   const savingVersion = changeVersion;
   const values = new FormData(editForm);
@@ -80,8 +96,10 @@ editForm?.addEventListener('submit', async (event) => {
     document.querySelector('h1').textContent = data.item.title;
     dirty = changeVersion !== savingVersion;
     setStatus(dirty ? '仍有未保存更改' : '已保存', dirty ? 'dirty' : 'saved');
+    return !dirty;
   } catch (error) {
     setStatus(error instanceof Error ? error.message : '保存失败，请重试', 'error');
+    return false;
   } finally {
     isSaving = false;
     if (saveButton) {
@@ -89,29 +107,66 @@ editForm?.addEventListener('submit', async (event) => {
       saveButton.textContent = '保存';
     }
   }
+}
+
+editForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  await saveEdits();
 });
 
-document.querySelector('[data-food-image]')?.addEventListener('change', async (event) => {
+imageInput?.addEventListener('change', async (event) => {
   const image = event.target.files?.[0];
-  if (!image) return;
+  if (!image || isUploading || isDeleting) return;
+  if (dirty && !(await saveEdits())) {
+    event.target.value = '';
+    return;
+  }
+  isUploading = true;
+  imageInput.disabled = true;
   const body = new FormData();
   body.set('image', image);
   setStatus('正在上传图片', 'saving');
-  const response = await fetch(`/api/admin/food/${editorData.item.id}/image`, { method: 'POST', body });
-  if (!response.ok) return setStatus(errorMessage(response, '上传'), 'error');
-  dirty = false;
-  window.location.reload();
+  try {
+    const response = await fetch(`/api/admin/food/${editorData.item.id}/image`, { method: 'POST', body });
+    if (!response.ok) throw new Error(errorMessage(response, '上传'));
+    dirty = false;
+    isUploading = false;
+    window.location.reload();
+  } catch (error) {
+    isUploading = false;
+    imageInput.disabled = false;
+    event.target.value = '';
+    setStatus(error instanceof Error ? error.message : '上传失败，请重试', 'error');
+  }
 });
 
-document.querySelector('[data-delete-food]')?.addEventListener('click', async () => {
+deleteButton?.addEventListener('click', async () => {
+  if (isSaving || isUploading || isDeleting) return;
   if (!window.confirm(`确认删除“${editorData.item.title}”？`)) return;
-  const response = await fetch(`/api/admin/food/${editorData.item.id}`, { method: 'DELETE' });
-  if (response.ok) window.location.href = '/admin/food';
-  else setStatus(errorMessage(response, '删除'), 'error');
+  isDeleting = true;
+  deleteButton.disabled = true;
+  setStatus('正在删除', 'saving');
+  try {
+    const response = await fetch(`/api/admin/food/${editorData.item.id}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error(errorMessage(response, '删除'));
+    dirty = false;
+    isDeleting = false;
+    window.location.href = '/admin/food';
+  } catch (error) {
+    isDeleting = false;
+    deleteButton.disabled = false;
+    setStatus(error instanceof Error ? error.message : '删除失败，请重试', 'error');
+  }
 });
 
 window.addEventListener('beforeunload', (event) => {
-  if (!dirty) return;
+  if (!dirty && !isSaving && !isCreating && !isUploading && !isDeleting) return;
   event.preventDefault();
   event.returnValue = '';
+});
+
+document.addEventListener('keydown', (event) => {
+  if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 's') return;
+  event.preventDefault();
+  (editForm || createForm)?.requestSubmit();
 });

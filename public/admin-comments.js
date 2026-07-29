@@ -4,6 +4,7 @@ const summaryEl = document.querySelector('[data-comments-summary]');
 const searchEl = document.querySelector('[data-comments-search]');
 const errorEl = document.querySelector('[data-comments-error]');
 const errorMessageEl = document.querySelector('[data-comments-error-message]');
+const refreshButton = document.querySelector('[data-comments-refresh]');
 let loadController = null;
 
 function escapeHtml(value) {
@@ -50,7 +51,7 @@ function render() {
 
   listEl.innerHTML = items.map((item) => {
     const avatar = item.author?.avatarUrl
-      ? `<img src="${escapeHtml(item.author.avatarUrl)}" alt="" width="42" height="42" loading="lazy" />`
+      ? `<img src="${escapeHtml(item.author.avatarUrl)}" alt="" width="42" height="42" loading="lazy" decoding="async" />`
       : '<span class="cms-comment-avatar-fallback" aria-hidden="true">GH</span>';
     const replyBadge = item.isReply ? '<span class="cms-index-badge">回复</span>' : '';
     const minimizedBadge = item.isMinimized ? '<span class="cms-index-badge">已隐藏</span>' : '';
@@ -82,18 +83,20 @@ function showError(message) {
   summaryEl.textContent = '读取失败';
   errorMessageEl.textContent = message || '留言读取失败';
   errorEl.hidden = false;
-  listEl.innerHTML = '';
 }
 
-async function loadComments() {
+async function loadComments({ force = false } = {}) {
   loadController?.abort();
   const controller = new AbortController();
   loadController = controller;
   errorEl.hidden = true;
   summaryEl.textContent = '正在读取';
+  listEl.setAttribute('aria-busy', 'true');
+  refreshButton.disabled = true;
 
   try {
-    const response = await fetch('/api/admin/comments', { signal: controller.signal });
+    const url = force ? '/api/admin/comments?refresh=1' : '/api/admin/comments';
+    const response = await fetch(url, { signal: controller.signal });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || '留言读取失败');
     if (loadController !== controller) return;
@@ -103,7 +106,11 @@ async function loadComments() {
     if (error.name === 'AbortError') return;
     showError(error.message);
   } finally {
-    if (loadController === controller) loadController = null;
+    if (loadController === controller) {
+      loadController = null;
+      listEl.removeAttribute('aria-busy');
+      refreshButton.disabled = false;
+    }
   }
 }
 
@@ -113,16 +120,21 @@ async function deleteComment(button) {
   if (!id || !window.confirm(`确定删除${author}的这条留言？删除后无法恢复。`)) return;
 
   button.disabled = true;
-  const response = await fetch(`/api/admin/comments/${encodeURIComponent(id)}`, {
-    method: 'DELETE',
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
+  errorEl.hidden = true;
+  try {
+    const response = await fetch(`/api/admin/comments/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || '留言删除失败');
+    state.items = state.items.filter((item) => item.id !== id);
+    render();
+  } catch (error) {
+    errorMessageEl.textContent = error?.message || '留言删除失败';
+    errorEl.hidden = false;
+  } finally {
     button.disabled = false;
-    window.alert(data.error || '留言删除失败');
-    return;
   }
-  await loadComments();
 }
 
 listEl?.addEventListener('click', (event) => {
@@ -135,6 +147,6 @@ searchEl?.addEventListener('input', () => {
   render();
 });
 
-document.querySelector('[data-comments-refresh]')?.addEventListener('click', loadComments);
-document.querySelector('[data-comments-retry]')?.addEventListener('click', loadComments);
+document.querySelector('[data-comments-refresh]')?.addEventListener('click', () => loadComments({ force: true }));
+document.querySelector('[data-comments-retry]')?.addEventListener('click', () => loadComments({ force: true }));
 loadComments();

@@ -33,6 +33,7 @@ test('post repository creates, lists, updates, and deletes markdown posts', () =
   assert.deepEqual(created.tags, ['AI', 'RAG']);
   assert.equal(repo.getBySlug('recent-note-test').title, '近期笔记测试');
   assert.equal(repo.list().items[0].description, '一条可管理的Markdown笔记');
+  assert.deepEqual(repo.list().items[0].topicSlugs, ['agent-system', 'llm-finetune']);
   assert.equal(repo.list({ topicSlug: 'agent-system' }).items[0].slug, 'recent-note-test');
   assert.equal(repo.list({ query: 'RAG', filter: 'all' }).items[0].slug, 'recent-note-test');
   assert.deepEqual(repo.listTags(), ['AI', 'RAG']);

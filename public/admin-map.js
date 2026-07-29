@@ -13,8 +13,14 @@ const orbitB = document.querySelector('[data-current-orbit-b]');
 const label = document.querySelector('[data-current-label]');
 const readout = document.querySelector('[data-map-readout]');
 const saveState = document.querySelector('[data-map-state]');
+const saveButton = document.querySelector('[data-save-map]');
 const modeButtons = [...document.querySelectorAll('[data-map-mode]')];
 let pointsRendered = false;
+let dirty = false;
+let isSaving = false;
+let changeVersion = 0;
+
+saveButton.disabled = true;
 
 tiles.querySelectorAll('img').forEach((image) => {
   image.draggable = false;
@@ -143,12 +149,22 @@ function updateReadout(text) {
   readout.textContent = text;
 }
 
+function markDirty() {
+  dirty = true;
+  changeVersion += 1;
+  saveState.textContent = '未保存';
+  saveState.dataset.state = 'dirty';
+}
+
 async function loadConfig() {
   const res = await fetch('/api/admin/map');
+  if (!res.ok) throw new Error(`读取失败（${res.status}）`);
   const data = await res.json();
+  if (!data.config) throw new Error('地图配置无效');
   state.config = data.config;
   setMode(state.mode);
   applyConfig();
+  saveButton.disabled = false;
 }
 
 modeButtons.forEach((button) => {
@@ -194,6 +210,7 @@ surface.addEventListener('pointermove', (event) => {
     state.config.label.y = p.y;
     updateReadout(`地点胶囊: x ${p.x.toFixed(2)}%, y ${p.y.toFixed(2)}%`);
   }
+  markDirty();
   applyConfig();
 });
 
@@ -212,6 +229,7 @@ document.querySelectorAll('[data-map-input]').forEach((input) => {
   input.addEventListener('input', () => {
     setByPath(state.config, input.dataset.mapInput, input.value);
     updateReadout('视觉参数已更新，保存后首页生效。');
+    markDirty();
     applyConfig();
   });
 });
@@ -220,6 +238,7 @@ document.querySelectorAll('[data-map-slider]').forEach((input) => {
   input.addEventListener('input', () => {
     setByPath(state.config, input.dataset.mapSlider, input.value);
     updateReadout(`地图：x ${state.config.map.x.toFixed(2)}%, y ${state.config.map.y.toFixed(2)}%, scale ${state.config.map.scale.toFixed(2)}`);
+    markDirty();
     applyConfig();
   });
 });
@@ -228,24 +247,60 @@ document.querySelectorAll('[data-map-checkbox]').forEach((input) => {
   input.addEventListener('change', () => {
     setBooleanByPath(state.config, input.dataset.mapCheckbox, input.checked);
     updateReadout(input.checked ? '城市标签已显示。' : '城市标签已隐藏。');
+    markDirty();
     applyConfig();
   });
 });
 
-document.querySelector('[data-save-map]').addEventListener('click', async () => {
+saveButton.addEventListener('click', async () => {
+  if (isSaving || !state.config) return;
+  isSaving = true;
+  saveButton.disabled = true;
+  const savingVersion = changeVersion;
+  const snapshot = JSON.parse(JSON.stringify(state.config));
   saveState.textContent = '正在保存';
-  const res = await fetch('/api/admin/map', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(state.config),
-  });
-  const data = await res.json();
-  state.config = data.config;
-  applyConfig();
-  saveState.textContent = '已保存';
-  window.setTimeout(() => {
-    saveState.textContent = '已就绪';
-  }, 1200);
+  saveState.dataset.state = 'saving';
+  try {
+    const res = await fetch('/api/admin/map', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(snapshot),
+    });
+    if (!res.ok) throw new Error(`保存失败（${res.status}）`);
+    const data = await res.json();
+    if (!data.config) throw new Error('保存结果无效');
+    if (changeVersion === savingVersion) {
+      state.config = data.config;
+      dirty = false;
+      applyConfig();
+      saveState.textContent = '已保存';
+      saveState.dataset.state = 'saved';
+    } else {
+      saveState.textContent = '仍有未保存更改';
+      saveState.dataset.state = 'dirty';
+    }
+  } catch (error) {
+    saveState.textContent = error?.message || '保存失败，请重试';
+    saveState.dataset.state = 'error';
+  } finally {
+    isSaving = false;
+    saveButton.disabled = false;
+  }
 });
 
-loadConfig();
+window.addEventListener('keydown', (event) => {
+  if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 's') return;
+  event.preventDefault();
+  saveButton.click();
+});
+
+window.addEventListener('beforeunload', (event) => {
+  if (!dirty && !isSaving) return;
+  event.preventDefault();
+  event.returnValue = '';
+});
+
+loadConfig().catch((error) => {
+  saveState.textContent = error?.message || '读取失败，请刷新重试';
+  saveState.dataset.state = 'error';
+});

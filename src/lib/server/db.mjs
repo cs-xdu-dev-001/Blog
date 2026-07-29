@@ -200,6 +200,12 @@ export function initializeSchema(db) {
   ensureColumn(db, 'blog_posts', 'encrypted_body', "TEXT NOT NULL DEFAULT ''");
   ensureColumn(db, 'post_topic_links', 'sort_order', 'INTEGER NOT NULL DEFAULT 0');
   db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_watch_items_status_order
+      ON watch_items(status, is_activity_featured DESC, is_featured DESC, updated_at DESC, id ASC);
+
+    CREATE INDEX IF NOT EXISTS idx_reading_items_public_status_order
+      ON reading_items(published, status, is_featured DESC, sort_order ASC, updated_at DESC, id ASC);
+
     CREATE INDEX IF NOT EXISTS idx_post_topic_links_topic_order
       ON post_topic_links(topic_slug, sort_order, post_id);
   `);

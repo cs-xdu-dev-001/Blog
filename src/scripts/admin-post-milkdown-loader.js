@@ -45,6 +45,7 @@ async function loadEditor() {
     })
     .catch((error) => {
       setEditorState('error');
+      editorModulePromise = null;
       renderRetry();
       console.error(error);
       throw error;

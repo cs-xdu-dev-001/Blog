@@ -92,3 +92,25 @@ test('search service matches food names, dishes, and places', () => {
   assert.equal(food.items[0].href, '/food/1');
   assert.equal(food.items[0].image, '/food/noodle-480.webp');
 });
+
+test('search service reuses public repository data during one search session', () => {
+  let now = 1_000;
+  const reads = { posts: 0, reading: 0, watch: 0, food: 0 };
+  const service = createSearchService({
+    cacheTtlMs: 5_000,
+    nowImpl: () => now,
+    posts: { list: () => { reads.posts += 1; return { items: [] }; } },
+    reading: { list: () => { reads.reading += 1; return { items: [] }; } },
+    watch: { list: () => { reads.watch += 1; return { items: [] }; } },
+    food: { list: () => { reads.food += 1; return { items: [] }; } },
+  });
+
+  service.search('a');
+  service.search('ab');
+  service.search('abc');
+  assert.deepEqual(reads, { posts: 1, reading: 1, watch: 1, food: 1 });
+
+  now += 5_001;
+  service.search('abcd');
+  assert.deepEqual(reads, { posts: 2, reading: 2, watch: 2, food: 2 });
+});

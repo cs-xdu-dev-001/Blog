@@ -23,6 +23,10 @@ test('Milkdown exposes immutable context and review hooks to the admin agent', (
   assert.match(editor, /messageEl\.textContent\s*=\s*review\.message/);
   assert.doesNotMatch(editor, /\$\{review\.message\s*\?/);
   assert.match(editor, /\.scrollIntoView\(\)/);
+  assert.match(editor, /root\.querySelector\('\.post-ai-inline-review'\)\?\.scrollIntoView/);
+  assert.match(editor, /prefers-reduced-motion: reduce/);
+  assert.match(editor, /event\.key === 'Enter' && \(event\.ctrlKey \|\| event\.metaKey\)/);
+  assert.match(editor, /setAttribute\('aria-label', 'AI修改建议'\)/);
   assert.doesNotMatch(editor, /coordsAtPos\(review\.from\)/);
   assert.doesNotMatch(editor, /has-selection-review/);
   assert.match(editor, /crypto\.randomUUID\(\)/);

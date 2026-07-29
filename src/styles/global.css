@@ -8321,6 +8321,8 @@ button:focus-visible {
   --cms-active-bg: rgba(47, 125, 255, 0.22);
   --cms-accent: #2f7dff;
   --cms-danger: #ff7773;
+  --cms-success: #82dbaa;
+  --cms-warning: #f0b35a;
   --cms-selection-bg: #2563eb;
   --cms-selection-text: #ffffff;
   --cms-preview-bg: #fbfaf7;
@@ -8555,6 +8557,41 @@ button:focus-visible {
   padding: 20px 16px 24px;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
+}
+
+.admin-login-error {
+  margin: -2px 0 0;
+  border-left: 3px solid #fb7185;
+  color: #fecdd3;
+  padding-left: 12px;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.admin-login-card button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.post-editor-status:has([data-editor-status][data-state="dirty"]) {
+  border-color: color-mix(in srgb, var(--cms-warning) 42%, transparent);
+  background: color-mix(in srgb, var(--cms-warning) 10%, transparent);
+  color: var(--cms-warning);
+}
+
+.post-editor-status:has([data-editor-status][data-state="saving"]) {
+  opacity: 0.82;
+}
+
+.post-editor-status:has([data-editor-status][data-state="error"]) {
+  border-color: color-mix(in srgb, var(--cms-danger) 42%, transparent);
+  background: color-mix(in srgb, var(--cms-danger) 9%, transparent);
+  color: var(--cms-danger);
+}
+
+.post-editor-actions button:disabled {
+  cursor: wait;
+  opacity: 0.58;
 }
 
 .post-editor-agent-empty {
@@ -9927,6 +9964,14 @@ html[data-admin-theme="light"] .post-editor-milkdown .milkdown {
   background: var(--cms-preview-bg);
   color: var(--cms-preview-text);
   padding: 42px 54px;
+}
+
+.post-editor-preview[data-preview-state="loading"] {
+  cursor: progress;
+}
+
+.post-editor-preview[data-preview-state="error"] {
+  border-color: color-mix(in srgb, var(--cms-danger) 34%, var(--cms-line));
 }
 
 .post-editor-textarea,
@@ -12989,6 +13034,15 @@ html[data-admin-theme="light"] .cms-theme-icon-moon {
   font-variant-numeric: tabular-nums;
 }
 
+.cms-save-state[data-state="dirty"],
+.cms-save-state[data-state="saving"] {
+  color: var(--cms-warning);
+}
+
+.cms-save-state[data-state="error"] {
+  color: var(--cms-danger);
+}
+
 .cms-index-toolbar {
   display: flex;
   align-items: center;
@@ -13137,6 +13191,10 @@ html[data-admin-theme="light"] .cms-theme-icon-moon {
   font-size: 13px;
   outline: 1px solid rgba(255, 255, 255, 0.08);
   outline-offset: -1px;
+}
+
+img.cms-index-thumb {
+  object-fit: cover;
 }
 
 .cms-index-title {
@@ -13577,6 +13635,7 @@ html[data-admin-theme="light"] .post-editor-page {
   --cms-accent: #2563eb;
   --cms-danger: #c73535;
   --cms-success: #16764a;
+  --cms-warning: #9a5a00;
   --cms-preview-bg: #ffffff;
   --cms-preview-text: #2f3a46;
 }

@@ -98,7 +98,7 @@ if (root) {
   function previewMedia(item) {
     const image = safeSearchHref(item.image);
     if (image) {
-      return `<div class="global-search-preview-media has-image"><img src="${escapeSearchHtml(image)}" alt="" /></div>`;
+      return `<div class="global-search-preview-media has-image"><img src="${escapeSearchHtml(image)}" alt="" loading="lazy" decoding="async" /></div>`;
     }
     return `<div class="global-search-preview-media"><span aria-hidden="true">${escapeSearchHtml(typeGlyph[item.type] || '·')}</span></div>`;
   }

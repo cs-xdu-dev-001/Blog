@@ -91,14 +91,24 @@ export function createSearchService({
   reading = readingRepository,
   watch = watchRepository,
   food = foodRepository,
+  cacheTtlMs = 5_000,
+  nowImpl = Date.now,
 } = {}) {
+  let publicDataCache = null;
+
   function readPublicData() {
+    if (publicDataCache?.expiresAt > nowImpl()) return publicDataCache.value;
     const postItems = posts.list({ filter: 'published', limit: 500 }).items
       .filter((item) => item.published === undefined || Number(item.published) === 1);
     const readingItems = reading.list({ limit: 500, publishedOnly: true }).items;
     const watchItems = watch.list({ limit: 1000 }).items;
     const foodItems = food.list({ limit: 500, publishedOnly: true }).items;
-    return { postItems, readingItems, watchItems, foodItems };
+    const value = { postItems, readingItems, watchItems, foodItems };
+    publicDataCache = {
+      value,
+      expiresAt: nowImpl() + Math.max(0, Number(cacheTtlMs) || 0),
+    };
+    return value;
   }
 
   return {

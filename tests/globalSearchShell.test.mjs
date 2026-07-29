@@ -34,6 +34,7 @@ test('global search shell provides a two-column dialog and complete keyboard int
   assert.match(styles, /\.global-search-preview-media img\s*\{[^}]*height:\s*100%\s*!important/);
   assert.match(styles, /\.global-search-preview-media\s*\{[^}]*position:\s*relative/);
   assert.match(styles, /\.global-search-preview-media img\s*\{[^}]*position:\s*absolute/);
+  assert.match(client, /loading="lazy" decoding="async"/);
   assert.match(styles, /\.global-search-query\s*>\s*\.global-search-mobile-back\s*\{[^}]*display:\s*none/);
   assert.doesNotMatch(component, /Ctrl|Enter打开|方向键/);
 });

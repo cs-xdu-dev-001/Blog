@@ -43,6 +43,12 @@ test('admin post editor previews through the frontend markdown renderer', () => 
   assert.match(api, /markdownToHtml/);
   assert.match(client, /\/api\/admin\/posts\/preview/);
   assert.match(client, /previewRequestId/);
+  assert.match(client, /markdown === lastPreviewMarkdown/);
+  assert.match(client, /markdown === previewPendingMarkdown/);
+  assert.match(client, /setPreviewState\('loading'\)/);
+  assert.match(client, /setPreviewState\('ready'\)/);
+  assert.match(client, /setPreviewState\('error'/);
+  assert.match(client, /aria-busy/);
   assert.match(client, /PREVIEW_DELAY_MS\s*=\s*400/);
   assert.match(client, /previewIsVisible\(\)/);
   assert.match(client, /attempt\s*<\s*2/);

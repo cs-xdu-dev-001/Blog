@@ -1,10 +1,12 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const hasCredentialsError = Astro.url.searchParams.get('error') === 'credentials';
 ---
 
 <BaseLayout title="Dev Notes CMS Login" chrome={false} shell={false} assistant={false}>
   <main class="admin-login-page">
-    <form class="admin-login-card" method="post" action="/api/admin/login">
+    <form class="admin-login-card" method="post" action="/api/admin/login" data-admin-login>
       <span>Dev Notes CMS</span>
       <h1>登录管理端</h1>
       <label>
@@ -15,7 +17,19 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         密码
         <input name="password" type="password" autocomplete="current-password" required />
       </label>
-      <button type="submit">进入控制台</button>
+      {hasCredentialsError && <p class="admin-login-error" role="alert">用户名或密码不正确</p>}
+      <button type="submit" data-login-submit>进入控制台</button>
     </form>
   </main>
 </BaseLayout>
+
+<script is:inline>
+  document.querySelector('[data-admin-login]')?.addEventListener('submit', (event) => {
+    const form = event.currentTarget;
+    if (!(form instanceof HTMLFormElement) || !form.checkValidity()) return;
+    const submitButton = form.querySelector('[data-login-submit]');
+    if (!(submitButton instanceof HTMLButtonElement)) return;
+    submitButton.disabled = true;
+    submitButton.textContent = '正在登录';
+  });
+</script>

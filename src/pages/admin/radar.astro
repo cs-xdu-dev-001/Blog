@@ -23,6 +23,10 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     <div class="cms-index-list">
       <div class="cms-index-list-head"><span>标签</span><span>类型</span><span>权重</span><span></span></div>
       <div data-radar-list></div>
+      <div class="cms-index-error" data-radar-error hidden>
+        <span>读取失败</span>
+        <button class="cms-button" type="button" data-radar-retry>重新读取</button>
+      </div>
     </div>
   </section>
 
@@ -31,7 +35,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     <div class="cms-drawer-body"><form class="cms-editor-form" id="radar-editor-form" data-radar-form></form></div>
     <footer>
       <button class="cms-danger-action" type="button" data-delete-radar hidden>删除</button>
-      <button class="cms-primary-action" type="submit" form="radar-editor-form">保存</button>
+      <button class="cms-primary-action" type="submit" form="radar-editor-form" data-save-radar>保存</button>
     </footer>
   </dialog>
   <script is:inline src="/admin-radar.js"></script>

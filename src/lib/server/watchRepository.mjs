@@ -135,11 +135,19 @@ export function createWatchRepository({ dbPath, uploadDir } = {}) {
 
     stats() {
       initialize();
+      const row = db.prepare(`
+        SELECT
+          COUNT(*) AS total,
+          COALESCE(SUM(CASE WHEN image_path = '' THEN 1 ELSE 0 END), 0) AS missing_image,
+          COALESCE(SUM(CASE WHEN comment = '' THEN 1 ELSE 0 END), 0) AS missing_comment,
+          COALESCE(SUM(CASE WHEN quote = '' THEN 1 ELSE 0 END), 0) AS missing_quote
+        FROM watch_items
+      `).get();
       return {
-        total: db.prepare('SELECT COUNT(*) AS n FROM watch_items').get().n,
-        missingImage: db.prepare("SELECT COUNT(*) AS n FROM watch_items WHERE image_path = ''").get().n,
-        missingComment: db.prepare("SELECT COUNT(*) AS n FROM watch_items WHERE comment = ''").get().n,
-        missingQuote: db.prepare("SELECT COUNT(*) AS n FROM watch_items WHERE quote = ''").get().n,
+        total: row.total,
+        missingImage: row.missing_image,
+        missingComment: row.missing_comment,
+        missingQuote: row.missing_quote,
       };
     },
 

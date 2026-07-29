@@ -199,7 +199,11 @@ function normalizeComment(comment, discussion, parentId = '') {
 export function createGithubCommentsService({
   token,
   fetchImpl = globalThis.fetch,
+  cacheTtlMs = 60_000,
+  nowImpl = Date.now,
 } = {}) {
+  const commentsCache = new Map();
+
   function resolveToken() {
     const value = token === undefined ? process.env.GITHUB_DISCUSSIONS_TOKEN : token;
     const normalized = String(value || '').trim();
@@ -243,73 +247,97 @@ export function createGithubCommentsService({
   }
 
   return {
-    async listComments({ repo, categoryId = '' } = {}) {
+    async listComments({ repo, categoryId = '', force = false } = {}) {
       const { owner, name } = splitRepo(repo);
-      const discussions = [];
-      const items = [];
-      let discussionCursor = null;
+      const normalizedCategoryId = String(categoryId || '').trim();
+      const cacheKey = `${owner}/${name}:${normalizedCategoryId}`;
+      const cached = commentsCache.get(cacheKey);
+      if (!force && cached?.value && cached.expiresAt > nowImpl()) return cached.value;
+      if (!force && cached?.promise) return cached.promise;
 
-      do {
-        const data = await request(DISCUSSIONS_QUERY, {
-          owner,
-          name,
-          categoryId: String(categoryId || '').trim() || null,
-          after: discussionCursor,
-        });
-        const connection = data.repository?.discussions;
-        discussions.push(...(connection?.nodes || []));
-        discussionCursor = connection?.pageInfo?.hasNextPage
-          ? connection.pageInfo.endCursor
-          : null;
-      } while (discussionCursor);
+      const loadPromise = (async () => {
+        const discussions = [];
+        const items = [];
+        let discussionCursor = null;
 
-      for (const discussion of discussions) {
-        let commentCursor = null;
         do {
-          const data = await request(COMMENTS_QUERY, {
+          const data = await request(DISCUSSIONS_QUERY, {
             owner,
             name,
-            number: discussion.number,
-            after: commentCursor,
+            categoryId: normalizedCategoryId || null,
+            after: discussionCursor,
           });
-          const connection = data.repository?.discussion?.comments;
-
-          for (const comment of connection?.nodes || []) {
-            items.push(normalizeComment(comment, discussion));
-            for (const reply of comment.replies?.nodes || []) {
-              items.push(normalizeComment(reply, discussion, String(comment.id || '')));
-            }
-
-            let replyCursor = comment.replies?.pageInfo?.hasNextPage
-              ? comment.replies.pageInfo.endCursor
-              : null;
-            while (replyCursor) {
-              const replyData = await request(REPLIES_QUERY, {
-                id: comment.id,
-                after: replyCursor,
-              });
-              const replyConnection = replyData.node?.replies;
-              for (const reply of replyConnection?.nodes || []) {
-                items.push(normalizeComment(reply, discussion, String(comment.id || '')));
-              }
-              replyCursor = replyConnection?.pageInfo?.hasNextPage
-                ? replyConnection.pageInfo.endCursor
-                : null;
-            }
-          }
-
-          commentCursor = connection?.pageInfo?.hasNextPage
+          const connection = data.repository?.discussions;
+          discussions.push(...(connection?.nodes || []));
+          discussionCursor = connection?.pageInfo?.hasNextPage
             ? connection.pageInfo.endCursor
             : null;
-        } while (commentCursor);
-      }
+        } while (discussionCursor);
 
-      items.sort((left, right) => String(right.createdAt).localeCompare(String(left.createdAt)));
-      return {
-        items,
-        total: items.length,
-        discussions: discussions.length,
-      };
+        for (const discussion of discussions) {
+          let commentCursor = null;
+          do {
+            const data = await request(COMMENTS_QUERY, {
+              owner,
+              name,
+              number: discussion.number,
+              after: commentCursor,
+            });
+            const connection = data.repository?.discussion?.comments;
+
+            for (const comment of connection?.nodes || []) {
+              items.push(normalizeComment(comment, discussion));
+              for (const reply of comment.replies?.nodes || []) {
+                items.push(normalizeComment(reply, discussion, String(comment.id || '')));
+              }
+
+              let replyCursor = comment.replies?.pageInfo?.hasNextPage
+                ? comment.replies.pageInfo.endCursor
+                : null;
+              while (replyCursor) {
+                const replyData = await request(REPLIES_QUERY, {
+                  id: comment.id,
+                  after: replyCursor,
+                });
+                const replyConnection = replyData.node?.replies;
+                for (const reply of replyConnection?.nodes || []) {
+                  items.push(normalizeComment(reply, discussion, String(comment.id || '')));
+                }
+                replyCursor = replyConnection?.pageInfo?.hasNextPage
+                  ? replyConnection.pageInfo.endCursor
+                  : null;
+              }
+            }
+
+            commentCursor = connection?.pageInfo?.hasNextPage
+              ? connection.pageInfo.endCursor
+              : null;
+          } while (commentCursor);
+        }
+
+        items.sort((left, right) => String(right.createdAt).localeCompare(String(left.createdAt)));
+        return {
+          items,
+          total: items.length,
+          discussions: discussions.length,
+        };
+      })();
+
+      commentsCache.set(cacheKey, { promise: loadPromise, value: null, expiresAt: 0 });
+      try {
+        const value = await loadPromise;
+        if (commentsCache.get(cacheKey)?.promise === loadPromise) {
+          commentsCache.set(cacheKey, {
+            promise: null,
+            value,
+            expiresAt: nowImpl() + Math.max(0, Number(cacheTtlMs) || 0),
+          });
+        }
+        return value;
+      } catch (error) {
+        if (commentsCache.get(cacheKey)?.promise === loadPromise) commentsCache.delete(cacheKey);
+        throw error;
+      }
     },
 
     async deleteComment(id) {
@@ -321,7 +349,9 @@ export function createGithubCommentsService({
         });
       }
       const data = await request(DELETE_COMMENT_MUTATION, { id: commentId });
-      return Boolean(data.deleteDiscussionComment);
+      const deleted = Boolean(data.deleteDiscussionComment);
+      if (deleted) commentsCache.clear();
+      return deleted;
     },
   };
 }

@@ -17,9 +17,11 @@ export const GET: APIRoute = async (context) => {
 
   try {
     const comments = siteConfigRepository.getSiteConfig().comments || {};
+    const force = new URL(context.request.url).searchParams.get('refresh') === '1';
     const result = await githubCommentsService.listComments({
       repo: comments.repo,
       categoryId: comments.categoryId,
+      force,
     });
     return Response.json(result);
   } catch (error) {

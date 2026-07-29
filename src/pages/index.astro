@@ -10,7 +10,8 @@ import { siteConfigRepository } from '../lib/server/siteConfigRepository.mjs';
 import { foodRepository } from '../lib/server/foodRepository.mjs';
 
 postRepository.ensureSeededFromContent();
-const posts = postRepository.list({ filter: 'published', limit: 100 }).items;
+const postStats = postRepository.stats();
+const publishedPostCount = postStats.published;
 const siteConfig = siteConfigRepository.getSiteConfig();
 const sectionList = siteConfigRepository.listSections();
 const sectionMap = Object.fromEntries(sectionList.map((section) => [section.key, section]));
@@ -31,6 +32,7 @@ const navSmall = (key, fallback) => {
 
 const watchArchive = getWatchArchiveFromDb();
 const WATCH_TRACK_BATCH_SIZE = 12;
+const WATCH_TRACK_CATALOG_SIZE = 48;
 const compactWatchItem = (item) => ({
   title: item.title,
   type: item.type,
@@ -44,15 +46,17 @@ const compactWatchItem = (item) => ({
   lineSource: item.lineSource,
   href: item.href,
 });
-const takeWatchBatch = (items, offset) => Array.from(
-  { length: Math.min(WATCH_TRACK_BATCH_SIZE, items.length) },
+const takeWatchBatch = (items, offset, size = WATCH_TRACK_BATCH_SIZE) => Array.from(
+  { length: Math.min(size, items.length) },
   (_, index) => items[(offset + index) % items.length],
 );
 const watchTrackRows = watchArchive.rows.map((row, rowIndex) => {
-  const catalog = row.items.map(compactWatchItem);
+  const fullCatalog = row.items.map(compactWatchItem);
+  const catalogStart = fullCatalog.length ? Math.floor(Math.random() * fullCatalog.length) : 0;
+  const catalog = takeWatchBatch(fullCatalog, catalogStart, WATCH_TRACK_CATALOG_SIZE);
   const startIndex = catalog.length ? Math.floor(Math.random() * catalog.length) : 0;
   return {
-    ...row,
+    direction: row.direction,
     rowIndex,
     startIndex,
     catalog,
@@ -100,7 +104,7 @@ const watchStats = {
   series: watchArchive.stats.series,
 };
 const archiveStats = [
-  { value: posts.length, label: '公开笔记', note: 'Writing' },
+  { value: publishedPostCount, label: '公开笔记', note: 'Writing' },
   { value: watchStats.total, label: '影像作品', note: 'Cinema' },
   { value: watchStats.watched, label: '已看', note: 'Watched' },
   { value: watchStats.wanted, label: '待看', note: 'Queue' },
@@ -188,7 +192,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
       <a class="qzq-brand" href="/">{siteConfig.brandName}</a>
       <div class="qzq-nav-links">
         {isSectionEnabled('topics') && <a class="qzq-nav-item" href="#topics"><span>{section('topics', { navLabel: '主线' }).navLabel}</span><small>{navSmall('topics', '4')}</small></a>}
-        <a class="qzq-nav-item" href="/writing"><span>笔记</span><small>{posts.length}</small></a>
+        <a class="qzq-nav-item" href="/writing"><span>笔记</span><small>{publishedPostCount}</small></a>
         {isSectionEnabled('watch') && <a class="qzq-nav-item" href="#watch"><span>{section('watch', { navLabel: '影像' }).navLabel}</span><small>{navSmall('watch', String(watchStats.watched))}</small></a>}
         {isSectionEnabled('food') && <a class="qzq-nav-item" href="#food"><span>{section('food', { navLabel: '美食' }).navLabel}</span><small>{navSmall('food', String(foodItems.length))}</small></a>}
         {isSectionEnabled('reading') && <a class="qzq-nav-item" href="#reading"><span>{section('reading', { navLabel: '书架' }).navLabel}</span><small>{navSmall('reading', String(readingTotal))}</small></a>}
@@ -309,7 +313,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
           {siteConfig.heroSubline}
         </p>
         <div class="qzq-stat-rhythm" aria-label="站点内容统计">
-          <span><strong data-count-to={posts.length}>0</strong><em>公开笔记</em></span>
+          <span><strong data-count-to={publishedPostCount}>0</strong><em>公开笔记</em></span>
           <span><strong data-count-to={watchStats.total}>0</strong><em>影像作品</em></span>
           <span><strong data-count-to={watchStats.watched}>0</strong><em>已看</em></span>
           <span><strong data-count-to={watchStats.series}>0</strong><em>剧集</em></span>
@@ -733,7 +737,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
           <a class="qzq-statistics-button qzq-stat-card" href="#statistics" data-tilt-card aria-label="统计概览">
             <span>统计</span>
             <strong>概览</strong>
-            <small>{posts.length}篇笔记 · {watchStats.total}部影像 · {readingTotal}本书</small>
+            <small>{publishedPostCount}篇笔记 · {watchStats.total}部影像 · {readingTotal}本书</small>
           </a>
         </div>
 

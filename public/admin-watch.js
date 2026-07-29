@@ -2,6 +2,8 @@ const state = { items: [], stats: {}, filter: 'all', query: '' };
 const listEl = document.querySelector('[data-watch-list]');
 const summaryEl = document.querySelector('[data-watch-summary]');
 const searchEl = document.querySelector('[data-watch-search]');
+const errorEl = document.querySelector('[data-watch-error]');
+let loadController = null;
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -20,12 +22,14 @@ function render() {
   }
   listEl.innerHTML = state.items.map((item) => {
     const image = item.image_small_path || item.image_path;
-    const style = image ? `style="background-image:url('${escapeHtml(image)}')"` : '';
+    const thumb = image
+      ? `<img class="cms-index-thumb" src="${escapeHtml(image)}" alt="" width="40" height="48" loading="lazy" decoding="async" />`
+      : '<span class="cms-index-thumb">影</span>';
     const activity = item.is_activity_featured ? ' · 观看近况' : '';
     return `
       <a class="cms-index-row" href="/admin/watch/${item.id}/edit">
         <span class="cms-index-row-main">
-          <span class="cms-index-thumb" ${style}>${image ? '' : '影'}</span>
+          ${thumb}
           <span>
             <strong class="cms-index-title">${escapeHtml(item.title)}</strong>
             <span class="cms-index-meta">${escapeHtml(item.quote || item.comment || '未填写内容')}</span>
@@ -40,30 +44,49 @@ function render() {
 }
 
 async function loadItems() {
+  loadController?.abort();
+  const controller = new AbortController();
+  loadController = controller;
+  errorEl.hidden = true;
   const params = new URLSearchParams({ filter: state.filter, query: state.query });
-  const response = await fetch(`/api/admin/watch?${params}`);
-  if (!response.ok) throw new Error('读取影像失败');
-  const data = await response.json();
-  state.items = data.items || [];
-  state.stats = data.stats || {};
-  render();
+  listEl.setAttribute('aria-busy', 'true');
+  try {
+    const response = await fetch(`/api/admin/watch?${params}`, { signal: controller.signal });
+    if (!response.ok) throw new Error('读取影像失败');
+    const data = await response.json();
+    if (loadController !== controller) return;
+    state.items = data.items || [];
+    state.stats = data.stats || {};
+    render();
+  } catch (error) {
+    if (error?.name === 'AbortError') return;
+    throw error;
+  } finally {
+    if (loadController === controller) {
+      loadController = null;
+      listEl.removeAttribute('aria-busy');
+    }
+  }
+}
+
+function showLoadError() {
+  summaryEl.textContent = '读取失败';
+  errorEl.hidden = false;
 }
 
 document.querySelectorAll('[data-filter]').forEach((button) => {
   button.addEventListener('click', () => {
     state.filter = button.dataset.filter || 'all';
     document.querySelectorAll('[data-filter]').forEach((item) => item.classList.toggle('active', item === button));
-    loadItems().catch((error) => { summaryEl.textContent = error.message; });
+    loadItems().catch(showLoadError);
   });
 });
 
 searchEl?.addEventListener('input', () => {
   state.query = searchEl.value;
   window.clearTimeout(searchEl._timer);
-  searchEl._timer = window.setTimeout(() => loadItems().catch((error) => { summaryEl.textContent = error.message; }), 180);
+  searchEl._timer = window.setTimeout(() => loadItems().catch(showLoadError), 240);
 });
 
-loadItems().catch((error) => {
-  summaryEl.textContent = error.message;
-  listEl.innerHTML = '<div class="cms-index-error">读取失败，请刷新重试</div>';
-});
+document.querySelector('[data-watch-retry]')?.addEventListener('click', () => loadItems().catch(showLoadError));
+loadItems().catch(showLoadError);

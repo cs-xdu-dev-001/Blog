@@ -6,6 +6,10 @@ const drawer = document.querySelector('[data-radar-drawer]');
 const drawerTitle = document.querySelector('[data-radar-drawer-title]');
 const form = document.querySelector('[data-radar-form]');
 const deleteButton = document.querySelector('[data-delete-radar]');
+const saveButton = document.querySelector('[data-save-radar]');
+const errorEl = document.querySelector('[data-radar-error]');
+let loadController = null;
+let operationPending = false;
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -39,12 +43,39 @@ function render() {
 }
 
 async function loadItems() {
-  const response = await fetch(`/api/admin/radar?scope=${encodeURIComponent(state.filter)}`);
-  if (!response.ok) throw new Error('读取标签失败');
-  const data = await response.json();
-  state.items = data.items || [];
-  state.stats = data.stats || {};
-  render();
+  loadController?.abort();
+  const controller = new AbortController();
+  loadController = controller;
+  errorEl.hidden = true;
+  listEl.setAttribute('aria-busy', 'true');
+  try {
+    const response = await fetch(`/api/admin/radar?scope=${encodeURIComponent(state.filter)}`, { signal: controller.signal });
+    if (!response.ok) throw new Error('读取标签失败');
+    const data = await response.json();
+    if (loadController !== controller) return;
+    state.items = data.items || [];
+    state.stats = data.stats || {};
+    render();
+  } catch (error) {
+    if (error?.name === 'AbortError') return;
+    throw error;
+  } finally {
+    if (loadController === controller) {
+      loadController = null;
+      listEl.removeAttribute('aria-busy');
+    }
+  }
+}
+
+function showLoadError(error) {
+  summaryEl.textContent = error?.message || '读取失败';
+  errorEl.hidden = false;
+}
+
+function setOperationPending(pending) {
+  operationPending = pending;
+  if (saveButton) saveButton.disabled = pending;
+  if (deleteButton) deleteButton.disabled = pending;
 }
 
 function openEditor(item = null) {
@@ -77,22 +108,39 @@ function payload() {
 
 form?.addEventListener('submit', async (event) => {
   event.preventDefault();
-  const response = await fetch(state.selected ? `/api/admin/radar/${state.selected.id}` : '/api/admin/radar', {
-    method: state.selected ? 'PUT' : 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload()),
-  });
-  if (!response.ok) return;
-  drawer.close();
-  await loadItems();
+  if (operationPending) return;
+  setOperationPending(true);
+  summaryEl.textContent = '正在保存';
+  try {
+    const response = await fetch(state.selected ? `/api/admin/radar/${state.selected.id}` : '/api/admin/radar', {
+      method: state.selected ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload()),
+    });
+    if (!response.ok) throw new Error(`保存失败（${response.status}）`);
+    drawer.close();
+    await loadItems();
+  } catch (error) {
+    summaryEl.textContent = error?.message || '保存失败';
+  } finally {
+    setOperationPending(false);
+  }
 });
 
 deleteButton?.addEventListener('click', async () => {
-  if (!state.selected || !window.confirm(`确认删除“${state.selected.zh || state.selected.label}”？`)) return;
-  const response = await fetch(`/api/admin/radar/${state.selected.id}`, { method: 'DELETE' });
-  if (!response.ok) return;
-  drawer.close();
-  await loadItems();
+  if (operationPending || !state.selected || !window.confirm(`确认删除“${state.selected.zh || state.selected.label}”？`)) return;
+  setOperationPending(true);
+  summaryEl.textContent = '正在删除';
+  try {
+    const response = await fetch(`/api/admin/radar/${state.selected.id}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error(`删除失败（${response.status}）`);
+    drawer.close();
+    await loadItems();
+  } catch (error) {
+    summaryEl.textContent = error?.message || '删除失败';
+  } finally {
+    setOperationPending(false);
+  }
 });
 
 listEl?.addEventListener('click', (event) => {
@@ -104,7 +152,8 @@ document.querySelector('[data-close-radar]')?.addEventListener('click', () => dr
 document.querySelectorAll('[data-filter]').forEach((button) => button.addEventListener('click', () => {
   state.filter = button.dataset.filter || 'all';
   document.querySelectorAll('[data-filter]').forEach((item) => item.classList.toggle('active', item === button));
-  loadItems().catch((error) => { summaryEl.textContent = error.message; });
+  loadItems().catch(showLoadError);
 }));
 searchEl?.addEventListener('input', () => { state.query = searchEl.value; render(); });
-loadItems().catch((error) => { summaryEl.textContent = error.message; });
+document.querySelector('[data-radar-retry]')?.addEventListener('click', () => loadItems().catch(showLoadError));
+loadItems().catch(showLoadError);

@@ -14,6 +14,10 @@ const searchEl = document.querySelector('[data-post-search]');
 const kindSelect = document.querySelector('[data-post-kind-filter]');
 const topicSelect = document.querySelector('[data-post-topic-filter]');
 const saveStateEl = document.querySelector('[data-post-save-state]');
+const createButtons = [...document.querySelectorAll('[data-create-post]')];
+let itemsController = null;
+let itemsRequestId = 0;
+let creatingPost = false;
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -36,7 +40,7 @@ function topicTitle(slug) {
 
 async function loadTopics() {
   const response = await fetch('/api/admin/topics');
-  if (!response.ok) return;
+  if (!response.ok) throw new Error('读取主线失败');
   const data = await response.json();
   state.topics = Array.isArray(data.items) ? data.items : [];
   topicSelect.innerHTML = [
@@ -44,17 +48,36 @@ async function loadTopics() {
     ...state.topics.map((topic) => `<option value="${escapeHtml(topic.slug)}">${escapeHtml(topic.title)}</option>`),
   ].join('');
   topicSelect.value = state.topicSlug;
+  renderList();
 }
 
 async function loadItems() {
+  itemsController?.abort();
+  const controller = new AbortController();
+  const requestId = ++itemsRequestId;
+  itemsController = controller;
   const params = new URLSearchParams({ filter: state.filter, query: state.query });
   if (state.topicSlug) params.set('topicSlug', state.topicSlug);
-  const response = await fetch(`/api/admin/posts?${params}`);
-  if (!response.ok) throw new Error('读取笔记失败');
-  const data = await response.json();
-  state.items = Array.isArray(data.items) ? data.items : [];
-  state.stats = data.stats || {};
-  render();
+  listEl.setAttribute('aria-busy', 'true');
+
+  try {
+    const response = await fetch(`/api/admin/posts?${params}`, { signal: controller.signal });
+    if (!response.ok) throw new Error('读取笔记失败');
+    const data = await response.json();
+    if (requestId !== itemsRequestId) return;
+    state.items = Array.isArray(data.items) ? data.items : [];
+    state.stats = data.stats || {};
+    setStatus('');
+    render();
+  } catch (error) {
+    if (error?.name === 'AbortError') return;
+    if (requestId === itemsRequestId) setStatus(error.message || '读取笔记失败');
+  } finally {
+    if (requestId === itemsRequestId) {
+      itemsController = null;
+      listEl.removeAttribute('aria-busy');
+    }
+  }
 }
 
 function visibleItems() {
@@ -102,23 +125,30 @@ function render() {
 }
 
 async function createPost(kind) {
+  if (creatingPost) return;
+  creatingPost = true;
+  createButtons.forEach((button) => { button.disabled = true; });
   setStatus('正在创建');
   const titlePrefix = kind === 'reflection' ? '未命名随记' : '未命名笔记';
   const title = `${titlePrefix} ${new Date().toLocaleDateString('zh-CN').replaceAll('/', '-')}`;
-  const response = await fetch('/api/admin/posts', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, kind, description: '', body: `# ${title}\n\n`, published: false }),
-  });
-  if (!response.ok) {
-    setStatus('创建失败');
-    return;
+  try {
+    const response = await fetch('/api/admin/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, kind, description: '', body: `# ${title}\n\n`, published: false }),
+    });
+    if (!response.ok) throw new Error('创建失败');
+    const data = await response.json();
+    if (!data.item?.id) throw new Error('创建结果无效');
+    window.location.href = `/admin/posts/${data.item.id}/edit`;
+  } catch (error) {
+    setStatus(error.message || '创建失败');
+    creatingPost = false;
+    createButtons.forEach((button) => { button.disabled = false; });
   }
-  const data = await response.json();
-  window.location.href = `/admin/posts/${data.item.id}/edit`;
 }
 
-document.querySelectorAll('[data-create-post]').forEach((button) => {
+createButtons.forEach((button) => {
   button.addEventListener('click', () => createPost(button.dataset.postKind || 'technical'));
 });
 
@@ -126,7 +156,7 @@ document.querySelectorAll('[data-post-filter]').forEach((button) => {
   button.addEventListener('click', () => {
     state.filter = button.dataset.postFilter || 'all';
     document.querySelectorAll('[data-post-filter]').forEach((item) => item.classList.toggle('active', item === button));
-    loadItems().catch((error) => setStatus(error.message));
+    loadItems();
   });
 });
 
@@ -137,13 +167,14 @@ kindSelect?.addEventListener('change', () => {
 
 topicSelect?.addEventListener('change', () => {
   state.topicSlug = topicSelect.value;
-  loadItems().catch((error) => setStatus(error.message));
+  loadItems();
 });
 
 searchEl?.addEventListener('input', () => {
   state.query = searchEl.value;
   window.clearTimeout(searchEl._timer);
-  searchEl._timer = window.setTimeout(() => loadItems().catch((error) => setStatus(error.message)), 180);
+  searchEl._timer = window.setTimeout(loadItems, 240);
 });
 
-Promise.all([loadTopics(), loadItems()]).catch((error) => setStatus(error.message));
+loadTopics().catch((error) => setStatus(error.message));
+loadItems();

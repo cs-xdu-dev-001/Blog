@@ -3,8 +3,14 @@ const createForm = document.querySelector('[data-reading-create-form]');
 const editForm = document.querySelector('[data-reading-editor-form]');
 const stateEl = document.querySelector('[data-reading-editor-state]');
 const saveButton = document.querySelector('[data-save-reading]');
+const createButton = createForm?.querySelector('[type="submit"]');
+const imageInput = document.querySelector('[data-reading-image]');
+const deleteButton = document.querySelector('[data-delete-reading]');
 let dirty = false;
 let isSaving = false;
+let isCreating = false;
+let isUploading = false;
+let isDeleting = false;
 let changeVersion = 0;
 
 function setStatus(text, state = 'idle') {
@@ -16,26 +22,39 @@ function setStatus(text, state = 'idle') {
 function saveError(response) {
   if (response.status === 401) return '登录已失效，请重新登录';
   if (response.status === 403) return '保存被拒绝，请刷新后重试';
+  if (response.status === 413) return '图片不能超过8MB';
+  if (response.status === 415) return '仅支持JPG、PNG、WebP和AVIF';
   return `保存失败（${response.status}）`;
 }
 
 createForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
+  if (isCreating) return;
+  isCreating = true;
+  if (createButton) createButton.disabled = true;
   const values = new FormData(createForm);
-  setStatus('正在创建');
-  const response = await fetch('/api/admin/reading', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      title: values.get('title'),
-      author: values.get('author'),
-      status: values.get('status'),
-      published: values.get('published') === 'on',
-    }),
-  });
-  if (!response.ok) return setStatus('创建失败');
-  const data = await response.json();
-  window.location.href = `/admin/reading/${data.item.id}/edit`;
+  setStatus('正在创建', 'saving');
+  try {
+    const response = await fetch('/api/admin/reading', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: values.get('title'),
+        author: values.get('author'),
+        status: values.get('status'),
+        published: values.get('published') === 'on',
+      }),
+    });
+    if (!response.ok) throw new Error(saveError(response));
+    const data = await response.json();
+    if (!data.item?.id) throw new Error('创建结果无效');
+    isCreating = false;
+    window.location.href = `/admin/reading/${data.item.id}/edit`;
+  } catch (error) {
+    isCreating = false;
+    if (createButton) createButton.disabled = false;
+    setStatus(error instanceof Error ? error.message : '创建失败，请重试', 'error');
+  }
 });
 
 editForm?.addEventListener('input', () => {
@@ -43,9 +62,8 @@ editForm?.addEventListener('input', () => {
   changeVersion += 1;
   setStatus('未保存', 'dirty');
 });
-editForm?.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  if (isSaving) return;
+async function saveEdits() {
+  if (!editForm || isSaving || isUploading || isDeleting) return false;
   isSaving = true;
   const savingVersion = changeVersion;
   const values = new FormData(editForm);
@@ -80,8 +98,10 @@ editForm?.addEventListener('submit', async (event) => {
     document.querySelector('h1').textContent = data.item.title;
     dirty = changeVersion !== savingVersion;
     setStatus(dirty ? '仍有未保存更改' : '已保存', dirty ? 'dirty' : 'saved');
+    return !dirty;
   } catch (error) {
     setStatus(error instanceof Error ? error.message : '保存失败，请重试', 'error');
+    return false;
   } finally {
     isSaving = false;
     if (saveButton) {
@@ -89,29 +109,66 @@ editForm?.addEventListener('submit', async (event) => {
       saveButton.textContent = '保存';
     }
   }
+}
+
+editForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  await saveEdits();
 });
 
-document.querySelector('[data-reading-image]')?.addEventListener('change', async (event) => {
+imageInput?.addEventListener('change', async (event) => {
   const image = event.target.files?.[0];
-  if (!image) return;
+  if (!image || isUploading || isDeleting) return;
+  if (dirty && !(await saveEdits())) {
+    event.target.value = '';
+    return;
+  }
+  isUploading = true;
+  imageInput.disabled = true;
   const body = new FormData();
   body.set('image', image);
-  setStatus('正在上传封面');
-  const response = await fetch(`/api/admin/reading/${editorData.item.id}/image`, { method: 'POST', body });
-  if (!response.ok) return setStatus('上传失败');
-  dirty = false;
-  window.location.reload();
+  setStatus('正在上传封面', 'saving');
+  try {
+    const response = await fetch(`/api/admin/reading/${editorData.item.id}/image`, { method: 'POST', body });
+    if (!response.ok) throw new Error(saveError(response));
+    dirty = false;
+    isUploading = false;
+    window.location.reload();
+  } catch (error) {
+    isUploading = false;
+    imageInput.disabled = false;
+    event.target.value = '';
+    setStatus(error instanceof Error ? error.message : '上传失败，请重试', 'error');
+  }
 });
 
-document.querySelector('[data-delete-reading]')?.addEventListener('click', async () => {
+deleteButton?.addEventListener('click', async () => {
+  if (isSaving || isUploading || isDeleting) return;
   if (!window.confirm(`确认删除《${editorData.item.title}》？`)) return;
-  const response = await fetch(`/api/admin/reading/${editorData.item.id}`, { method: 'DELETE' });
-  if (response.ok) window.location.href = '/admin/reading';
-  else setStatus('删除失败');
+  isDeleting = true;
+  deleteButton.disabled = true;
+  setStatus('正在删除', 'saving');
+  try {
+    const response = await fetch(`/api/admin/reading/${editorData.item.id}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error(saveError(response));
+    dirty = false;
+    isDeleting = false;
+    window.location.href = '/admin/reading';
+  } catch (error) {
+    isDeleting = false;
+    deleteButton.disabled = false;
+    setStatus(error instanceof Error ? error.message : '删除失败，请重试', 'error');
+  }
 });
 
 window.addEventListener('beforeunload', (event) => {
-  if (!dirty) return;
+  if (!dirty && !isSaving && !isCreating && !isUploading && !isDeleting) return;
   event.preventDefault();
   event.returnValue = '';
+});
+
+document.addEventListener('keydown', (event) => {
+  if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 's') return;
+  event.preventDefault();
+  (editForm || createForm)?.requestSubmit();
 });

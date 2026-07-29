@@ -40,7 +40,19 @@ const aiIcon = `
 `;
 
 function setStatus(text) {
-  if (statusEl) statusEl.textContent = text;
+  if (!statusEl) return;
+  const states = {
+    READY: ['已保存', 'saved'],
+    已保存: ['已保存', 'saved'],
+    UNSAVED: ['有未保存修改', 'dirty'],
+    有未保存修改: ['有未保存修改', 'dirty'],
+    'AI REVIEW': ['审阅AI修改', 'review'],
+    'UPLOADING IMAGE': ['正在上传图片', 'saving'],
+  };
+  const [label, state] = states[text] || [text, ''];
+  statusEl.textContent = label;
+  if (state) statusEl.dataset.state = state;
+  else statusEl.removeAttribute('data-state');
 }
 
 function serializeSelection(ctx, view) {
@@ -131,6 +143,8 @@ function createInlineReviewDOM(review) {
   const element = document.createElement('section');
   element.className = 'post-ai-inline-review';
   element.contentEditable = 'false';
+  element.setAttribute('role', 'region');
+  element.setAttribute('aria-label', 'AI修改建议');
   element.innerHTML = `
     <div class="post-ai-inline-review-body">
       <p data-inline-review-message></p>
@@ -247,6 +261,12 @@ function createAIReview(crepe) {
         })
         .scrollIntoView());
     });
+    requestAnimationFrame(() => {
+      root.querySelector('.post-ai-inline-review')?.scrollIntoView({
+        block: 'nearest',
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      });
+    });
   };
 
   const setLoading = (loading) => {
@@ -276,7 +296,7 @@ function createAIReview(crepe) {
     panel.hidden = true;
     resetReviewPanel();
     restoreEditor();
-    if (restoreStatus) setStatus(review?.previousStatus || 'READY');
+    if (restoreStatus) setStatus(review?.previousStatus || '已保存');
     review = null;
     activeReviewId = null;
   };
@@ -337,7 +357,7 @@ function createAIReview(crepe) {
       label,
       result: String(result),
       message: String(message || '').trim(),
-      previousStatus: statusEl?.textContent || 'READY',
+      previousStatus: statusEl?.textContent || '已保存',
     };
     activeReviewId = review.id;
     title.textContent = label;
@@ -366,10 +386,29 @@ function createAIReview(crepe) {
   acceptButton.addEventListener('click', acceptReview);
   rejectButton.addEventListener('click', () => close());
   panel.addEventListener('keydown', (event) => {
-    if (event.key !== 'Escape') return;
-    event.preventDefault();
-    close();
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      close();
+      return;
+    }
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      acceptReview();
+    }
   });
+
+  root.addEventListener('keydown', (event) => {
+    if (!review) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      close();
+      return;
+    }
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      acceptReview();
+    }
+  }, true);
 
   return { open, openResult, close };
 }
@@ -386,18 +425,27 @@ function removeSlashAI(crepe) {
 }
 
 async function uploadPostImage(file) {
-  const res = await fetch('/api/admin/posts/image', {
-    method: 'POST',
-    headers: {
-      'Content-Type': file.type,
-      'X-Image-Name': encodeURIComponent(file.name || 'image'),
-    },
-    credentials: 'same-origin',
-    body: file,
-  });
-  if (!res.ok) throw new Error(`图片上传失败（${res.status}）`);
-  const data = await res.json();
-  return data.image?.imagePath || data.image?.smallPath || '';
+  window.__postImageUploads = Number(window.__postImageUploads || 0) + 1;
+  try {
+    const res = await fetch('/api/admin/posts/image', {
+      method: 'POST',
+      headers: {
+        'Content-Type': file.type,
+        'X-Image-Name': encodeURIComponent(file.name || 'image'),
+      },
+      credentials: 'same-origin',
+      body: file,
+    });
+    if (!res.ok) {
+      if (res.status === 413) throw new Error('图片不能超过8MB');
+      if (res.status === 415) throw new Error('仅支持JPG、PNG、WebP和AVIF');
+      throw new Error(`图片上传失败（${res.status}）`);
+    }
+    const data = await res.json();
+    return data.image?.imagePath || data.image?.smallPath || '';
+  } finally {
+    window.__postImageUploads = Math.max(0, Number(window.__postImageUploads || 1) - 1);
+  }
 }
 
 function clipboardImageFiles(event) {

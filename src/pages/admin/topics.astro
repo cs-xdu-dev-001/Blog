@@ -20,6 +20,10 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
     <div class="cms-index-list">
       <div class="cms-index-list-head"><span>主线</span><span>标签</span><span>强度</span><span>排序</span></div>
       <div data-topic-list></div>
+      <div class="cms-index-error" data-topic-error hidden>
+        <span>读取失败</span>
+        <button class="cms-button" type="button" data-topic-retry>重新读取</button>
+      </div>
     </div>
   </section>
 

@@ -23,11 +23,19 @@ const unlockLockedPostButton = document.querySelector('[data-unlock-locked-post]
 const lockedNoteStatus = document.querySelector('[data-locked-note-status]');
 const PREVIEW_DELAY_MS = 400;
 const PREVIEW_RETRY_DELAY_MS = 350;
+const AUTO_SAVE_DELAY_MS = 2500;
 
 let previewTimer = null;
 let isSaving = false;
+let isDeleting = false;
+let isDirty = false;
+let autoSavePaused = false;
+let autoSaveTimer = null;
+let lastSavedSignature = '';
 let previewRequestId = 0;
 let previewAbortController = null;
+let previewPendingMarkdown = '';
+let lastPreviewMarkdown = '';
 let editorMode = 'edit';
 let hasSuccessfulPreview = false;
 let allTags = normalizeTags([...initialTagOptions, ...(post.tags || [])]);
@@ -59,8 +67,41 @@ function fallbackSlug() {
   return `note-${new Date().toISOString().slice(0, 10)}`;
 }
 
-function setStatus(text) {
-  if (statusEl) statusEl.textContent = text;
+function setStatus(text, state = '') {
+  if (!statusEl) return;
+  statusEl.textContent = text;
+  if (state) statusEl.dataset.state = state;
+  else statusEl.removeAttribute('data-state');
+}
+
+function payloadSignature(payload = collectPayload()) {
+  return JSON.stringify(payload);
+}
+
+function setSaveState(state, message) {
+  const labels = {
+    saved: '已保存',
+    dirty: '有未保存修改',
+    saving: '正在保存',
+    error: '保存失败',
+  };
+  setStatus(message || labels[state] || '', state);
+}
+
+function scheduleAutoSave() {
+  window.clearTimeout(autoSaveTimer);
+  if (!isDirty || isSaving || isDeleting || autoSavePaused
+    || document.querySelector('[data-post-editor-page]')?.dataset.agentEditorLocked === 'true') {
+    return;
+  }
+  autoSaveTimer = window.setTimeout(() => void savePost({ automatic: true }), AUTO_SAVE_DELAY_MS);
+}
+
+function markDirty() {
+  autoSavePaused = false;
+  isDirty = payloadSignature() !== lastSavedSignature;
+  setSaveState(isDirty ? 'dirty' : 'saved');
+  scheduleAutoSave();
 }
 
 function getLineBounds(value, position) {
@@ -201,18 +242,27 @@ function imageAlt(file) {
 }
 
 async function uploadPostImage(file) {
-  const res = await fetch('/api/admin/posts/image', {
-    method: 'POST',
-    headers: {
-      'Content-Type': file.type,
-      'X-Image-Name': encodeURIComponent(file.name || 'image'),
-    },
-    credentials: 'same-origin',
-    body: file,
-  });
-  if (!res.ok) throw new Error(`图片上传失败（${res.status}）`);
-  const data = await res.json();
-  return data.image?.imagePath || data.image?.smallPath || '';
+  window.__postImageUploads = Number(window.__postImageUploads || 0) + 1;
+  try {
+    const res = await fetch('/api/admin/posts/image', {
+      method: 'POST',
+      headers: {
+        'Content-Type': file.type,
+        'X-Image-Name': encodeURIComponent(file.name || 'image'),
+      },
+      credentials: 'same-origin',
+      body: file,
+    });
+    if (!res.ok) {
+      if (res.status === 413) throw new Error('图片不能超过8MB');
+      if (res.status === 415) throw new Error('仅支持JPG、PNG、WebP和AVIF');
+      throw new Error(`图片上传失败（${res.status}）`);
+    }
+    const data = await res.json();
+    return data.image?.imagePath || data.image?.smallPath || '';
+  } finally {
+    window.__postImageUploads = Math.max(0, Number(window.__postImageUploads || 1) - 1);
+  }
 }
 
 async function insertUploadedImages(files) {
@@ -224,7 +274,7 @@ async function insertUploadedImages(files) {
       if (!imagePath) continue;
       insertTextAtCursor(input, `![${imageAlt(file)}](${imagePath})\n`);
     }
-    setStatus('UNSAVED');
+    setSaveState('dirty');
     schedulePreview();
   } catch (error) {
     setStatus(error instanceof Error ? error.message : 'IMAGE UPLOAD FAILED');
@@ -777,16 +827,32 @@ function previewIsVisible() {
   return editorMode === 'preview' || editorMode === 'split';
 }
 
+function setPreviewState(state, message = '') {
+  if (!preview) return;
+  preview.dataset.previewState = state;
+  preview.setAttribute('aria-busy', String(state === 'loading'));
+  if (message) preview.title = message;
+  else preview.removeAttribute('title');
+}
+
 function waitForPreviewRetry() {
   return new Promise((resolve) => window.setTimeout(resolve, PREVIEW_RETRY_DELAY_MS));
 }
 
 async function updatePreview() {
   if (!preview || !input || !previewIsVisible()) return;
+  const markdown = input.value;
+  if (hasSuccessfulPreview && markdown === lastPreviewMarkdown) {
+    setPreviewState('ready');
+    return;
+  }
+  if (markdown === previewPendingMarkdown && previewAbortController) return;
   const requestId = ++previewRequestId;
   previewAbortController?.abort();
   const controller = new AbortController();
   previewAbortController = controller;
+  previewPendingMarkdown = markdown;
+  setPreviewState('loading');
   let failureStatus = null;
 
   try {
@@ -800,7 +866,7 @@ async function updatePreview() {
           },
           credentials: 'same-origin',
           cache: 'no-store',
-          body: JSON.stringify({ markdown: input.value }),
+          body: JSON.stringify({ markdown }),
           signal: controller.signal,
         });
         if (requestId !== previewRequestId || controller.signal.aborted) return;
@@ -821,6 +887,8 @@ async function updatePreview() {
         if (requestId !== previewRequestId || controller.signal.aborted) return;
         preview.innerHTML = data.html || '<p>预览会显示在这里。</p>';
         hasSuccessfulPreview = true;
+        lastPreviewMarkdown = markdown;
+        setPreviewState('ready');
         enhancePreviewTables();
         return;
       } catch (error) {
@@ -838,13 +906,19 @@ async function updatePreview() {
         ? `<p>预览连接失败（${failureStatus}）。</p>`
         : '<p>预览连接失败。</p>';
     }
+    if (requestId === previewRequestId) {
+      setPreviewState('error', failureStatus ? `预览更新失败（${failureStatus}）` : '预览更新失败');
+    }
   } finally {
-    if (previewAbortController === controller) previewAbortController = null;
+    if (previewAbortController === controller) {
+      previewAbortController = null;
+      previewPendingMarkdown = '';
+    }
   }
 }
 
 function schedulePreview() {
-  setStatus('UNSAVED');
+  markDirty();
   window.clearTimeout(previewTimer);
   if (!previewIsVisible()) return;
   previewTimer = window.setTimeout(updatePreview, PREVIEW_DELAY_MS);
@@ -868,27 +942,57 @@ function collectPayload() {
   };
 }
 
-async function savePost() {
-  if (isSaving) return;
-  isSaving = true;
-  setStatus('SAVING');
-  const res = await fetch(`/api/admin/posts/${post.id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(collectPayload()),
-  });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    setStatus(data.error || 'SAVE FAILED');
-    isSaving = false;
-    return;
+async function savePost({ automatic = false } = {}) {
+  if (isSaving || isDeleting) return false;
+  window.clearTimeout(autoSaveTimer);
+  const payload = collectPayload();
+  const savingSignature = payloadSignature(payload);
+  if (!isDirty && savingSignature === lastSavedSignature) {
+    setSaveState('saved');
+    return true;
   }
-  const data = await res.json();
-  post.slug = data.item.slug;
-  post.title = data.item.title;
-  if (slugInput) slugInput.value = data.item.slug;
-  setStatus('SAVED');
-  isSaving = false;
+  isSaving = true;
+  autoSavePaused = false;
+  if (saveButton) saveButton.disabled = true;
+  if (deleteButton) deleteButton.disabled = true;
+  if (previewButton) previewButton.disabled = true;
+  setSaveState('saving', automatic ? '正在自动保存' : '正在保存');
+  let succeeded = false;
+  try {
+    const res = await fetch(`/api/admin/posts/${post.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `保存失败（${res.status}）`);
+    }
+    const data = await res.json();
+    const currentPayload = collectPayload();
+    const currentSignature = payloadSignature(currentPayload);
+    const slugChangedDuringSave = currentPayload.slug !== payload.slug;
+    post.slug = data.item.slug;
+    post.title = data.item.title;
+    if (slugInput && !slugChangedDuringSave) slugInput.value = data.item.slug;
+    lastSavedSignature = payloadSignature({ ...payload, slug: data.item.slug });
+    if (currentSignature === savingSignature) lastSavedSignature = payloadSignature();
+    isDirty = payloadSignature() !== lastSavedSignature;
+    setSaveState(isDirty ? 'dirty' : 'saved');
+    succeeded = !isDirty;
+  } catch (error) {
+    isDirty = true;
+    autoSavePaused = true;
+    setSaveState('error', error instanceof Error ? error.message : '保存失败');
+  } finally {
+    isSaving = false;
+    if (saveButton) saveButton.disabled = false;
+    if (deleteButton) deleteButton.disabled = false;
+    if (previewButton) previewButton.disabled = false;
+    if (isDirty && !autoSavePaused) scheduleAutoSave();
+  }
+  return succeeded;
 }
 
 async function unlockLockedPost() {
@@ -914,15 +1018,51 @@ async function unlockLockedPost() {
 }
 
 async function deletePost() {
+  if (isSaving || isDeleting || Number(window.__postImageUploads || 0) > 0) return;
   const title = form?.querySelector('input[name="title"]')?.value || post.title || '当前笔记';
   if (!window.confirm(`确认删除“${title}”？此操作不可撤销。`)) return;
-  setStatus('DELETING');
-  const res = await fetch(`/api/admin/posts/${post.id}`, { method: 'DELETE' });
-  if (!res.ok) {
-    setStatus('DELETE FAILED');
+  window.clearTimeout(autoSaveTimer);
+  autoSavePaused = true;
+  isDeleting = true;
+  if (deleteButton) deleteButton.disabled = true;
+  if (saveButton) saveButton.disabled = true;
+  if (previewButton) previewButton.disabled = true;
+  setStatus('正在删除', 'saving');
+  try {
+    const res = await fetch(`/api/admin/posts/${post.id}`, {
+      method: 'DELETE',
+      credentials: 'same-origin',
+    });
+    if (!res.ok) throw new Error(`删除失败（${res.status}）`);
+    isDirty = false;
+    window.location.href = '/admin/posts';
+  } catch (error) {
+    autoSavePaused = false;
+    setStatus(error instanceof Error ? error.message : '删除失败', 'error');
+    scheduleAutoSave();
+  } finally {
+    isDeleting = false;
+    if (deleteButton) deleteButton.disabled = false;
+    if (saveButton) saveButton.disabled = false;
+    if (previewButton) previewButton.disabled = false;
+  }
+}
+
+async function openFrontendPreview() {
+  if (isSaving || isDeleting) return;
+  if (Number(window.__postImageUploads || 0) > 0) {
+    setStatus('图片仍在上传，请稍候', 'saving');
     return;
   }
-  window.location.href = '/admin/posts';
+  const previewWindow = window.open('about:blank', '_blank');
+  if (!previewWindow) return;
+  previewWindow.opener = null;
+  if (isDirty && !await savePost()) {
+    previewWindow.close();
+    return;
+  }
+  const slug = form?.querySelector('[name="slug"]')?.value || post.slug;
+  previewWindow.location.replace(`/posts/${slug}`);
 }
 
 document.querySelectorAll('[data-editor-mode]').forEach((button) => {
@@ -963,7 +1103,15 @@ input?.addEventListener('drop', (event) => {
   event.preventDefault();
   insertUploadedImages(files);
 });
-form?.addEventListener('input', schedulePreview);
+form?.addEventListener('input', (event) => {
+  const target = event.target instanceof HTMLInputElement
+    || event.target instanceof HTMLTextAreaElement
+    || event.target instanceof HTMLSelectElement
+    ? event.target
+    : null;
+  if (!target?.name) return;
+  schedulePreview();
+});
 tagSummaryButton?.addEventListener('click', (event) => {
   const target = event.target instanceof Element ? event.target : null;
   const removeButton = target?.closest('[data-tag-remove]');
@@ -1025,13 +1173,10 @@ regenerateSlugButton?.addEventListener('click', () => {
   schedulePreview();
 });
 
-saveButton?.addEventListener('click', savePost);
+saveButton?.addEventListener('click', () => void savePost());
 unlockLockedPostButton?.addEventListener('click', unlockLockedPost);
 deleteButton?.addEventListener('click', deletePost);
-previewButton?.addEventListener('click', () => {
-  const slug = form?.querySelector('[name="slug"]')?.value || post.slug;
-  window.open(`/posts/${slug}`, '_blank', 'noreferrer');
-});
+previewButton?.addEventListener('click', () => void openFrontendPreview());
 preview?.addEventListener('click', (event) => {
   const target = event.target instanceof Element ? event.target : null;
   const button = target?.closest('.post-preview-table-edit');
@@ -1077,7 +1222,17 @@ document.addEventListener('click', (event) => {
   }
 });
 document.addEventListener('keydown', (event) => {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+    event.preventDefault();
+    void savePost();
+    return;
+  }
   if (event.key === 'Escape' && tableEditorState) closeTableEditor();
+});
+window.addEventListener('beforeunload', (event) => {
+  if (!isDirty && !isSaving && !isDeleting && Number(window.__postImageUploads || 0) === 0) return;
+  event.preventDefault();
+  event.returnValue = '';
 });
 window.addEventListener('resize', () => {
   if (!tableEditorPosition) return;
@@ -1086,3 +1241,5 @@ window.addEventListener('resize', () => {
 });
 
 renderTags();
+lastSavedSignature = payloadSignature();
+setSaveState('saved');

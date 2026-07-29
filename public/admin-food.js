@@ -21,12 +21,14 @@ function render() {
   }
   listEl.innerHTML = state.items.map((item) => {
     const image = item.image_small_path || item.image_path;
-    const style = image ? `style="background-image:url('${escapeHtml(image)}')"` : '';
+    const thumb = image
+      ? `<img class="cms-index-thumb cms-food-thumb" src="${escapeHtml(image)}" alt="" width="40" height="40" loading="lazy" decoding="async" />`
+      : '<span class="cms-index-thumb cms-food-thumb">食</span>';
     const badges = [item.status, item.published ? '' : '未发布', item.is_featured ? '首页精选' : ''].filter(Boolean).join(' · ');
     return `
       <a class="cms-index-row" href="/admin/food/${item.id}/edit">
         <span class="cms-index-row-main">
-          <span class="cms-index-thumb cms-food-thumb" ${style}>${image ? '' : '食'}</span>
+          ${thumb}
           <span>
             <strong class="cms-index-title">${escapeHtml(item.title)}</strong>
             <span class="cms-index-meta">${escapeHtml(item.dish || item.comment || '未填写代表菜')}</span>
@@ -46,6 +48,7 @@ async function loadItems() {
   state.controller = controller;
   errorEl.hidden = true;
   const params = new URLSearchParams({ filter: state.filter, query: state.query });
+  listEl.setAttribute('aria-busy', 'true');
   try {
     const response = await fetch(`/api/admin/food?${params}`, { signal: controller.signal });
     if (!response.ok) throw new Error('读取美食失败');
@@ -55,9 +58,14 @@ async function loadItems() {
     state.stats = data.stats || {};
     render();
   } catch (error) {
-    if (error.name === 'AbortError') return;
+    if (error?.name === 'AbortError') return;
     errorEl.hidden = false;
     summaryEl.textContent = error.message;
+  } finally {
+    if (state.controller === controller) {
+      state.controller = null;
+      listEl.removeAttribute('aria-busy');
+    }
   }
 }
 
@@ -72,7 +80,7 @@ document.querySelectorAll('[data-filter]').forEach((button) => {
 searchEl?.addEventListener('input', () => {
   state.query = searchEl.value;
   window.clearTimeout(searchEl._timer);
-  searchEl._timer = window.setTimeout(loadItems, 180);
+  searchEl._timer = window.setTimeout(loadItems, 240);
 });
 
 document.querySelector('[data-food-retry]')?.addEventListener('click', loadItems);

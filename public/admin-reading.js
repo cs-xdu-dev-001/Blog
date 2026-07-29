@@ -28,16 +28,16 @@ function render() {
   }
   listEl.innerHTML = state.items.map((item) => {
     const image = item.image_small_path || item.image_path;
-    const style = image
-      ? `style="background-image:url('${escapeHtml(image)}')"`
-      : `style="background-color:${escapeHtml(item.spine_color || '#263548')}"`;
+    const thumb = image
+      ? `<img class="cms-index-thumb" src="${escapeHtml(image)}" alt="" width="40" height="48" loading="lazy" decoding="async" />`
+      : `<span class="cms-index-thumb" style="background-color:${escapeHtml(item.spine_color || '#263548')}">书</span>`;
     const displayStatus = Number(item.published ?? 1) === 1
       ? statusLabel(item)
       : `${statusLabel(item)} · 未发布`;
     return `
       <a class="cms-index-row" href="/admin/reading/${item.id}/edit">
         <span class="cms-index-row-main">
-          <span class="cms-index-thumb" ${style}>${image ? '' : '书'}</span>
+          ${thumb}
           <span>
             <strong class="cms-index-title">${escapeHtml(item.title)}</strong>
             <span class="cms-index-meta">${escapeHtml(item.summary || item.quote || '未填写内容')}</span>
@@ -57,6 +57,7 @@ async function loadItems() {
   loadController = controller;
   errorEl.hidden = true;
   const params = new URLSearchParams({ filter: state.filter, query: state.query });
+  listEl.setAttribute('aria-busy', 'true');
   try {
     const response = await fetch(`/api/admin/reading?${params}`, { signal: controller.signal });
     if (!response.ok) throw new Error('读取书籍失败');
@@ -69,14 +70,16 @@ async function loadItems() {
     if (error.name === 'AbortError') return;
     throw error;
   } finally {
-    if (loadController === controller) loadController = null;
+    if (loadController === controller) {
+      loadController = null;
+      listEl.removeAttribute('aria-busy');
+    }
   }
 }
 
 function showLoadError() {
   statsEl.textContent = '读取失败';
   errorEl.hidden = false;
-  listEl.innerHTML = '';
 }
 
 document.querySelectorAll('[data-reading-filter]').forEach((button) => {
@@ -90,7 +93,7 @@ document.querySelectorAll('[data-reading-filter]').forEach((button) => {
 searchEl?.addEventListener('input', () => {
   state.query = searchEl.value;
   window.clearTimeout(searchEl._timer);
-  searchEl._timer = window.setTimeout(() => loadItems().catch(showLoadError), 180);
+  searchEl._timer = window.setTimeout(() => loadItems().catch(showLoadError), 240);
 });
 
 document.querySelector('[data-reading-retry]')?.addEventListener('click', () => loadItems().catch(showLoadError));
