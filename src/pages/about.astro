@@ -4,6 +4,7 @@ import { siteConfigRepository } from '../lib/server/siteConfigRepository.mjs';
 
 const siteConfig = siteConfigRepository.getSiteConfig();
 const sections = Object.fromEntries(siteConfigRepository.listSections().map((section) => [section.key, section]));
+const topicCount = siteConfig.topics?.cards?.length ?? 0;
 const navSmall = (key, fallback) => {
   const value = sections[key]?.navSmall || fallback;
   return value === 'auto' ? fallback : value;
@@ -21,7 +22,7 @@ const aboutParagraphs = String(siteConfig.aboutBody || '').split(/\n{2,}/).filte
     <nav class="qzq-nav" aria-label="Primary navigation">
       <a class="qzq-brand" href="/">{siteConfig.brandName}</a>
       <div class="qzq-nav-links">
-        <a class="qzq-nav-item" href="/#topics"><span>{sections.topics?.navLabel || '主线'}</span><small>{navSmall('topics', '4')}</small></a>
+        <a class="qzq-nav-item" href="/#topics"><span>{sections.topics?.navLabel || '主线'}</span><small>{topicCount}</small></a>
         <a class="qzq-nav-item" href="/#notes"><span>{sections.notes?.navLabel || '笔记'}</span><small>{navSmall('notes', 'log')}</small></a>
         <a class="qzq-nav-item" href="/#watch"><span>{sections.watch?.navLabel || '影像'}</span><small>{navSmall('watch', 'film')}</small></a>
         <a class="qzq-nav-item" href="/#reading"><span>{sections.reading?.navLabel || '书架'}</span><small>{navSmall('reading', 'book')}</small></a>

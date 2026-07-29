@@ -157,6 +157,7 @@ const radarHitPoints = (items, item, index) => {
 };
 const topicConfig = siteConfig.topics || {};
 const topicCards = Array.isArray(topicConfig.cards) ? topicConfig.cards : [];
+const topicCount = topicCards.length;
 const topicRows = Array.from(
   { length: Math.ceil(topicCards.length / 5) || 1 },
   (_, rowIndex) => topicCards.slice(rowIndex * 5, rowIndex * 5 + 5),
@@ -191,7 +192,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
     <nav class="qzq-nav" aria-label="Primary navigation">
       <a class="qzq-brand" href="/">{siteConfig.brandName}</a>
       <div class="qzq-nav-links">
-        {isSectionEnabled('topics') && <a class="qzq-nav-item" href="#topics"><span>{section('topics', { navLabel: '主线' }).navLabel}</span><small>{navSmall('topics', '4')}</small></a>}
+        {isSectionEnabled('topics') && <a class="qzq-nav-item" href="#topics"><span>{section('topics', { navLabel: '主线' }).navLabel}</span><small>{topicCount}</small></a>}
         <a class="qzq-nav-item" href="/writing"><span>笔记</span><small>{publishedPostCount}</small></a>
         {isSectionEnabled('watch') && <a class="qzq-nav-item" href="#watch"><span>{section('watch', { navLabel: '影像' }).navLabel}</span><small>{navSmall('watch', String(watchStats.watched))}</small></a>}
         {isSectionEnabled('food') && <a class="qzq-nav-item" href="#food"><span>{section('food', { navLabel: '美食' }).navLabel}</span><small>{navSmall('food', String(foodItems.length))}</small></a>}
