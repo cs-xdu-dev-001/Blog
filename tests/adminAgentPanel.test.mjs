@@ -37,7 +37,7 @@ test('admin agent client supports context, cancellation, review, and bounded his
   assert.match(client, /captureContext\?\.\(\)/);
   assert.match(client, /__postAgentBridge\?\.reviewProposal/);
   assert.match(client, /new AbortController/);
-  assert.match(client, /\.slice\(-8\)/);
+  assert.match(client, /\.slice\(-4\)/);
   assert.match(client, /admin-agent:open/);
   assert.match(client, /data-admin-agent-resize/);
   assert.match(client, /scopePreference:\s*scopeSelect\?\.value/);
@@ -48,6 +48,7 @@ test('admin agent client supports context, cancellation, review, and bounded his
   assert.match(client, /response\.body\?\.getReader\(\)/);
   assert.match(client, /eventType === 'phase'/);
   assert.match(client, /eventType === 'result'/);
+  assert.match(client, /eventType === 'delta'/);
   assert.match(client, /data-admin-agent-trace/);
   assert.match(client, /reviewProposal\(target,\s*result\.proposal,\s*result\.message\)/);
   assert.match(client, /admin-agent:selection-change/);

@@ -1,5 +1,7 @@
 ---
+import ContentBacklinks from '../../components/ContentBacklinks.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { contentReferenceService } from '../../lib/server/contentReferenceService.mjs';
 import { markdownToHtml } from '../../lib/server/markdownRenderer.mjs';
 import { watchRepository } from '../../lib/server/watchRepository.mjs';
 
@@ -18,6 +20,7 @@ const archiveNumber = String(item.id).padStart(3, '0');
 const posterSrcset = item.image_small_path
   ? `${item.image_small_path} 480w, ${item.image_path} 960w`
   : undefined;
+const backlinks = contentReferenceService.backlinks(`/watch/${item.id}`);
 ---
 
 <BaseLayout
@@ -70,6 +73,7 @@ const posterSrcset = item.image_small_path
       {item.comment && (
         <section class="watch-review-body article-prose" set:html={review.html}></section>
       )}
+      <ContentBacklinks items={backlinks} />
     </article>
   </main>
 </BaseLayout>

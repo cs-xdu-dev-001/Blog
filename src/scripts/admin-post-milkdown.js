@@ -15,6 +15,7 @@ import { Plugin, PluginKey } from '@milkdown/kit/prose/state';
 import { Decoration, DecorationSet } from '@milkdown/kit/prose/view';
 import { $prose, insert, replaceAll, replaceRange } from '@milkdown/utils';
 import { reviewIsCurrent } from './admin-agent-review.js';
+import { attachPostReferencePicker, findReferenceTrigger } from './admin-post-references.js';
 import { languages as codeLanguages } from './codemirror-language-data.js';
 import '@milkdown/crepe/theme/common/reset.css';
 import '@milkdown/crepe/theme/common/block-edit.css';
@@ -85,10 +86,14 @@ function serializeSelection(ctx, view) {
     if (paragraph) wrapper = schema.topNodeType.createAndFill(null, paragraph);
   }
   const selection = wrapper ? serializer(wrapper) : state.doc.textBetween(from, to);
+  const beforeText = state.doc.textBetween(0, from, '\n\n', '\n');
+  const afterText = state.doc.textBetween(to, state.doc.content.size, '\n\n', '\n');
   return {
     ...snapshot,
     selection,
     original: selection,
+    before: beforeText.split(/\n{2,}/).filter(Boolean).at(-1) || '',
+    after: afterText.split(/\n{2,}/).filter(Boolean)[0] || '',
     from,
     to,
   };
@@ -488,6 +493,28 @@ function syncMarkdown(markdown) {
   input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
+function captureReferenceTrigger(crepe) {
+  let trigger = null;
+  crepe.editor.action((ctx) => {
+    const view = ctx.get(editorViewCtx);
+    const { selection } = view.state;
+    if (!selection.empty || !selection.$from.parent.isTextblock) return;
+
+    const blockStart = selection.$from.start();
+    const blockText = view.state.doc.textBetween(blockStart, selection.from, '\n', '\n');
+    const localTrigger = findReferenceTrigger(blockText, blockText.length);
+    if (!localTrigger) return;
+
+    trigger = {
+      from: blockStart + localTrigger.from,
+      to: blockStart + localTrigger.to,
+      query: localTrigger.query,
+      coords: view.coordsAtPos(selection.from),
+    };
+  });
+  return trigger;
+}
+
 function labelAIToolbarButton() {
   document.querySelectorAll('.milkdown-toolbar').forEach((toolbar) => {
     const button = toolbar.querySelector('.toolbar-item:last-child');
@@ -573,6 +600,13 @@ export async function bootMilkdown() {
     }
     if (fallback) fallback.hidden = true;
     const aiReview = createAIReview(crepe);
+    attachPostReferencePicker({
+      root,
+      getTrigger: () => captureReferenceTrigger(crepe),
+      insertReference: ({ from, to, markdown }) => {
+        crepe.editor.action(replaceRange(markdown, { from, to }));
+      },
+    });
     window.__postAgentBridge = {
       captureContext: () => captureAITarget(crepe),
       undoLastChange: () => {

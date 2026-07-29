@@ -1,5 +1,7 @@
 ---
+import ContentBacklinks from '../../components/ContentBacklinks.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { contentReferenceService } from '../../lib/server/contentReferenceService.mjs';
 import { getReadingBySlugFromDb } from '../../lib/server/readingArchiveView.mjs';
 
 export const prerender = false;
@@ -9,6 +11,7 @@ const book = getReadingBySlugFromDb(Astro.params.slug);
 if (!book) {
   return Astro.redirect('/reading');
 }
+const backlinks = contentReferenceService.backlinks(`/reading/${book.slug}`);
 ---
 
 <BaseLayout
@@ -61,6 +64,7 @@ if (!book) {
         <h2>我的记录</h2>
         <p>{book.review}</p>
       </section>
+      <ContentBacklinks items={backlinks} />
     </div>
   </article>
 </BaseLayout>

@@ -474,6 +474,7 @@ export async function requestAssistantText({
   systemText,
   messages = [],
   maxTokens = 2400,
+  model,
   config = siteConfigRepository.getSiteConfig(),
   signal,
 } = {}) {
@@ -499,9 +500,10 @@ export async function requestAssistantText({
     : [];
   const tokenLimit = Math.max(256, Math.min(4000, Number(maxTokens) || 2400));
   const mode = assistantApiMode(config);
+  const requestModel = String(model || assistantModel(config)).trim();
   const body = mode === 'responses'
     ? {
-        model: assistantModel(config),
+        model: requestModel,
         max_output_tokens: tokenLimit,
         stream: true,
         input: [
@@ -516,7 +518,7 @@ export async function requestAssistantText({
         ],
       }
     : {
-        model: assistantModel(config),
+        model: requestModel,
         max_tokens: tokenLimit,
         temperature: 0.35,
         stream: false,
@@ -571,6 +573,120 @@ export async function requestAssistantText({
       error: 'AI助手暂时不可用',
     };
   }
+}
+
+export async function* streamAssistantText({
+  systemText,
+  messages = [],
+  maxTokens = 2400,
+  model,
+  config = siteConfigRepository.getSiteConfig(),
+  signal,
+} = {}) {
+  const apiKey = assistantApiKey(config);
+  if (!apiKey) throw new Error('AI接口尚未配置');
+
+  const normalizedMessages = Array.isArray(messages)
+    ? messages
+        .filter((message) => message && conversationRoles.has(message.role))
+        .map((message) => ({
+          role: message.role,
+          content: String(message.content ?? '').replaceAll('\0', '').trim().slice(0, 45000),
+        }))
+        .filter((message) => message.content)
+        .slice(-12)
+    : [];
+  const tokenLimit = Math.max(256, Math.min(4000, Number(maxTokens) || 2400));
+  const mode = assistantApiMode(config);
+  const requestModel = String(model || assistantModel(config)).trim();
+  const body = mode === 'responses'
+    ? {
+        model: requestModel,
+        max_output_tokens: tokenLimit,
+        stream: true,
+        input: [
+          { role: 'system', content: [{ type: 'input_text', text: String(systemText || '') }] },
+          ...normalizedMessages.map((message) => ({
+            role: message.role,
+            content: [{
+              type: message.role === 'assistant' ? 'output_text' : 'input_text',
+              text: message.content,
+            }],
+          })),
+        ],
+      }
+    : {
+        model: requestModel,
+        max_tokens: tokenLimit,
+        temperature: 0.35,
+        stream: true,
+        messages: [
+          { role: 'system', content: String(systemText || '') },
+          ...normalizedMessages,
+        ],
+      };
+
+  const response = await fetch(assistantEndpoint(config), assistantFetchOptions(config, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+    signal,
+  }));
+  if (!response.ok) {
+    throw new Error(response.status === 429
+      ? '模型请求过多，请稍后重试'
+      : `模型服务暂时不可用（HTTP ${response.status}）`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('模型没有返回可用内容');
+  const decoder = new TextDecoder();
+  const isEventStream = String(response.headers.get('content-type') || '').toLowerCase()
+    .includes('text/event-stream');
+  let output = '';
+  let buffer = '';
+
+  const consume = (rawFrame) => {
+    const frame = parseUpstreamSseFrame(rawFrame);
+    if (!frame || frame.done) return null;
+    if (frame.error) throw new Error(frame.error.message);
+    const part = upstreamTextPart(frame, mode);
+    if (!part) return null;
+    const appended = appendStreamText(output, part.text, part.cumulative);
+    output = appended.text;
+    return appended.delta;
+  };
+
+  while (true) {
+    const chunk = await reader.read();
+    if (chunk.done) break;
+    buffer += decoder.decode(chunk.value, { stream: true });
+    if (!isEventStream) continue;
+    const frames = buffer.split(/\r?\n\r?\n/);
+    buffer = frames.pop() || '';
+    for (const rawFrame of frames) {
+      const delta = consume(rawFrame);
+      if (delta) yield { type: 'delta', text: delta };
+    }
+  }
+  buffer += decoder.decode();
+
+  if (isEventStream && buffer.trim()) {
+    const delta = consume(buffer);
+    if (delta) yield { type: 'delta', text: delta };
+  } else if (!isEventStream && buffer.trim()) {
+    const text = parseModelAnswer(JSON.parse(buffer), config);
+    if (text) {
+      output = text;
+      yield { type: 'delta', text };
+    }
+  }
+
+  if (!output.trim()) throw new Error('模型没有返回可用内容');
+  yield { type: 'done', text: output.trim() };
 }
 
 function writingAssistantRequestBody(instruction, target, config, { hasSelection = false } = {}) {

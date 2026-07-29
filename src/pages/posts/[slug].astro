@@ -1,5 +1,7 @@
 ---
+import ContentBacklinks from '../../components/ContentBacklinks.astro';
 import ArticleLayout from '../../layouts/ArticleLayout.astro';
+import { contentReferenceService } from '../../lib/server/contentReferenceService.mjs';
 import {
   getLockedNoteCookieName,
   readLockedNoteKeyFromCookie,
@@ -41,6 +43,9 @@ const allPosts = postRepository.list({ filter: 'published', limit: 500 }).items;
 const currentIndex = allPosts.findIndex((item) => item.slug === post.slug);
 const prevPost = allPosts[currentIndex - 1] ?? null;
 const nextPost = allPosts[currentIndex + 1] ?? null;
+const backlinks = isLockedPending
+  ? []
+  : contentReferenceService.backlinks(`/posts/${post.slug}`);
 ---
 
 <ArticleLayout
@@ -66,6 +71,9 @@ const nextPost = allPosts[currentIndex + 1] ?? null;
       {unlockFailed && <p class="locked-post-error">密钥不对。</p>}
     </section>
   ) : (
-    <Fragment set:html={rendered.html} />
+    <>
+      <Fragment set:html={rendered.html} />
+      <ContentBacklinks items={backlinks} />
+    </>
   )}
 </ArticleLayout>

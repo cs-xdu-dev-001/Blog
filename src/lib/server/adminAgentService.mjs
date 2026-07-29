@@ -1,13 +1,17 @@
-import { requestAssistantText } from './assistantService.mjs';
+import { requestAssistantText, streamAssistantText } from './assistantService.mjs';
 import { siteConfigRepository } from './siteConfigRepository.mjs';
 
 const limits = {
   message: 1200,
   document: 30000,
   selection: 12000,
-  history: 8,
+  history: 4,
   historyMessage: 1600,
+  adjacent: 2400,
 };
+
+const adminModel = 'gpt-5.5';
+const quickActions = new Set(['polish', 'continue', 'shorten', 'rewrite', 'structure']);
 
 function cleanText(value, maxLength) {
   return String(value || '').replaceAll('\0', '').trim().slice(0, maxLength);
@@ -54,6 +58,8 @@ function contextMessage(input, message) {
   const description = cleanText(input.description, 1200);
   const document = cleanText(input.document, limits.document);
   const selection = cleanText(input.selection, limits.selection);
+  const before = cleanText(input.before, limits.adjacent);
+  const after = cleanText(input.after, limits.adjacent);
   const scopePreference = ['selection', 'document'].includes(input.scopePreference)
     ? input.scopePreference
     : 'auto';
@@ -67,8 +73,10 @@ function contextMessage(input, message) {
     `本次操作范围：${scopeLabel}`,
     `笔记标题：${title || '未命名'}`,
     description ? `笔记摘要：${description}` : '',
+    selection ? `上一段：\n${before || '（无）'}` : '',
     selection ? `当前选中内容：\n${selection}` : '当前没有选中文本。',
-    `当前Markdown正文：\n${document || '（空）'}`,
+    selection ? `下一段：\n${after || '（无）'}` : '',
+    selection ? '' : `当前Markdown正文：\n${document || '（空）'}`,
   ].filter(Boolean).join('\n\n');
 }
 
@@ -91,6 +99,7 @@ export async function runAdminAgent(input = {}, {
   const response = await requestText({
     config,
     signal,
+    model: adminModel,
     maxTokens: 2400,
     systemText: [
       '你是Dev Notes管理端的笔记Agent。',
@@ -123,7 +132,36 @@ export async function runAdminAgent(input = {}, {
   return { ok: true, ...parsed };
 }
 
-export async function* streamAdminAgent(input = {}, options = {}) {
+function quickEditScope(input) {
+  const selection = cleanText(input.selection, limits.selection);
+  return selection && input.scopePreference !== 'document' ? 'selection' : 'document';
+}
+
+function quickEditPrompt(input, action, scope) {
+  const instructions = {
+    polish: '润色表达，保持原意和事实不变。',
+    continue: '沿用现有语气和结构续写；返回内容必须包含原文以及续写部分。',
+    shorten: '压缩内容，删除重复表达，保留关键信息。',
+    rewrite: '重新组织并改写内容，使逻辑更清晰。',
+    structure: '整理内容结构，合理使用Markdown标题、列表和段落。',
+  };
+  const selection = cleanText(input.selection, limits.selection);
+  const target = scope === 'selection'
+    ? selection
+    : cleanText(input.document, limits.document);
+  return [
+    `任务：${instructions[action]}`,
+    '只返回可直接替换编辑器内容的Markdown，不要解释，不要代码围栏。',
+    scope === 'selection' && input.before ? `上一段（仅供理解，不要输出）：\n${cleanText(input.before, limits.adjacent)}` : '',
+    `待处理内容：\n${target || '（空）'}`,
+    scope === 'selection' && input.after ? `下一段（仅供理解，不要输出）：\n${cleanText(input.after, limits.adjacent)}` : '',
+  ].filter(Boolean).join('\n\n');
+}
+
+export async function* streamAdminAgent(input = {}, {
+  streamText = streamAssistantText,
+  ...options
+} = {}) {
   const selection = cleanText(input.selection, limits.selection);
   yield {
     event: 'phase',
@@ -149,6 +187,63 @@ export async function* streamAdminAgent(input = {}, options = {}) {
       status: 'active',
     },
   };
+
+  const action = cleanText(input.action, 40);
+  if (quickActions.has(action)) {
+    const scope = quickEditScope(input);
+    let markdown = '';
+    try {
+      for await (const event of streamText({
+        config: options.config || siteConfigRepository.getSiteConfig(),
+        signal: options.signal,
+        model: adminModel,
+        maxTokens: 2400,
+        systemText: '你是Dev Notes管理端的Markdown编辑助手。严格执行编辑任务，只输出替换后的Markdown。',
+        messages: [{
+          role: 'user',
+          content: quickEditPrompt(input, action, scope),
+        }],
+      })) {
+        if (event.type === 'delta' && event.text) {
+          markdown += event.text;
+          yield {
+            event: 'delta',
+            data: { text: event.text, scope },
+          };
+        }
+        if (event.type === 'done' && event.text) markdown = event.text;
+      }
+    } catch (error) {
+      yield {
+        event: 'error',
+        data: {
+          code: 'ASSISTANT_UNAVAILABLE',
+          message: error instanceof Error ? error.message : 'AI助手暂时不可用',
+          retryable: true,
+        },
+      };
+      return;
+    }
+    if (!markdown.trim()) {
+      yield {
+        event: 'error',
+        data: {
+          code: 'EMPTY_RESPONSE',
+          message: '模型没有返回可用内容',
+          retryable: true,
+        },
+      };
+      return;
+    }
+    yield {
+      event: 'result',
+      data: {
+        message: '修改建议已生成',
+        proposal: { scope, markdown: markdown.trim() },
+      },
+    };
+    return;
+  }
 
   const result = await runAdminAgent(input, options);
   if (!result.ok) {

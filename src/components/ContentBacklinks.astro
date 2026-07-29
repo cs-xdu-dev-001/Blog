@@ -1,0 +1,17 @@
+---
+const { items = [] } = Astro.props;
+---
+
+{items.length > 0 && (
+  <aside class="content-backlinks" aria-label="相关笔记">
+    <strong>相关笔记</strong>
+    <div>
+      {items.map((item) => (
+        <a href={item.url}>
+          <span>{item.title}</span>
+          <i aria-hidden="true">↗</i>
+        </a>
+      ))}
+    </div>
+  </aside>
+)}

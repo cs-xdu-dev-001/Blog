@@ -1,5 +1,7 @@
 ---
+import ContentBacklinks from '../../components/ContentBacklinks.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { contentReferenceService } from '../../lib/server/contentReferenceService.mjs';
 import { markdownToHtml } from '../../lib/server/markdownRenderer.mjs';
 import { foodRepository } from '../../lib/server/foodRepository.mjs';
 
@@ -14,6 +16,7 @@ const content = markdownToHtml(item.comment || '');
 const imageSrcset = item.image_small_path
   ? `${item.image_small_path} 480w, ${item.image_path} 960w`
   : undefined;
+const backlinks = contentReferenceService.backlinks(`/food/${item.id}`);
 ---
 
 <BaseLayout
@@ -54,6 +57,7 @@ const imageSrcset = item.image_small_path
         </div>
       </header>
       {item.comment && <section class="food-detail-body article-prose" set:html={content.html}></section>}
+      <ContentBacklinks items={backlinks} />
     </article>
   </main>
 </BaseLayout>

@@ -1,5 +1,7 @@
 ---
+import ContentBacklinks from '../../components/ContentBacklinks.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { contentReferenceService } from '../../lib/server/contentReferenceService.mjs';
 import { postRepository } from '../../lib/server/postRepository.mjs';
 import { siteConfigRepository } from '../../lib/server/siteConfigRepository.mjs';
 
@@ -20,6 +22,7 @@ const topicTags = String(topic.meta || '')
   .map((item) => item.trim())
   .filter(Boolean);
 const latestPost = posts[0];
+const backlinks = contentReferenceService.backlinks(`/topics/${topic.slug}`);
 const formatDate = (date) =>
   new Intl.DateTimeFormat('zh-CN', {
     year: 'numeric',
@@ -74,5 +77,6 @@ const formatDate = (date) =>
         <a href="/admin/posts">管理关联 ↗</a>
       </section>
     )}
+    <ContentBacklinks items={backlinks} />
   </section>
 </BaseLayout>

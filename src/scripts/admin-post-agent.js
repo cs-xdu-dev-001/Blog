@@ -93,11 +93,14 @@ function createTrace() {
   const summary = document.createElement('summary');
   summary.textContent = '执行过程';
   const list = document.createElement('ol');
-  details.append(summary, list);
+  const draft = document.createElement('div');
+  draft.className = 'post-editor-agent-draft';
+  draft.hidden = true;
+  details.append(summary, list, draft);
   article.append(details);
   messagesEl.append(article);
   messagesEl.scrollTop = messagesEl.scrollHeight;
-  return { article, details, list, phases: new Map() };
+  return { article, details, list, draft, phases: new Map() };
 }
 
 function updateTrace(trace, phase) {
@@ -145,7 +148,7 @@ function setBusy(busy) {
   form?.querySelector('button[type="submit"]')?.toggleAttribute('disabled', busy);
 }
 
-async function sendMessage(message, displayMessage = message) {
+async function sendMessage(message, displayMessage = message, action = '') {
   if (page?.dataset.agentEditorLocked === 'true') {
     addMessage('error', '请先解锁笔记，再让Agent读取或修改正文');
     return;
@@ -168,13 +171,14 @@ async function sendMessage(message, displayMessage = message) {
   });
 
   addMessage('user', displayMessage);
-  const requestHistory = history.slice(-8);
-  history = [...history, { role: 'user', content: message }].slice(-8);
+  const requestHistory = history.slice(-4);
+  history = [...history, { role: 'user', content: message }].slice(-4);
   abortController?.abort();
   abortController = new AbortController();
   setBusy(true);
   const trace = createTrace();
   let result = null;
+  let streamedMarkdown = '';
 
   try {
     const response = await fetch('/api/admin/assistant/agent', {
@@ -184,11 +188,14 @@ async function sendMessage(message, displayMessage = message) {
       signal: abortController.signal,
       body: JSON.stringify({
         message,
+        action,
         history: requestHistory,
         title: titleInput?.value || '',
         description: descriptionInput?.value || '',
-        document: target.document,
+        document: target.selection ? '' : target.document,
         selection: target.selection,
+        before: target.before || '',
+        after: target.after || '',
         scopePreference: scopeSelect?.value || 'auto',
       }),
     });
@@ -198,6 +205,13 @@ async function sendMessage(message, displayMessage = message) {
     }
     await readEventStream(response, (eventType, data) => {
       if (eventType === 'phase') updateTrace(trace, data);
+      if (eventType === 'delta') {
+        streamedMarkdown += String(data.text || '');
+        if (trace?.draft) {
+          trace.draft.hidden = false;
+          trace.draft.textContent = streamedMarkdown;
+        }
+      }
       if (eventType === 'result') {
         updateTrace(trace, {
           id: 'generate',
@@ -216,7 +230,7 @@ async function sendMessage(message, displayMessage = message) {
     } else {
       addMessage('assistant', result.message);
     }
-    history = [...history, { role: 'assistant', content: result.message }].slice(-8);
+    history = [...history, { role: 'assistant', content: result.message }].slice(-4);
   } catch (error) {
     if (error?.name !== 'AbortError') {
       trace?.article.remove();
@@ -258,7 +272,7 @@ commandButtons.forEach((button) => {
   button.addEventListener('click', () => {
     const message = commandPrompts[button.dataset.adminAgentCommand];
     if (!message || abortController) return;
-    void sendMessage(message, button.textContent.trim());
+    void sendMessage(message, button.textContent.trim(), button.dataset.adminAgentCommand);
   });
 });
 
