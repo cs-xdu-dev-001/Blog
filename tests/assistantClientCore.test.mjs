@@ -57,8 +57,12 @@ test('assistant client consumes streamed events and retries a failed turn in pla
 
   assert.match(client, /consumeAssistantSse/);
   assert.match(client, /response\.body\.getReader\(\)/);
-  assert.match(client, /正在连接/);
-  assert.match(client, /正在生成/);
+  assert.match(client, /message\.event === 'start'/);
+  assert.match(client, /连接模型/);
+  assert.match(client, /正在回答/);
+  assert.match(client, /requestAnimationFrame/);
+  assert.match(client, /markdown:\s*true/);
+  assert.match(client, /streaming:\s*true/);
   assert.match(client, /data-assistant-retry/);
   assert.match(client, /historySnapshot/);
   assert.match(client, /retryable/);
@@ -66,6 +70,18 @@ test('assistant client consumes streamed events and retries a failed turn in pla
   assert.match(client, /responseReader\?\.releaseLock/);
   assert.match(client, /clearMessageRetries/);
   assert.match(styles, /\.dn-assistant-retry/);
+});
+
+test('assistant shell exposes a live status and a restrained waiting animation', () => {
+  const layout = fs.readFileSync(new URL('../src/layouts/BaseLayout.astro', import.meta.url), 'utf8');
+  const styles = fs.readFileSync(new URL('../src/styles/global.css', import.meta.url), 'utf8');
+
+  assert.match(layout, /role="dialog"/);
+  assert.match(layout, /aria-labelledby="dn-assistant-title"/);
+  assert.match(styles, /\.dn-assistant-progress/);
+  assert.match(styles, /\.dn-assistant-breath/);
+  assert.match(styles, /@keyframes dnAssistantBreathe/);
+  assert.match(styles, /prefers-reduced-motion:\s*reduce[\s\S]*dn-assistant-breath/);
 });
 
 test('assistant session stores completed turns and clears them together', () => {

@@ -117,9 +117,15 @@ if (assistant) {
           <span>Ask</span>
           <i>AI</i>
         </button>
-        <section class="dn-assistant-panel" data-assistant-panel aria-hidden="true" aria-label="站内AI助手">
+        <section
+          class="dn-assistant-panel"
+          data-assistant-panel
+          aria-hidden="true"
+          aria-labelledby="dn-assistant-title"
+          role="dialog"
+        >
           <div class="dn-assistant-head" data-assistant-drag-handle title="拖动窗口">
-            <h2>{assistantConfig.title}</h2>
+            <h2 id="dn-assistant-title">{assistantConfig.title}</h2>
             <div class="dn-assistant-head-actions">
               <button class="dn-assistant-clear" type="button" data-assistant-clear aria-label="清空当前对话" disabled>清空</button>
               <button class="dn-assistant-close" type="button" data-assistant-close aria-label="关闭站内AI助手">×</button>

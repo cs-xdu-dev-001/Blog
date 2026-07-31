@@ -179,10 +179,40 @@ import {
     `;
   };
 
+  const createProgress = (label) => {
+    const progress = document.createElement('div');
+    progress.className = 'dn-assistant-progress';
+    progress.setAttribute('role', 'status');
+    progress.setAttribute('aria-live', 'polite');
+    progress.innerHTML = `
+      <span class="dn-assistant-breath" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span data-assistant-status>${escapeHtml(label)}</span>
+    `;
+    return progress;
+  };
+
+  const updateProgress = (item, label, active) => {
+    let progress = item.querySelector('.dn-assistant-progress');
+    if (!active) {
+      progress?.remove();
+      return;
+    }
+    if (!progress) {
+      progress = createProgress(label);
+      item.prepend(progress);
+    }
+    const status = progress.querySelector('[data-assistant-status]');
+    if (status && status.textContent !== label) status.textContent = label;
+  };
+
   const appendMessage = (role, text, options = {}) => {
     const item = document.createElement('article');
     item.className = `dn-assistant-message dn-assistant-message-${role}${options.loading ? ' is-loading' : ''}${options.error ? ' is-error' : ''}`;
     item.setAttribute('aria-label', role === 'user' ? '你的消息' : 'AI回答');
+
+    if (role === 'assistant' && options.loading) {
+      item.append(createProgress(options.status || '连接模型'));
+    }
 
     const bubble = document.createElement('div');
     bubble.className = 'dn-assistant-bubble';
@@ -200,6 +230,8 @@ import {
     item.classList.toggle('is-loading', Boolean(options.loading));
     item.classList.toggle('is-error', Boolean(options.error));
     item.classList.toggle('is-cancelled', Boolean(options.cancelled));
+    item.classList.toggle('is-streaming', Boolean(options.streaming));
+    updateProgress(item, options.status || '正在回答', Boolean(options.loading));
     const bubble = item.querySelector('.dn-assistant-bubble');
     if (bubble) {
       if (options.markdown) bubble.innerHTML = renderAssistantMarkdown(text);
@@ -238,13 +270,34 @@ import {
     if (session.isPending()) return;
     const request = session.beginRequest();
     setPendingState(true);
-    updateMessage(assistantMessage, '正在连接', { loading: true });
+    updateMessage(assistantMessage, '', { loading: true, status: '连接模型' });
 
     let answer = '';
     let sources = [];
     let completed = false;
     let streamError = null;
     let responseReader = null;
+    let renderFrame = 0;
+
+    const renderAnswer = () => {
+      renderFrame = 0;
+      updateMessage(assistantMessage, answer, {
+        loading: true,
+        markdown: true,
+        streaming: true,
+        status: '正在回答',
+      });
+    };
+
+    const scheduleAnswerRender = () => {
+      if (!renderFrame) renderFrame = window.requestAnimationFrame(renderAnswer);
+    };
+
+    const flushAnswerRender = () => {
+      if (!renderFrame) return;
+      window.cancelAnimationFrame(renderFrame);
+      renderAnswer();
+    };
 
     try {
       const response = await fetch('/api/assistant', {
@@ -276,17 +329,19 @@ import {
 
         const consumeEvents = (events) => {
           for (const message of events) {
-            if (message.event === 'sources') {
+            if (message.event === 'start') {
+              updateMessage(assistantMessage, '', { loading: true, status: '请求已接收' });
+            } else if (message.event === 'sources') {
               sources = Array.isArray(message.data?.sources) ? message.data.sources : [];
+              updateMessage(assistantMessage, '', {
+                loading: true,
+                status: sources.length ? '已检索站内内容' : '准备回答',
+              });
             } else if (message.event === 'delta') {
               const delta = String(message.data?.text || '');
               if (!delta) continue;
-              if (!answer) {
-                assistantMessage.dataset.status = '正在生成';
-                updateMessage(assistantMessage, '正在生成', { loading: true });
-              }
               answer += delta;
-              updateMessage(assistantMessage, answer, { loading: true });
+              scheduleAnswerRender();
             } else if (message.event === 'done') {
               completed = true;
             } else if (message.event === 'error') {
@@ -308,6 +363,7 @@ import {
         }
         const tail = consumeAssistantSse(buffer, decoder.decode(), { flush: true });
         consumeEvents(tail.events);
+        flushAnswerRender();
         if (!completed && !streamError) {
           streamError = {
             code: answer ? 'STREAM_PROTOCOL_ERROR' : 'EMPTY_RESPONSE',
@@ -335,6 +391,7 @@ import {
         });
       }
     } catch (error) {
+      if (renderFrame) window.cancelAnimationFrame(renderFrame);
       if (error?.name === 'AbortError') {
         if (assistantMessage.isConnected) {
           updateMessage(assistantMessage, '已停止生成', { cancelled: true });
@@ -466,7 +523,7 @@ import {
     input.value = '';
     clearMessageRetries();
     appendMessage('user', question);
-    const assistantMessage = appendMessage('assistant', '正在连接', { loading: true });
+    const assistantMessage = appendMessage('assistant', '', { loading: true, status: '连接模型' });
     await runAssistantRequest({
       question,
       historySnapshot,
