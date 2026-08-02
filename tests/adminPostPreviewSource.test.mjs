@@ -15,6 +15,9 @@ test('admin post editor previews through the frontend markdown renderer', () => 
   const milkdownLoader = fs.existsSync(milkdownLoaderPath) ? fs.readFileSync(milkdownLoaderPath, 'utf8') : '';
   const languageCatalogPath = new URL('../src/scripts/codemirror-language-data.js', import.meta.url);
   const languageCatalog = fs.existsSync(languageCatalogPath) ? fs.readFileSync(languageCatalogPath, 'utf8') : '';
+  const codeFeature = read('src/scripts/admin-post-milkdown-code.js');
+  const tableFeature = read('src/scripts/admin-post-milkdown-table.js');
+  const latexFeature = read('src/scripts/admin-post-milkdown-latex.js');
   const astroConfig = read('astro.config.mjs');
   const apiUrl = new URL('../src/pages/api/admin/posts/preview.ts', import.meta.url);
   const imageApiUrl = new URL('../src/pages/api/admin/posts/image.ts', import.meta.url);
@@ -81,8 +84,8 @@ test('admin post editor previews through the frontend markdown renderer', () => 
   assert.match(client, /setPointerCapture/);
   assert.doesNotMatch(client, /post-table-editor-backdrop/);
   assert.match(milkdownClient, /@milkdown\/crepe/);
-  assert.match(milkdownClient, /codemirror-language-data/);
-  assert.match(milkdownClient, /languages:\s*codeLanguages/);
+  assert.match(codeFeature, /codemirror-language-data/);
+  assert.match(codeFeature, /languages/);
   assert.match(astroConfig, /@codemirror\/language-data/);
   assert.match(astroConfig, /codemirror-language-data\.js/);
   for (const language of [
@@ -103,10 +106,13 @@ test('admin post editor previews through the frontend markdown renderer', () => 
   assert.doesNotMatch(milkdownClient, /from\s+'@milkdown\/crepe'/);
   assert.match(milkdownClient, /import\s+\{\s*CrepeBuilder\s*\}\s+from\s+'@milkdown\/crepe\/builder'/);
   assert.match(milkdownClient, /from\s+'@milkdown\/crepe\/feature\/image-block'/);
-  assert.match(milkdownClient, /from\s+'@milkdown\/crepe\/feature\/code-mirror'/);
+  assert.doesNotMatch(milkdownClient, /from\s+'@milkdown\/crepe\/feature\/code-mirror'/);
+  assert.match(codeFeature, /from\s+'@milkdown\/crepe\/feature\/code-mirror'/);
+  assert.match(tableFeature, /from\s+'@milkdown\/crepe\/feature\/table'/);
+  assert.match(latexFeature, /from\s+'@milkdown\/crepe\/feature\/latex'/);
   assert.match(milkdownClient, /new CrepeBuilder/);
   assert.match(milkdownClient, /\.addFeature\(imageBlock/);
-  assert.match(milkdownClient, /\.addFeature\(codeMirror/);
+  assert.match(codeFeature, /\.addFeature\(codeMirror/);
   assert.match(milkdownClient, /defaultValue:\s*input\.value/);
   assert.match(milkdownClient, /markdownUpdated/);
   assert.match(milkdownClient, /input\.dispatchEvent\(new Event\('input'/);

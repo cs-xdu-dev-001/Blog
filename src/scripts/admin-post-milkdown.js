@@ -1,13 +1,10 @@
 import { CrepeBuilder } from '@milkdown/crepe/builder';
 import { blockEdit } from '@milkdown/crepe/feature/block-edit';
-import { codeMirror } from '@milkdown/crepe/feature/code-mirror';
 import { cursor } from '@milkdown/crepe/feature/cursor';
 import { imageBlock } from '@milkdown/crepe/feature/image-block';
-import { latex } from '@milkdown/crepe/feature/latex';
 import { linkTooltip } from '@milkdown/crepe/feature/link-tooltip';
 import { listItem } from '@milkdown/crepe/feature/list-item';
 import { placeholder } from '@milkdown/crepe/feature/placeholder';
-import { table } from '@milkdown/crepe/feature/table';
 import { toolbar } from '@milkdown/crepe/feature/toolbar';
 import { editorViewCtx, serializerCtx } from '@milkdown/kit/core';
 import { undo } from '@milkdown/kit/prose/history';
@@ -15,19 +12,16 @@ import { Plugin, PluginKey } from '@milkdown/kit/prose/state';
 import { Decoration, DecorationSet } from '@milkdown/kit/prose/view';
 import { $prose, insert, replaceAll, replaceRange } from '@milkdown/utils';
 import { reviewIsCurrent } from './admin-agent-review.js';
+import { detectOptionalEditorFeatures } from './admin-post-editor-features.js';
 import { attachPostReferencePicker, findReferenceTrigger } from './admin-post-references.js';
-import { languages as codeLanguages } from './codemirror-language-data.js';
 import '@milkdown/crepe/theme/common/reset.css';
 import '@milkdown/crepe/theme/common/block-edit.css';
-import '@milkdown/crepe/theme/common/code-mirror.css';
 import '@milkdown/crepe/theme/common/cursor.css';
 import '@milkdown/crepe/theme/common/image-block.css';
 import '@milkdown/crepe/theme/common/link-tooltip.css';
 import '@milkdown/crepe/theme/common/list-item.css';
 import '@milkdown/crepe/theme/common/placeholder.css';
 import '@milkdown/crepe/theme/common/toolbar.css';
-import '@milkdown/crepe/theme/common/table.css';
-import '@milkdown/crepe/theme/common/latex.css';
 import '@milkdown/crepe/theme/frame.css';
 
 const root = document.querySelector('[data-milkdown-editor]');
@@ -525,12 +519,23 @@ function labelAIToolbarButton() {
   });
 }
 
+async function loadOptionalEditorFeatures(markdown) {
+  const requested = detectOptionalEditorFeatures(markdown);
+  const modules = await Promise.all([
+    requested.codeMirror ? import('./admin-post-milkdown-code.js') : null,
+    requested.table ? import('./admin-post-milkdown-table.js') : null,
+    requested.latex ? import('./admin-post-milkdown-latex.js') : null,
+  ]);
+  return modules.filter(Boolean);
+}
+
 export async function bootMilkdown() {
   if (!root || !input) return;
   if (root.dataset.milkdownReady === 'true') return window.__postMilkdownEditor;
 
   const fallback = document.querySelector('[data-editor-fallback]');
   const initialMarkdown = input.value;
+  const optionalFeaturesPromise = loadOptionalEditorFeatures(initialMarkdown);
   root.replaceChildren();
   root.removeAttribute('tabindex');
   const openAdminAgent = () => document.dispatchEvent(new CustomEvent('admin-agent:open'));
@@ -573,16 +578,14 @@ export async function bootMilkdown() {
           onRun: openAdminAgent,
         });
       },
-    })
-    .addFeature(codeMirror, {
-      languages: codeLanguages,
-      copyText: '复制',
-      searchPlaceholder: '搜索语言',
-      noResultText: '无结果',
-      previewToggleText: (previewOnlyMode) => (previewOnlyMode ? '编辑' : '隐藏'),
-    })
-    .addFeature(table)
-    .addFeature(latex);
+    });
+
+  const optionalFeatures = await optionalFeaturesPromise;
+  optionalFeatures.forEach((module) => {
+    module.addCodeMirrorFeature?.(crepe);
+    module.addTableFeature?.(crepe);
+    module.addLatexFeature?.(crepe);
+  });
 
   crepe.on((listener) => {
     listener.markdownUpdated((_ctx, markdown) => {
