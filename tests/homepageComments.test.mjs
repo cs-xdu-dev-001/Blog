@@ -70,8 +70,9 @@ test('homepage admin exposes Giscus settings and saves them with the home payloa
 
 test('Giscus only accepts the blog domains and local development origins', () => {
   const config = JSON.parse(fs.readFileSync(new URL('../giscus.json', import.meta.url), 'utf8'));
-
   assert.deepEqual(config.origins, [
+    'https://blog.kards.asia',
+    'https://kards.asia',
     'https://blog.lajiyuming.tech',
     'https://lajiyuming.tech',
   ]);
