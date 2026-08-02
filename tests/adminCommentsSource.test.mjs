@@ -20,6 +20,7 @@ test('admin shell exposes a dedicated comment management index', () => {
   assert.match(script, /'\/api\/admin\/comments'/);
   assert.match(script, /'\/api\/admin\/comments\?refresh=1'/);
   assert.match(script, /fetch\(url,/);
+  assert.match(script, /pagination\.appendTo\(params\)/);
   assert.match(script, /method:\s*'DELETE'/);
   assert.match(script, /encodeURIComponent\(id\)/);
   assert.match(script, /window\.confirm/);

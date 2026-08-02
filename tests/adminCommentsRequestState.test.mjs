@@ -15,12 +15,13 @@ test('comment refresh preserves current rows and exposes request progress', () =
   assert.match(client, /refreshButton\.disabled = false/);
   assert.doesNotMatch(client, /function showError[\s\S]*?listEl\.innerHTML = ''/);
   assert.match(client, /force \? '\/api\/admin\/comments\?refresh=1' : '\/api\/admin\/comments'/);
+  assert.match(client, /pagination\.appendTo\(params\)/);
 });
 
 test('successful comment deletion updates the local list without refetching GitHub', () => {
   assert.match(client, /state\.items = state\.items\.filter\(\(item\) => item\.id !== id\)/);
   assert.match(client, /state\.items = state\.items\.filter[\s\S]*?render\(\)/);
-  assert.doesNotMatch(client, /await loadComments\(\)/);
+  assert.doesNotMatch(client, /await loadComments/);
 });
 
 test('comment deletion restores its control after network and API failures', () => {

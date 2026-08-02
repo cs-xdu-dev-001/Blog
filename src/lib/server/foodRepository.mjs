@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { initializeSchema, openDatabase } from './db.mjs';
+import { normalizeAdminPagination, publicPagination } from './adminPagination.mjs';
 import { safeImageBaseName, saveImageVariants } from './imageVariants.mjs';
 
 const allowedFilters = new Set(['all', 'recent', 'eaten', 'frequent', 'wanted', 'featured', 'draft']);
@@ -71,7 +72,7 @@ export function createFoodRepository({ dbPath, uploadDir } = {}) {
       return normalize(db.prepare('SELECT * FROM food_items WHERE id = ? AND published = 1').get(id));
     },
 
-    list({ query = '', filter = 'all', limit = 500, publishedOnly = false } = {}) {
+    list({ query = '', filter = 'all', limit = 500, publishedOnly = false, page, pageSize } = {}) {
       initialize();
       const where = [];
       const params = {};
@@ -89,9 +90,16 @@ export function createFoodRepository({ dbPath, uploadDir } = {}) {
       if (safeFilter === 'draft') where.push('published = 0');
       if (publishedOnly) where.push('published = 1');
 
+      const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+      const paginated = page !== undefined || pageSize !== undefined;
+      let pagination = null;
+      if (paginated) {
+        const total = db.prepare(`SELECT COUNT(*) AS total FROM food_items ${whereSql}`).get(params).total;
+        pagination = normalizeAdminPagination({ page, pageSize, total });
+      }
       const items = db.prepare(`
         SELECT * FROM food_items
-        ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+        ${whereSql}
         ORDER BY
           is_featured DESC,
           CASE WHEN visit_date = '' THEN 1 ELSE 0 END,
@@ -100,9 +108,18 @@ export function createFoodRepository({ dbPath, uploadDir } = {}) {
           updated_at DESC,
           id DESC
         LIMIT @limit
-      `).all({ ...params, limit: Math.max(1, Math.min(Number(limit) || 500, 1000)) }).map(normalize);
+        ${paginated ? 'OFFSET @offset' : ''}
+      `).all({
+        ...params,
+        limit: pagination?.pageSize || Math.max(1, Math.min(Number(limit) || 500, 1000)),
+        ...(pagination ? { offset: pagination.offset } : {}),
+      }).map(normalize);
 
-      return { items, stats: this.stats() };
+      return {
+        items,
+        stats: this.stats(),
+        ...(pagination ? { pagination: publicPagination(pagination) } : {}),
+      };
     },
 
     stats() {

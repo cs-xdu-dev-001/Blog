@@ -38,10 +38,10 @@ test('admin can create and edit reflection posts without a separate module', () 
   assert.match(adminPage, /<option value="reflection">/);
   assert.match(adminClient, /querySelectorAll\('\[data-create-post\]'\)/);
   assert.match(adminClient, /button\.dataset\.postKind/);
-  assert.match(adminClient, /item\.kind === 'reflection'/);
   assert.doesNotMatch(adminClient, /item\.category === '随记'/);
   assert.match(adminClient, /kind:\s*'all'/);
-  assert.match(adminClient, /state\.kind === 'reflection'/);
+  assert.match(adminClient, /new URLSearchParams\(\{ filter: state\.filter, query: state\.query, kind: state\.kind \}\)/);
+  assert.match(adminClient, /pagination\.reset\(\)/);
   assert.match(adminClient, /kindSelect\.value/);
   assert.match(styles, /\.cms-index-toolbar select/);
 });

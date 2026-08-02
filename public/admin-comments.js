@@ -1,11 +1,18 @@
-const state = { items: [], query: '' };
+const state = { items: [], query: '', totalComments: 0 };
 const listEl = document.querySelector('[data-comments-list]');
 const summaryEl = document.querySelector('[data-comments-summary]');
 const searchEl = document.querySelector('[data-comments-search]');
 const errorEl = document.querySelector('[data-comments-error]');
 const errorMessageEl = document.querySelector('[data-comments-error-message]');
 const refreshButton = document.querySelector('[data-comments-refresh]');
+const initialParams = new URLSearchParams(window.location.search);
+state.query = initialParams.get('query') || '';
+if (searchEl) searchEl.value = state.query;
 let loadController = null;
+const pagination = window.AdminPagination.create({
+  root: document.querySelector('[data-admin-pagination]'),
+  onChange: () => loadComments(),
+});
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -29,23 +36,14 @@ function formatDate(value) {
   }).format(date);
 }
 
-function visibleItems() {
-  const query = state.query.trim().toLowerCase();
-  if (!query) return state.items;
-  return state.items.filter((item) => {
-    const text = `${item.body} ${item.author?.login} ${item.discussion?.title}`.toLowerCase();
-    return text.includes(query);
-  });
-}
-
 function render() {
-  const items = visibleItems();
+  const items = state.items;
   summaryEl.textContent = state.query
-    ? `${items.length}/${state.items.length}条`
-    : `${state.items.length}条`;
+    ? `${pagination.state.total}/${state.totalComments}条`
+    : `${state.totalComments}条`;
 
   if (!items.length) {
-    listEl.innerHTML = `<div class="cms-index-empty">${state.items.length ? '没有匹配的留言' : '暂无留言'}</div>`;
+    listEl.innerHTML = `<div class="cms-index-empty">${state.totalComments ? '没有匹配的留言' : '暂无留言'}</div>`;
     return;
   }
 
@@ -95,12 +93,19 @@ async function loadComments({ force = false } = {}) {
   refreshButton.disabled = true;
 
   try {
-    const url = force ? '/api/admin/comments?refresh=1' : '/api/admin/comments';
+    const baseUrl = force ? '/api/admin/comments?refresh=1' : '/api/admin/comments';
+    const params = new URLSearchParams(baseUrl.split('?')[1] || '');
+    params.set('query', state.query);
+    pagination.appendTo(params);
+    const url = `${baseUrl.split('?')[0]}?${params}`;
     const response = await fetch(url, { signal: controller.signal });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || '留言读取失败');
     if (loadController !== controller) return;
     state.items = Array.isArray(data.items) ? data.items : [];
+    state.totalComments = Number(data.totalComments || 0);
+    pagination.set(data.pagination);
+    pagination.syncUrl({ query: state.query });
     render();
   } catch (error) {
     if (error.name === 'AbortError') return;
@@ -128,6 +133,14 @@ async function deleteComment(button) {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || '留言删除失败');
     state.items = state.items.filter((item) => item.id !== id);
+    state.totalComments = Math.max(0, state.totalComments - 1);
+    const total = Math.max(0, pagination.state.total - 1);
+    pagination.set({
+      page: pagination.state.page,
+      pageSize: pagination.state.pageSize,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / pagination.state.pageSize)),
+    });
     render();
   } catch (error) {
     errorMessageEl.textContent = error?.message || '留言删除失败';
@@ -144,7 +157,9 @@ listEl?.addEventListener('click', (event) => {
 
 searchEl?.addEventListener('input', () => {
   state.query = searchEl.value;
-  render();
+  pagination.reset();
+  window.clearTimeout(searchEl._timer);
+  searchEl._timer = window.setTimeout(loadComments, 240);
 });
 
 document.querySelector('[data-comments-refresh]')?.addEventListener('click', () => loadComments({ force: true }));

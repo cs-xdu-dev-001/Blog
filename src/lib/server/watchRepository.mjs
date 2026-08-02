@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { initializeSchema, openDatabase } from './db.mjs';
+import { normalizeAdminPagination, publicPagination } from './adminPagination.mjs';
 import { safeImageBaseName as safeUploadImageBaseName, saveImageVariants } from './imageVariants.mjs';
 
 const allowedFilters = new Set([
@@ -103,7 +104,7 @@ export function createWatchRepository({ dbPath, uploadDir } = {}) {
       return row ? normalize(row) : null;
     },
 
-    list({ query = '', filter = 'all', limit = 500 } = {}) {
+    list({ query = '', filter = 'all', limit = 500, page, pageSize } = {}) {
       initialize();
       const where = [];
       const params = {};
@@ -123,14 +124,30 @@ export function createWatchRepository({ dbPath, uploadDir } = {}) {
       if (safeFilter === 'activity') where.push('is_activity_featured = 1');
       if (safeFilter === 'featured') where.push('is_featured = 1');
 
+      const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+      const paginated = page !== undefined || pageSize !== undefined;
+      let pagination = null;
+      if (paginated) {
+        const total = db.prepare(`SELECT COUNT(*) AS total FROM watch_items ${whereSql}`).get(params).total;
+        pagination = normalizeAdminPagination({ page, pageSize, total });
+      }
       const sql = `
         SELECT * FROM watch_items
-        ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+        ${whereSql}
         ORDER BY is_activity_featured DESC, is_featured DESC, updated_at DESC, id ASC
         LIMIT @limit
+        ${paginated ? 'OFFSET @offset' : ''}
       `;
-      const items = db.prepare(sql).all({ ...params, limit }).map(normalize);
-      return { items, stats: this.stats() };
+      const items = db.prepare(sql).all({
+        ...params,
+        limit: pagination?.pageSize || limit,
+        ...(pagination ? { offset: pagination.offset } : {}),
+      }).map(normalize);
+      return {
+        items,
+        stats: this.stats(),
+        ...(pagination ? { pagination: publicPagination(pagination) } : {}),
+      };
     },
 
     stats() {

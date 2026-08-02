@@ -8,6 +8,8 @@ export const GET: APIRoute = async (context) => {
   return Response.json(foodRepository.list({
     query: url.searchParams.get('query') || '',
     filter: url.searchParams.get('filter') || 'all',
+    page: url.searchParams.get('page') || 1,
+    pageSize: url.searchParams.get('pageSize') || 30,
   }));
 };
 

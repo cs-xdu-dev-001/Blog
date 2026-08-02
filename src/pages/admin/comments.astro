@@ -20,6 +20,8 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       <button class="cms-button" type="button" data-comments-retry>重新读取</button>
     </div>
     <div class="cms-comments-list" data-comments-list></div>
+    <div class="cms-pagination" data-admin-pagination></div>
   </section>
+  <script is:inline src="/admin-pagination.js"></script>
   <script is:inline src="/admin-comments.js"></script>
 </AdminLayout>

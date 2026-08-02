@@ -64,6 +64,29 @@ test('post repository creates, lists, updates, and deletes markdown posts', () =
   assert.equal(repo.list({ topicSlug: 'frontend-interaction', filter: 'all' }).items.length, 0);
 });
 
+test('post repository performs filtered pagination in SQLite', () => {
+  const repo = createPostRepository({ dbPath: tempDbPath() });
+  for (let index = 1; index <= 24; index += 1) {
+    repo.create({
+      title: `算法笔记 ${String(index).padStart(2, '0')}`,
+      kind: index % 2 ? 'technical' : 'reflection',
+      published: true,
+      date: `2026-07-${String(index).padStart(2, '0')}`,
+    });
+  }
+
+  const result = repo.list({ filter: 'all', kind: 'technical', page: 2, pageSize: 10 });
+
+  assert.equal(result.items.length, 2);
+  assert.equal(result.items[0].title, '算法笔记 03');
+  assert.deepEqual(result.pagination, {
+    page: 2,
+    pageSize: 10,
+    total: 12,
+    totalPages: 2,
+  });
+});
+
 test('topic post order is independent and replacing links does not delete posts', () => {
   const repo = createPostRepository({ dbPath: tempDbPath() });
   const first = repo.create({

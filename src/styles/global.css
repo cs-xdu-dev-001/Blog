@@ -13191,11 +13191,76 @@ html[data-admin-theme="light"] .cms-theme-icon-moon {
 
 .cms-index-shell {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   gap: 12px;
   width: 100%;
   min-width: 0;
   min-height: 100%;
+}
+
+.cms-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-height: 42px;
+  color: var(--cms-muted);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cms-page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  border: 1px solid var(--cms-line);
+  border-radius: 7px;
+  background: var(--cms-surface);
+  padding: 0 10px;
+  color: var(--cms-text);
+}
+
+.cms-page-size span {
+  color: var(--cms-accent);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.cms-page-size select {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 620;
+  outline: none;
+  cursor: pointer;
+}
+
+.cms-pagination button {
+  height: 38px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--cms-text);
+  padding: 0 10px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.cms-pagination button:hover:not(:disabled) {
+  background: var(--cms-surface-raised);
+}
+
+.cms-pagination button:disabled {
+  color: var(--cms-faint);
+  cursor: default;
+}
+
+.cms-page-position {
+  min-width: 92px;
+  color: var(--cms-text);
+  text-align: center;
 }
 
 .cms-index-head,

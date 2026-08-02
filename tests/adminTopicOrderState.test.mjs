@@ -11,11 +11,11 @@ test('topic ordering locks controls and always releases its request state', () =
   assert.match(client, /finally \{\s*state\.savingOrder = false;\s*render\(\)/);
 });
 
-test('topic ordering restores the previous local order after a failed save', () => {
-  assert.match(client, /const previousItems = \[\.\.\.state\.items\]/);
-  assert.match(client, /async function saveOrder\(previousItems\)/);
-  assert.match(client, /catch \(error\) \{\s*state\.items = previousItems;\s*throw error/);
-  assert.doesNotMatch(client, /loadItems\(\)\.catch\(\(\) => \{\}\)/);
+test('topic ordering moves the selected topic in the complete server-owned collection', () => {
+  assert.match(client, /async function moveTopic\(slug, direction\)/);
+  assert.match(client, /const cards = \[\.\.\.\(current\.config\?\.topics\?\.cards \|\| \[\]\)\]/);
+  assert.match(client, /\[cards\[index\], cards\[nextIndex\]\] = \[cards\[nextIndex\], cards\[index\]\]/);
+  assert.match(client, /await loadItems\(\)/);
 });
 
 test('topic ordering validates both site config requests', () => {

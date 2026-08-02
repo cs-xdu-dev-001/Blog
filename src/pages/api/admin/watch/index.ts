@@ -9,7 +9,12 @@ export const GET: APIRoute = async (context) => {
   const query = url.searchParams.get('query') || '';
   const filter = url.searchParams.get('filter') || 'all';
 
-  return Response.json(watchRepository.list({ query, filter }));
+  return Response.json(watchRepository.list({
+    query,
+    filter,
+    page: url.searchParams.get('page') || 1,
+    pageSize: url.searchParams.get('pageSize') || 30,
+  }));
 };
 
 export const POST: APIRoute = async (context) => {

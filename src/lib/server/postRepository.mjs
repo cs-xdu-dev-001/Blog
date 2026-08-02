@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { initializeSchema, openDatabase } from './db.mjs';
+import { normalizeAdminPagination, publicPagination } from './adminPagination.mjs';
 import {
   decryptLockedText,
   encryptLockedText,
@@ -476,7 +477,7 @@ export function createPostRepository({ dbPath } = {}) {
       return normalizeWithTopics(row, { unlockKey });
     },
 
-    list({ query = '', filter = 'published', limit = 500, topicSlug = '' } = {}) {
+    list({ query = '', filter = 'published', limit = 500, topicSlug = '', kind = 'all', page, pageSize } = {}) {
       initialize();
       const safeFilter = allowedFilters.has(filter) ? filter : 'published';
       const where = [];
@@ -494,15 +495,34 @@ export function createPostRepository({ dbPath } = {}) {
       if (safeFilter === 'published') where.push('p.published = 1');
       if (safeFilter === 'draft') where.push('p.published = 0');
       if (safeFilter === 'featured') where.push('p.featured = 1');
+      if (kind === 'technical' || kind === 'reflection') {
+        where.push('p.category = @kindCategory');
+        params.kindCategory = categoryForPostKind(kind);
+      }
+      const join = normalizedTopicSlug ? 'JOIN post_topic_links pt ON pt.post_id = p.id' : '';
+      const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+      const paginated = page !== undefined || pageSize !== undefined;
+      let pagination = null;
+      if (paginated) {
+        const total = db.prepare(`SELECT COUNT(*) AS total FROM blog_posts p ${join} ${whereSql}`).get(params).total;
+        pagination = normalizeAdminPagination({ page, pageSize, total });
+        params.limit = pagination.pageSize;
+        params.offset = pagination.offset;
+      }
       const rows = db.prepare(`
         SELECT p.* FROM blog_posts p
-        ${normalizedTopicSlug ? 'JOIN post_topic_links pt ON pt.post_id = p.id' : ''}
-        ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+        ${join}
+        ${whereSql}
         ORDER BY ${normalizedTopicSlug ? 'pt.sort_order ASC, p.date DESC, p.id DESC' : 'p.date DESC, p.id DESC'}
         LIMIT @limit
+        ${paginated ? 'OFFSET @offset' : ''}
       `).all(params);
       const items = normalizeRowsWithTopics(rows);
-      return { items, stats: this.stats() };
+      return {
+        items,
+        stats: this.stats(),
+        ...(pagination ? { pagination: publicPagination(pagination) } : {}),
+      };
     },
 
     setTopicPostOrder,

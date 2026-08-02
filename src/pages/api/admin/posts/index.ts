@@ -13,7 +13,10 @@ export const GET: APIRoute = async (context) => {
   return Response.json(postRepository.list({
     query,
     filter,
+    kind: url.searchParams.get('kind') || 'all',
     topicSlug: url.searchParams.get('topicSlug') || '',
+    page: url.searchParams.get('page') || 1,
+    pageSize: url.searchParams.get('pageSize') || 30,
   }));
 };
 

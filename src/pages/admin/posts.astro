@@ -38,9 +38,11 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       <div class="cms-index-list-head"><span>标题</span><span>类型</span><span>状态</span><span></span></div>
       <div data-post-list></div>
     </div>
+    <div class="cms-pagination" data-admin-pagination></div>
     <span class="cms-save-state" data-post-save-state hidden></span>
   </section>
 
+  <script is:inline src="/admin-pagination.js"></script>
   <script is:inline src="/admin-posts.js"></script>
   <script>
     import '../../scripts/admin-post-editor-prefetch.js';

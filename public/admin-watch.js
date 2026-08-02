@@ -3,7 +3,18 @@ const listEl = document.querySelector('[data-watch-list]');
 const summaryEl = document.querySelector('[data-watch-summary]');
 const searchEl = document.querySelector('[data-watch-search]');
 const errorEl = document.querySelector('[data-watch-error]');
+const initialParams = new URLSearchParams(window.location.search);
+state.filter = initialParams.get('filter') || 'all';
+state.query = initialParams.get('query') || '';
+if (searchEl) searchEl.value = state.query;
+document.querySelectorAll('[data-filter]').forEach((button) => {
+  button.classList.toggle('active', button.dataset.filter === state.filter);
+});
 let loadController = null;
+const pagination = window.AdminPagination.create({
+  root: document.querySelector('[data-admin-pagination]'),
+  onChange: () => loadItems().catch(showLoadError),
+});
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -49,6 +60,7 @@ async function loadItems() {
   loadController = controller;
   errorEl.hidden = true;
   const params = new URLSearchParams({ filter: state.filter, query: state.query });
+  pagination.appendTo(params);
   listEl.setAttribute('aria-busy', 'true');
   try {
     const response = await fetch(`/api/admin/watch?${params}`, { signal: controller.signal });
@@ -57,6 +69,8 @@ async function loadItems() {
     if (loadController !== controller) return;
     state.items = data.items || [];
     state.stats = data.stats || {};
+    pagination.set(data.pagination);
+    pagination.syncUrl({ filter: state.filter, query: state.query });
     render();
   } catch (error) {
     if (error?.name === 'AbortError') return;
@@ -77,6 +91,7 @@ function showLoadError() {
 document.querySelectorAll('[data-filter]').forEach((button) => {
   button.addEventListener('click', () => {
     state.filter = button.dataset.filter || 'all';
+    pagination.reset();
     document.querySelectorAll('[data-filter]').forEach((item) => item.classList.toggle('active', item === button));
     loadItems().catch(showLoadError);
   });
@@ -84,6 +99,7 @@ document.querySelectorAll('[data-filter]').forEach((button) => {
 
 searchEl?.addEventListener('input', () => {
   state.query = searchEl.value;
+  pagination.reset();
   window.clearTimeout(searchEl._timer);
   searchEl._timer = window.setTimeout(() => loadItems().catch(showLoadError), 240);
 });
