@@ -3,4 +3,4 @@ Allow: /
 Disallow: /admin/
 Disallow: /api/
 
-Sitemap: https://blog.lajiyuming.tech/sitemap.xml
+Sitemap: https://blog.kards.asia/sitemap.xml

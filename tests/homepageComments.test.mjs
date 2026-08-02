@@ -72,9 +72,6 @@ test('Giscus only accepts the blog domains and local development origins', () =>
   const config = JSON.parse(fs.readFileSync(new URL('../giscus.json', import.meta.url), 'utf8'));
   assert.deepEqual(config.origins, [
     'https://blog.kards.asia',
-    'https://kards.asia',
-    'https://blog.lajiyuming.tech',
-    'https://lajiyuming.tech',
   ]);
   assert.ok(config.originsRegex.includes('^http://localhost:[0-9]+$'));
   assert.ok(config.originsRegex.includes('^http://127\\.0\\.0\\.1:[0-9]+$'));

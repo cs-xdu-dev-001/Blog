@@ -54,7 +54,7 @@ function setOpen(open) {
   if (open) requestAnimationFrame(() => input?.focus());
 }
 
-function addMessage(role, content, { undo = false } = {}) {
+function addMessage(role, content, { undo = false, retry = null } = {}) {
   if (!messagesEl) return;
   if (emptyState) emptyState.hidden = true;
   const article = document.createElement('article');
@@ -76,6 +76,17 @@ function addMessage(role, content, { undo = false } = {}) {
       body.textContent = '已撤销修改';
       action.remove();
     });
+    article.append(action);
+  }
+  if (typeof retry === 'function') {
+    const action = document.createElement('button');
+    action.type = 'button';
+    action.textContent = '重试';
+    action.setAttribute('data-agent-retry', '');
+    action.addEventListener('click', () => {
+      action.disabled = true;
+      retry();
+    }, { once: true });
     article.append(action);
   }
   messagesEl.append(article);
@@ -148,7 +159,7 @@ function setBusy(busy) {
   form?.querySelector('button[type="submit"]')?.toggleAttribute('disabled', busy);
 }
 
-async function sendMessage(message, displayMessage = message, action = '') {
+async function sendMessage(message, displayMessage = message, action = '', { showUser = true } = {}) {
   if (page?.dataset.agentEditorLocked === 'true') {
     addMessage('error', '请先解锁笔记，再让Agent读取或修改正文');
     return;
@@ -170,9 +181,8 @@ async function sendMessage(message, displayMessage = message, action = '') {
     preview: String(target.selection || '').replace(/\s+/g, ' ').trim().slice(0, 80),
   });
 
-  addMessage('user', displayMessage);
+  if (showUser) addMessage('user', displayMessage);
   const requestHistory = history.slice(-4);
-  history = [...history, { role: 'user', content: message }].slice(-4);
   abortController?.abort();
   abortController = new AbortController();
   setBusy(true);
@@ -230,14 +240,21 @@ async function sendMessage(message, displayMessage = message, action = '') {
     } else {
       addMessage('assistant', result.message);
     }
-    history = [...history, { role: 'assistant', content: result.message }].slice(-4);
+    history = [
+      ...history,
+      { role: 'user', content: message },
+      { role: 'assistant', content: result.message },
+    ].slice(-4);
   } catch (error) {
     if (error?.name !== 'AbortError') {
       trace?.article.remove();
-      addMessage('error', error instanceof Error ? error.message : 'Agent暂时不可用');
+      addMessage('error', error instanceof Error ? error.message : 'Agent暂时不可用', {
+        retry: () => void sendMessage(message, displayMessage, action, { showUser: false }),
+      });
     } else if (trace) {
       trace.article.classList.remove('is-working');
       trace.details.open = false;
+      addMessage('assistant', '已停止生成');
     }
   } finally {
     abortController = null;

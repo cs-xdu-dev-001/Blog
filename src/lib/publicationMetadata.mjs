@@ -1,4 +1,4 @@
-export const SITE_ORIGIN = 'https://blog.lajiyuming.tech';
+export const SITE_ORIGIN = 'https://blog.kards.asia';
 export const DEFAULT_OG_IMAGE_PATH = '/og-default.png';
 
 export function absoluteSiteUrl(value = '/', origin = SITE_ORIGIN) {

@@ -1,9 +1,6 @@
 {
   "origins": [
-    "https://blog.kards.asia",
-    "https://kards.asia",
-    "https://blog.lajiyuming.tech",
-    "https://lajiyuming.tech"
+    "https://blog.kards.asia"
   ],
   "originsRegex": [
     "^http://localhost:[0-9]+$",

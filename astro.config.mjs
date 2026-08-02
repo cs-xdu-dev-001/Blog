@@ -2,14 +2,16 @@ import { defineConfig } from 'astro/config';
 import node from '@astrojs/node';
 import tailwind from '@astrojs/tailwind';
 import { fileURLToPath } from 'node:url';
+import { SITE_ORIGIN } from './src/lib/publicationMetadata.mjs';
+
+const siteHostname = new URL(SITE_ORIGIN).hostname;
 
 export default defineConfig({
-  site: 'https://blog.lajiyuming.tech',
+  site: SITE_ORIGIN,
   output: 'server',
   security: {
     allowedDomains: [
-      { protocol: 'https', hostname: 'lajiyuming.tech' },
-      { protocol: 'https', hostname: 'blog.lajiyuming.tech' },
+      { protocol: 'https', hostname: siteHostname },
     ],
   },
   devToolbar: {

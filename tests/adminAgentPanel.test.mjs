@@ -26,7 +26,21 @@ test('post editor contains one docked admin agent panel', () => {
   assert.match(page, /data-admin-agent-command="rewrite"/);
   assert.match(page, /data-admin-agent-command="structure"/);
   assert.match(page, /data-admin-agent-scope/);
-  assert.match(page, /admin-post-agent\.js/);
+  assert.match(page, /admin-post-agent-loader\.js/);
+  assert.doesNotMatch(page, /import '\.\.\/\.\.\/\.\.\/\.\.\/scripts\/admin-post-agent\.js'/);
+});
+
+test('admin agent is loaded on intent instead of with the editor shell', () => {
+  const loader = read('src/scripts/admin-post-agent-loader.js');
+
+  assert.match(loader, /import\('\.\/admin-post-agent\.js'\)/);
+  assert.match(loader, /pointerenter/);
+  assert.match(loader, /focusin/);
+  assert.match(loader, /admin-agent:open/);
+  assert.match(loader, /data-agent-load-error/);
+  assert.match(loader, /重新加载/);
+  assert.match(loader, /aria-busy/);
+  assert.doesNotMatch(loader, /requestIdleCallback|setTimeout/);
 });
 
 test('admin agent client supports context, cancellation, review, and bounded history', () => {
@@ -55,6 +69,8 @@ test('admin agent client supports context, cancellation, review, and bounded his
   assert.match(client, /已选内容 · \$\{length\}字/);
   assert.match(client, /想对选中内容做什么？/);
   assert.match(client, /询问或修改选中内容/);
+  assert.match(client, /data-agent-retry/);
+  assert.match(client, /重试/);
   assert.doesNotMatch(client, /action\.textContent = '查看修改'/);
 });
 

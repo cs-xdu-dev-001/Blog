@@ -6,11 +6,10 @@ import astroConfig from '../astro.config.mjs';
 test('production proxy preserves the public HTTPS origin for CSRF checks', () => {
   const allowedDomains = astroConfig.security?.allowedDomains ?? [];
   assert.deepEqual(allowedDomains, [
-    { protocol: 'https', hostname: 'lajiyuming.tech' },
-    { protocol: 'https', hostname: 'blog.lajiyuming.tech' },
+    { protocol: 'https', hostname: 'blog.kards.asia' },
   ]);
 
-  for (const hostname of ['lajiyuming.tech', 'blog.lajiyuming.tech']) {
+  for (const hostname of ['blog.kards.asia']) {
     const request = NodeApp.createRequest({
       method: 'GET',
       url: '/admin/login',

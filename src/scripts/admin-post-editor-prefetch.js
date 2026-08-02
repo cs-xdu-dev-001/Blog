@@ -30,10 +30,3 @@ document.addEventListener('pointerover', (event) => {
 document.addEventListener('focusin', (event) => {
   if (isEditorLink(event.target)) requestEditorPrefetch();
 });
-
-const idlePrefetch = () => requestEditorPrefetch();
-if ('requestIdleCallback' in window) {
-  window.requestIdleCallback(idlePrefetch, { timeout: 3000 });
-} else {
-  window.setTimeout(idlePrefetch, 2000);
-}
