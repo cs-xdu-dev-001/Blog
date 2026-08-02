@@ -5,6 +5,7 @@ import {
   getLockedNoteCookieMaxAge,
   getLockedNoteCookieName,
 } from '../../../../../lib/server/lockedNoteCrypto.mjs';
+import { lockedNoteAttemptLimiter } from '../../../../../lib/server/authAttemptLimiter.mjs';
 import { postRepository } from '../../../../../lib/server/postRepository.mjs';
 
 export const POST: APIRoute = async (context) => {
@@ -16,12 +17,20 @@ export const POST: APIRoute = async (context) => {
   if (!Number.isFinite(id) || !key) {
     return Response.json({ error: 'locked note key is required' }, { status: 400 });
   }
+  const attempt = await lockedNoteAttemptLimiter.consume(context.request, id);
+  if (!attempt.allowed) {
+    return Response.json({ error: 'too many unlock attempts' }, {
+      status: 429,
+      headers: { 'Retry-After': String(attempt.retryAfter) },
+    });
+  }
 
   try {
     const item = postRepository.get(id, { unlockKey: key });
     if (!item?.locked || !item.lockedContentUnlocked) {
       return Response.json({ error: 'locked note key is invalid' }, { status: 403 });
     }
+    await lockedNoteAttemptLimiter.reset(context.request, id);
     context.cookies.set(getLockedNoteCookieName(), createLockedNoteCookieValue(key), {
       path: '/',
       httpOnly: true,

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { openDatabase } from '../src/lib/server/db.mjs';
+import { initializeSchema, openDatabase } from '../src/lib/server/db.mjs';
 import { createPostRepository } from '../src/lib/server/postRepository.mjs';
 import { markdownToHtml } from '../src/lib/server/markdownRenderer.mjs';
 
@@ -169,9 +169,8 @@ Imported body.
 
 test('post repository migrates legacy categories into shared tags and keeps note kinds', () => {
   const dbPath = tempDbPath();
-  const repo = createPostRepository({ dbPath });
-  repo.initialize();
   const db = openDatabase(dbPath);
+  initializeSchema(db);
   const insert = db.prepare(`
     INSERT INTO blog_posts
       (slug, title, description, category, tags, body, date, featured, published)
@@ -192,6 +191,7 @@ test('post repository migrates legacy categories into shared tags and keeps note
   });
   db.close();
 
+  const repo = createPostRepository({ dbPath });
   const technical = repo.getBySlug('legacy-technical');
   const reflection = repo.getBySlug('legacy-reflection');
 

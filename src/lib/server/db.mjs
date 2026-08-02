@@ -2,6 +2,8 @@ import Database from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
 
+const initializedSchemas = new WeakSet();
+
 export function getDefaultDbPath() {
   return process.env.BLOG_DB_PATH || path.resolve(process.cwd(), 'data', 'blog.sqlite');
 }
@@ -19,6 +21,8 @@ function ensureColumn(db, table, name, definition) {
 }
 
 export function initializeSchema(db) {
+  if (initializedSchemas.has(db)) return;
+
   db.exec(`
     DROP INDEX IF EXISTS idx_watch_items_title_type_status;
 
@@ -209,4 +213,5 @@ export function initializeSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_post_topic_links_topic_order
       ON post_topic_links(topic_slug, sort_order, post_id);
   `);
+  initializedSchemas.add(db);
 }

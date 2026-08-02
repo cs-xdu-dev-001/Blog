@@ -87,15 +87,19 @@ function normalizeConfig(input = {}) {
 
 export function createMapRepository({ dbPath } = {}) {
   const db = openDatabase(dbPath);
+  let initialized = false;
 
   function initialize() {
+    if (initialized) return;
     initializeSchema(db);
     const row = db.prepare('SELECT value FROM site_settings WHERE key = ?').get(SETTING_KEY);
-    if (row) return;
-    db.prepare('INSERT INTO site_settings (key, value) VALUES (?, ?)').run(
-      SETTING_KEY,
-      JSON.stringify(defaultConfig),
-    );
+    if (!row) {
+      db.prepare('INSERT INTO site_settings (key, value) VALUES (?, ?)').run(
+        SETTING_KEY,
+        JSON.stringify(defaultConfig),
+      );
+    }
+    initialized = true;
   }
 
   return {

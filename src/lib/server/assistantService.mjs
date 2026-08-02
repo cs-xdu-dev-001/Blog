@@ -905,9 +905,12 @@ export function createAssistantService({
 } = {}) {
   const db = openDatabase(dbPath);
   const deps = { posts, getReading, getWatch };
+  let initialized = false;
 
   function initialize() {
+    if (initialized) return;
     initializeSchema(db);
+    initialized = true;
   }
 
   function checkRateLimit(request, config) {

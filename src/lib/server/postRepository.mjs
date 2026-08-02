@@ -232,6 +232,7 @@ function parseFrontmatter(raw) {
 
 export function createPostRepository({ dbPath } = {}) {
   const db = openDatabase(dbPath);
+  let initialized = false;
 
   function migrateLegacyCategories() {
     const rows = db.prepare(`
@@ -261,8 +262,10 @@ export function createPostRepository({ dbPath } = {}) {
   }
 
   function initialize() {
+    if (initialized) return;
     initializeSchema(db);
     migrateLegacyCategories();
+    initialized = true;
   }
 
   function uniqueSlug(base, id = null) {

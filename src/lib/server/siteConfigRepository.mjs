@@ -243,8 +243,10 @@ function normalizeSiteConfig(value) {
 
 export function createSiteConfigRepository({ dbPath } = {}) {
   const db = openDatabase(dbPath);
+  let initialized = false;
 
   function initialize() {
+    if (initialized) return;
     initializeSchema(db);
     db.prepare(`
       INSERT INTO site_settings (key, value)
@@ -262,6 +264,7 @@ export function createSiteConfigRepository({ dbPath } = {}) {
     const tx = db.transaction((sections) => sections.forEach((section) => stmt.run(section)));
     tx(defaultSections);
     db.prepare("DELETE FROM site_sections WHERE key = 'notes'").run();
+    initialized = true;
   }
 
   function saveNormalizedSiteConfig(config) {

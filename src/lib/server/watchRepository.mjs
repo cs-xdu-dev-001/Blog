@@ -23,10 +23,13 @@ export function safeImageBaseName(title) {
 export function createWatchRepository({ dbPath, uploadDir } = {}) {
   const db = openDatabase(dbPath);
   const finalUploadDir = uploadDir || path.resolve(process.cwd(), 'public', 'uploads', 'watch');
+  let initialized = false;
 
   function initialize() {
+    if (initialized) return;
     initializeSchema(db);
     fs.mkdirSync(finalUploadDir, { recursive: true });
+    initialized = true;
   }
 
   function normalize(row) {

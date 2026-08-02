@@ -40,19 +40,23 @@ function clampNumber(value, min, max) {
 
 export function createRadarRepository({ dbPath } = {}) {
   const db = openDatabase(dbPath);
+  let initialized = false;
 
   function initialize() {
+    if (initialized) return;
     initializeSchema(db);
     const existing = db.prepare('SELECT COUNT(*) AS n FROM radar_tags').get().n;
-    if (existing) return;
-    const stmt = db.prepare(`
-      INSERT INTO radar_tags
-        (scope, label, zh, count, value, sort_order, is_enabled)
-      VALUES
-        (@scope, @label, @zh, @count, @value, @sort_order, 1)
-    `);
-    const tx = db.transaction((rows) => rows.forEach((row) => stmt.run(row)));
-    tx(defaultTags);
+    if (!existing) {
+      const stmt = db.prepare(`
+        INSERT INTO radar_tags
+          (scope, label, zh, count, value, sort_order, is_enabled)
+        VALUES
+          (@scope, @label, @zh, @count, @value, @sort_order, 1)
+      `);
+      const tx = db.transaction((rows) => rows.forEach((row) => stmt.run(row)));
+      tx(defaultTags);
+    }
+    initialized = true;
   }
 
   return {
