@@ -188,7 +188,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
   shell={false}
   preconnectGiscus={isSectionEnabled('comments') && commentsReady}
 >
-  <main class="qzq-home">
+  <div class="qzq-home">
     <nav class="qzq-nav" aria-label="Primary navigation">
       <a class="qzq-brand" href="/">{siteConfig.brandName}</a>
       <div class="qzq-nav-links">
@@ -835,7 +835,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
       </section>
     )}
 
-  </main>
+  </div>
 
   <script>
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');

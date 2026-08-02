@@ -31,7 +31,7 @@ const backlinks = contentReferenceService.backlinks(`/watch/${item.id}`);
   imageWidth={item.image_width || undefined}
   imageHeight={item.image_height || undefined}
 >
-  <main class="watch-review-shell">
+  <div class="watch-review-shell">
     <a class="watch-review-back" href="/#watch">返回影像档案</a>
 
     <article class="watch-review-paper">
@@ -75,5 +75,5 @@ const backlinks = contentReferenceService.backlinks(`/watch/${item.id}`);
       )}
       <ContentBacklinks items={backlinks} />
     </article>
-  </main>
+  </div>
 </BaseLayout>

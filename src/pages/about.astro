@@ -18,7 +18,7 @@ const aboutParagraphs = String(siteConfig.aboutBody || '').split(/\n{2,}/).filte
   chrome={false}
   shell={false}
 >
-  <main class="qzq-home qzq-about-page">
+  <div class="qzq-home qzq-about-page">
     <nav class="qzq-nav" aria-label="Primary navigation">
       <a class="qzq-brand" href="/">{siteConfig.brandName}</a>
       <div class="qzq-nav-links">
@@ -72,5 +72,5 @@ const aboutParagraphs = String(siteConfig.aboutBody || '').split(/\n{2,}/).filte
         <p>GitHub：{siteConfig.social.github}。B站：{siteConfig.social.bilibili}。QQ：{siteConfig.social.qq}。</p>
       </article>
     </section>
-  </main>
+  </div>
 </BaseLayout>

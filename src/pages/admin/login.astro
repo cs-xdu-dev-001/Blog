@@ -5,7 +5,7 @@ const hasCredentialsError = Astro.url.searchParams.get('error') === 'credentials
 ---
 
 <BaseLayout title="Dev Notes CMS Login" chrome={false} shell={false} assistant={false}>
-  <main class="admin-login-page">
+  <div class="admin-login-page">
     <form class="admin-login-card" method="post" action="/api/admin/login" data-admin-login>
       <span>Dev Notes CMS</span>
       <h1>登录管理端</h1>
@@ -20,7 +20,7 @@ const hasCredentialsError = Astro.url.searchParams.get('error') === 'credentials
       {hasCredentialsError && <p class="admin-login-error" role="alert">用户名或密码不正确</p>}
       <button type="submit" data-login-submit>进入控制台</button>
     </form>
-  </main>
+  </div>
 </BaseLayout>
 
 <script is:inline>

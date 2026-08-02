@@ -40,7 +40,7 @@ const tagOptionsJson = JSON.stringify(tagOptions).replaceAll('<', '\\u003c');
 ---
 
 <BaseLayout title={`Dev Notes CMS | ${post.title}`} chrome={false} shell={false} assistant={false}>
-  <main
+  <div
     class="post-editor-page"
     data-post-editor-page
     data-agent-editor-locked={post.locked && !post.lockedContentUnlocked ? 'true' : 'false'}
@@ -262,5 +262,5 @@ const tagOptionsJson = JSON.stringify(tagOptions).replaceAll('<', '\\u003c');
       import '../../../../scripts/admin-post-milkdown-loader.js';
       import '../../../../scripts/admin-post-agent-loader.js';
     </script>
-  </main>
+  </div>
 </BaseLayout>

@@ -38,7 +38,7 @@ const navGroups = [
 ---
 
 <BaseLayout title={title} chrome={false} shell={false} assistant={false}>
-  <main class:list={['cms-page', pageClass]} {...pageAttrs}>
+  <div class:list={['cms-page', pageClass]} {...pageAttrs}>
     <header class="cms-topbar">
       <a class="cms-brand" href="/admin/site"><span>DN</span> Dev Notes CMS</a>
       <slot name="search">
@@ -88,5 +88,5 @@ const navGroups = [
 
       <slot name="editor" />
     </div>
-  </main>
+  </div>
 </BaseLayout>

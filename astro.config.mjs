@@ -1,6 +1,5 @@
 import { defineConfig } from 'astro/config';
 import node from '@astrojs/node';
-import tailwind from '@astrojs/tailwind';
 import { fileURLToPath } from 'node:url';
 import { SITE_ORIGIN } from './src/lib/publicationMetadata.mjs';
 
@@ -35,9 +34,4 @@ export default defineConfig({
       theme: 'github-light',
     },
   },
-  integrations: [
-    tailwind({
-      applyBaseStyles: false,
-    }),
-  ],
 });

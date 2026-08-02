@@ -6,7 +6,7 @@ const { items, stats } = foodRepository.list({ limit: 500, publishedOnly: true }
 ---
 
 <BaseLayout title="美食 | Dev Notes" description="吃过、常去和准备去试的店。">
-  <main class="food-archive-shell">
+  <div class="food-archive-shell">
     <header class="food-archive-head">
       <a href="/">返回首页</a>
       <h1>美食</h1>
@@ -47,7 +47,7 @@ const { items, stats } = foodRepository.list({ limit: 500, publishedOnly: true }
       ))}
       {!items.length && <p class="food-archive-empty">还没有公开的美食记录。</p>}
     </section>
-  </main>
+  </div>
 
   <script>
     const filters = document.querySelectorAll('[data-food-archive-filter]');
