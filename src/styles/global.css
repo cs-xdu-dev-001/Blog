@@ -10111,6 +10111,49 @@ html[data-admin-theme="light"] .post-reference-picker-item em {
   border-color: color-mix(in srgb, var(--cms-danger) 34%, var(--cms-line));
 }
 
+.post-preview-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 100%;
+  color: var(--cms-text);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.post-preview-status.is-loading::before {
+  width: 15px;
+  height: 15px;
+  border: 2px solid var(--cms-line-strong);
+  border-top-color: var(--cms-accent);
+  border-radius: 50%;
+  content: '';
+  animation: cms-spin 700ms linear infinite;
+}
+
+@keyframes cms-spin {
+  to { transform: rotate(360deg); }
+}
+
+.post-preview-status.is-error {
+  min-height: 0;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--cms-danger) 34%, var(--cms-line));
+  border-radius: 6px;
+  color: var(--cms-danger);
+}
+
+.post-preview-status button {
+  border: 1px solid var(--cms-line-strong);
+  border-radius: 6px;
+  background: var(--cms-surface-raised);
+  color: var(--cms-text-strong);
+  padding: 7px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+
 .post-editor-textarea,
 .post-editor-preview {
   scrollbar-width: thin;

@@ -125,6 +125,11 @@ export const defaultSiteConfig = {
     minuteLimit: 20,
     maxQuestionLength: 1000,
     maxAnswerLength: 1200,
+    webSearch: {
+      enabled: false,
+      apiKey: '',
+      maxResults: 4,
+    },
     modules: {
       posts: true,
       reading: true,
@@ -233,6 +238,10 @@ function normalizeSiteConfig(value) {
     assistant: {
       ...defaultSiteConfig.assistant,
       ...(parsed.assistant || {}),
+      webSearch: {
+        ...defaultSiteConfig.assistant.webSearch,
+        ...((parsed.assistant || {}).webSearch || {}),
+      },
       modules: {
         ...defaultSiteConfig.assistant.modules,
         ...((parsed.assistant || {}).modules || {}),
@@ -332,6 +341,10 @@ export function createSiteConfigRepository({ dbPath } = {}) {
         assistant: {
           ...current.assistant,
           ...(input.assistant || {}),
+          webSearch: {
+            ...current.assistant.webSearch,
+            ...((input.assistant || {}).webSearch || {}),
+          },
           modules: {
             ...current.assistant.modules,
             ...((input.assistant || {}).modules || {}),

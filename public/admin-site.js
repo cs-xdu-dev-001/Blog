@@ -141,6 +141,11 @@ function assistantPayload(values) {
       minuteLimit: Number(values.get('assistant.minuteLimit') || 20),
       maxQuestionLength: Number(values.get('assistant.maxQuestionLength') || 1000),
       maxAnswerLength: Number(values.get('assistant.maxAnswerLength') || 1200),
+      webSearch: {
+        enabled: values.get('assistant.webSearch.enabled') === 'on',
+        apiKey: values.get('assistant.webSearch.apiKey'),
+        maxResults: Number(values.get('assistant.webSearch.maxResults') || 4),
+      },
       modules: {
         posts: values.get('assistant.modules.posts') === 'on',
         reading: values.get('assistant.modules.reading') === 'on',
@@ -240,7 +245,12 @@ testAssistantButton?.addEventListener('click', async () => {
     const result = await response.json().catch(() => ({}));
     target.hidden = false;
     target.classList.toggle('is-ok', response.ok && result.ok);
-    target.textContent = response.ok && result.ok ? `接口正常：${result.answer || '已响应'}` : `测试失败：${result.error || response.status}`;
+    const webStatus = result.webSearch?.enabled
+      ? `；联网搜索${result.webSearch.ok ? `正常（${result.webSearch.resultCount}条）` : '失败'}`
+      : '；联网搜索未开启';
+    target.textContent = response.ok && result.ok
+      ? `模型接口正常${webStatus}`
+      : `测试失败：${result.error || response.status}${webStatus}`;
   } catch {
     target.hidden = false;
     target.classList.remove('is-ok');

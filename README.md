@@ -100,6 +100,7 @@ cp .env.example .env
 - `ASSISTANT_API_KEY`：AI接口密钥。
 - `ASSISTANT_MODEL`：模型名。
 - `ASSISTANT_PROXY_URL`：服务端AI请求代理。
+- `TAVILY_API_KEY`：前台AI联网搜索密钥，也可在管理端AI助手页面配置。
 
 真实`.env`不要提交到GitHub。
 

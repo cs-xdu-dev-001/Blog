@@ -18,6 +18,14 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         </div>
       </section>
       <section class="cms-settings-section">
+        <h2>联网搜索</h2>
+        <div class="cms-check-row"><label><input type="checkbox" name="assistant.webSearch.enabled" />允许AI按需联网</label></div>
+        <div class="cms-settings-grid">
+          <label class="cms-setting-field"><span>Tavily API Key</span><input name="assistant.webSearch.apiKey" type="password" autocomplete="off" /></label>
+          <label class="cms-setting-field"><span>每次结果数</span><select name="assistant.webSearch.maxResults"><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></label>
+        </div>
+      </section>
+      <section class="cms-settings-section">
         <h2>模型接口</h2>
         <div class="cms-settings-grid">
           <label class="cms-setting-field full"><span>API Base URL</span><input name="assistant.apiBaseUrl" type="url" /></label>

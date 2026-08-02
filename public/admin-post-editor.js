@@ -6,6 +6,7 @@ const shell = document.querySelector('[data-editor-shell]');
 const form = document.querySelector('[data-post-form]');
 const input = document.querySelector('[data-markdown-input]');
 const preview = document.querySelector('[data-markdown-preview]');
+const writePane = document.querySelector('.post-editor-write');
 const statusEl = document.querySelector('[data-editor-status]');
 const saveButton = document.querySelector('[data-save-post]');
 const deleteButton = document.querySelector('[data-delete-post]');
@@ -835,6 +836,43 @@ function setPreviewState(state, message = '') {
   else preview.removeAttribute('title');
 }
 
+function clearPreviewStatus() {
+  preview?.querySelector('[data-preview-status]')?.remove();
+}
+
+function renderPreviewLoading() {
+  if (!preview) return;
+  clearPreviewStatus();
+  if (hasSuccessfulPreview) return;
+  const status = document.createElement('div');
+  status.className = 'post-preview-status is-loading';
+  status.setAttribute('data-preview-status', 'loading');
+  status.setAttribute('role', 'status');
+  status.textContent = '正在生成预览';
+  preview.replaceChildren(status);
+}
+
+function renderPreviewError(failureStatus) {
+  if (!preview) return;
+  clearPreviewStatus();
+  const status = document.createElement('div');
+  status.className = 'post-preview-status is-error';
+  status.setAttribute('data-preview-status', 'error');
+  status.setAttribute('role', 'alert');
+
+  const message = document.createElement('span');
+  message.textContent = failureStatus ? `预览连接失败（${failureStatus}）` : '预览连接失败';
+  const retry = document.createElement('button');
+  retry.type = 'button';
+  retry.setAttribute('data-preview-retry', 'true');
+  retry.textContent = '重试';
+  retry.addEventListener('click', () => void updatePreview(), { once: true });
+  status.append(message, retry);
+
+  if (hasSuccessfulPreview) preview.prepend(status);
+  else preview.replaceChildren(status);
+}
+
 function waitForPreviewRetry() {
   return new Promise((resolve) => window.setTimeout(resolve, PREVIEW_RETRY_DELAY_MS));
 }
@@ -853,6 +891,7 @@ async function updatePreview() {
   previewAbortController = controller;
   previewPendingMarkdown = markdown;
   setPreviewState('loading');
+  renderPreviewLoading();
   let failureStatus = null;
 
   try {
@@ -901,12 +940,8 @@ async function updatePreview() {
       }
     }
 
-    if (requestId === previewRequestId && !hasSuccessfulPreview) {
-      preview.innerHTML = failureStatus
-        ? `<p>预览连接失败（${failureStatus}）。</p>`
-        : '<p>预览连接失败。</p>';
-    }
     if (requestId === previewRequestId) {
+      renderPreviewError(failureStatus);
       setPreviewState('error', failureStatus ? `预览更新失败（${failureStatus}）` : '预览更新失败');
     }
   } finally {
@@ -1072,7 +1107,13 @@ document.querySelectorAll('[data-editor-mode]').forEach((button) => {
     shell?.classList.toggle('is-edit', mode === 'edit');
     shell?.classList.toggle('is-preview', mode === 'preview');
     shell?.classList.toggle('is-split', mode === 'split');
-    document.querySelectorAll('[data-editor-mode]').forEach((el) => el.classList.toggle('active', el === button));
+    document.querySelectorAll('[data-editor-mode]').forEach((el) => {
+      const active = el === button;
+      el.classList.toggle('active', active);
+      el.setAttribute('aria-pressed', String(active));
+    });
+    writePane?.setAttribute('aria-hidden', String(mode === 'preview'));
+    preview?.setAttribute('aria-hidden', String(mode === 'edit'));
     window.clearTimeout(previewTimer);
     if (previewIsVisible()) updatePreview();
     else previewAbortController?.abort();

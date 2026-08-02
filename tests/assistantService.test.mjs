@@ -75,6 +75,54 @@ test('assistant streams chat completion deltas and requests upstream streaming',
   }
 });
 
+test('assistant searches the web before streaming a general answer', async () => {
+  const { site, assistant } = createIsolatedAssistant(tempDbPath());
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    const href = String(url);
+    calls.push({ href, body: JSON.parse(options.body) });
+    if (href === 'https://api.tavily.com/search') {
+      return Response.json({
+        results: [{
+          title: 'Current AI news',
+          url: 'https://example.org/ai-news',
+          content: 'Latest verified AI news.',
+          raw_content: 'Latest verified AI news.',
+          score: 0.9,
+        }],
+      });
+    }
+    return new Response([
+      'data: {"choices":[{"delta":{"content":"已查到"}}]}',
+      '',
+      'data: [DONE]',
+      '',
+    ].join('\n'), { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+  };
+
+  try {
+    site.updateSiteConfig({ assistant: {
+      apiBaseUrl: 'https://example.com/v1',
+      apiKey: 'model-key',
+      model: 'test-model',
+      apiMode: 'chat',
+      webSearch: { enabled: true, apiKey: 'tvly-test', maxResults: 3 },
+    } });
+    const result = await assistant.streamAnswer('查一下今天的AI新闻', requestWithIp('10.0.2.1'));
+    const events = await collectAssistantEvents(result);
+
+    assert.equal(calls[0].href, 'https://api.tavily.com/search');
+    assert.equal(calls[1].href, 'https://example.com/v1/chat/completions');
+    assert.ok(calls[1].body.messages.at(-1).content.includes('https://example.org/ai-news'));
+    assert.deepEqual(events.filter((event) => event.event === 'tool').map((event) => event.data.status), ['running', 'done']);
+    assert.equal(events.find((event) => event.event === 'sources').data.sources.at(-1).type, 'web');
+    assert.equal(events.filter((event) => event.event === 'delta').map((event) => event.data.text).join(''), '已查到');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('assistant preserves repeated incremental tokens', async () => {
   const { site, assistant } = createIsolatedAssistant(tempDbPath());
   const originalFetch = globalThis.fetch;

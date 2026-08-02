@@ -67,10 +67,4 @@ if (root) {
       if (button.dataset.editorMode !== 'preview') loadFromInteraction();
     });
   });
-
-  if ('requestIdleCallback' in window) {
-    window.requestIdleCallback(loadFromInteraction, { timeout: 300 });
-  } else {
-    window.setTimeout(loadFromInteraction, 0);
-  }
 }

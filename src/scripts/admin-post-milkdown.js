@@ -601,7 +601,13 @@ export async function bootMilkdown() {
     if (input.value !== initialMarkdown) {
       crepe.editor.action(replaceAll(input.value));
     }
+    const restoreFocus = document.activeElement === fallback;
     if (fallback) fallback.hidden = true;
+    if (restoreFocus) {
+      requestAnimationFrame(() => {
+        crepe.editor.action((ctx) => ctx.get(editorViewCtx).focus());
+      });
+    }
     const aiReview = createAIReview(crepe);
     attachPostReferencePicker({
       root,

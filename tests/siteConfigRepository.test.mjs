@@ -18,6 +18,8 @@ test('site config repository reads defaults and updates site settings', () => {
   assert.equal(defaults.social.github, 'https://github.com/cs-xdu-dev-001');
   assert.equal(defaults.social.monitor, 'https://pulseboard.academicedu.me/');
   assert.equal(defaults.assistant.placeholder, '在Dev Notes中问任何问题');
+  assert.equal(defaults.assistant.webSearch.enabled, false);
+  assert.equal(defaults.assistant.webSearch.maxResults, 4);
   assert.equal(defaults.topics.title, '主线');
   assert.equal(defaults.topics.body, '');
   assert.equal(defaults.topics.cards.length, 9);
@@ -61,6 +63,28 @@ test('site config repository reads defaults and updates site settings', () => {
       href: '/topics/http-capture',
     },
   ]);
+});
+
+test('assistant web search settings persist as one nested config', () => {
+  const repo = createSiteConfigRepository({ dbPath: tempDbPath() });
+  const updated = repo.updateSiteConfig({
+    assistant: {
+      webSearch: { enabled: true, apiKey: 'tvly-test', maxResults: 3 },
+    },
+  });
+
+  assert.deepEqual(updated.assistant.webSearch, {
+    enabled: true,
+    apiKey: 'tvly-test',
+    maxResults: 3,
+  });
+
+  const adminPage = fs.readFileSync(new URL('../src/pages/admin/assistant.astro', import.meta.url), 'utf8');
+  const adminScript = fs.readFileSync(new URL('../public/admin-site.js', import.meta.url), 'utf8');
+  assert.match(adminPage, /name="assistant\.webSearch\.enabled"/);
+  assert.match(adminPage, /name="assistant\.webSearch\.apiKey"/);
+  assert.match(adminPage, /name="assistant\.webSearch\.maxResults"/);
+  assert.match(adminScript, /webSearch:\s*\{/);
 });
 
 test('homepage exposes the monitor dashboard as a configurable external icon link', () => {

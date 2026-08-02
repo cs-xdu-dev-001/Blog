@@ -178,14 +178,14 @@ const tagOptionsJson = JSON.stringify(tagOptions).replaceAll('<', '\\u003c');
         </div>
       </form>
 
-      <div class="post-editor-modebar" role="tablist" aria-label="编辑模式">
-        <button type="button" class="active" data-editor-mode="edit">编辑</button>
-        <button type="button" data-editor-mode="preview">预览</button>
-        <button type="button" data-editor-mode="split">分屏</button>
+      <div class="post-editor-modebar" role="group" aria-label="编辑模式">
+        <button type="button" class="active" data-editor-mode="edit" aria-pressed="true" aria-controls="post-editor-write">编辑</button>
+        <button type="button" data-editor-mode="preview" aria-pressed="false" aria-controls="post-editor-preview">预览</button>
+        <button type="button" data-editor-mode="split" aria-pressed="false" aria-controls="post-editor-write post-editor-preview">分屏</button>
       </div>
 
       <section class="post-editor-main">
-        <section class="post-editor-pane post-editor-write post-editor-wysiwyg">
+        <section id="post-editor-write" class="post-editor-pane post-editor-write post-editor-wysiwyg" aria-label="正文编辑区">
           <textarea
             class="post-editor-textarea"
             name="body"
@@ -199,11 +199,19 @@ const tagOptionsJson = JSON.stringify(tagOptions).replaceAll('<', '\\u003c');
             data-editor-state="idle"
             tabindex="-1"
             aria-label="正文编辑器"
-            aria-busy="true"
+            aria-busy="false"
           ></div>
         </section>
 
-        <article class="post-editor-pane post-editor-preview article-prose" data-markdown-preview></article>
+        <article
+          id="post-editor-preview"
+          class="post-editor-pane post-editor-preview article-prose"
+          data-markdown-preview
+          aria-label="前台预览"
+          aria-live="polite"
+          aria-busy="false"
+          aria-hidden="true"
+        ></article>
       </section>
     </section>
 

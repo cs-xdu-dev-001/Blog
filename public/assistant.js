@@ -165,7 +165,7 @@ import {
     return `
       <div class="dn-assistant-message-sources">
         <span>参考</span>
-        ${sources.slice(0, 4).map((source) => {
+        ${sources.slice(0, 8).map((source) => {
           const href = safeAssistantUrl(source.url || '#');
           const external = /^https?:\/\//i.test(href);
           return `
@@ -331,11 +331,19 @@ import {
           for (const message of events) {
             if (message.event === 'start') {
               updateMessage(assistantMessage, '', { loading: true, status: '请求已接收' });
-            } else if (message.event === 'sources') {
-              sources = Array.isArray(message.data?.sources) ? message.data.sources : [];
+            } else if (message.event === 'tool' && message.data?.name === 'web_search') {
+              const running = message.data?.status === 'running';
+              const count = Number(message.data?.resultCount || 0);
               updateMessage(assistantMessage, '', {
                 loading: true,
-                status: sources.length ? '已检索站内内容' : '准备回答',
+                status: running ? '正在联网搜索' : count ? `已找到${count}个联网来源` : '联网搜索无结果',
+              });
+            } else if (message.event === 'sources') {
+              sources = Array.isArray(message.data?.sources) ? message.data.sources : [];
+              const hasWebSources = sources.some((source) => source?.type === 'web');
+              updateMessage(assistantMessage, '', {
+                loading: true,
+                status: hasWebSources ? '正在整理联网结果' : sources.length ? '已检索站内内容' : '准备回答',
               });
             } else if (message.event === 'delta') {
               const delta = String(message.data?.text || '');
