@@ -15,6 +15,7 @@
     "start": "node ./dist/server/entry.mjs",
     "db:init": "node scripts/init-watch-db.mjs",
     "images:backfill": "node scripts/backfill-image-variants.mjs",
+    "images:cleanup-posts": "node scripts/cleanup-post-images.mjs",
     "posts:import": "node scripts/import-posts.mjs",
     "test:posts": "node --test tests/postRepository.test.mjs",
     "astro": "astro"

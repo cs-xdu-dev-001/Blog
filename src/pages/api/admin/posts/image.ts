@@ -1,7 +1,13 @@
 import path from 'node:path';
 import type { APIRoute } from 'astro';
 import { requireAdmin } from '../../../../lib/server/auth.mjs';
-import { safeImageBaseName, saveImageVariants } from '../../../../lib/server/imageVariants.mjs';
+import {
+  removeImageVariants,
+  safeImageBaseName,
+  saveImageVariants,
+  storedImagePaths,
+} from '../../../../lib/server/imageVariants.mjs';
+import { postRepository } from '../../../../lib/server/postRepository.mjs';
 
 const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
 const extensions = new Map([
@@ -22,6 +28,10 @@ function decodeImageName(value: string | null) {
 
 export const POST: APIRoute = async (context) => {
   if (!requireAdmin(context)) return new Response('Unauthorized', { status: 401 });
+  const postId = Number(context.request.headers.get('x-post-id'));
+  if (!Number.isInteger(postId) || postId <= 0 || !postRepository.get(postId)) {
+    return new Response('Post not found', { status: 404 });
+  }
 
   const contentType = String(context.request.headers.get('content-type') || '')
     .split(';')[0]
@@ -62,13 +72,22 @@ export const POST: APIRoute = async (context) => {
   const extension = path.extname(originalName) || extensions.get(imageType) || '';
   const normalizedName = originalName || `post-image${extension}`;
   const stem = safeImageBaseName(path.basename(normalizedName, path.extname(normalizedName)), 'post-image');
+  const uploadDir = path.resolve(process.cwd(), 'public', 'uploads', 'posts');
+  const publicBase = '/uploads/posts';
   const image = await saveImageVariants({
     baseName: `${Date.now()}-${stem}`,
     originalName: normalizedName,
     buffer,
-    uploadDir: path.resolve(process.cwd(), 'public', 'uploads', 'posts'),
-    publicBase: '/uploads/posts',
+    uploadDir,
+    publicBase,
   });
+
+  try {
+    postRepository.registerImageAsset(postId, image);
+  } catch (error) {
+    removeImageVariants(storedImagePaths(image), { uploadDir, publicBase });
+    throw error;
+  }
 
   return Response.json({ image });
 };

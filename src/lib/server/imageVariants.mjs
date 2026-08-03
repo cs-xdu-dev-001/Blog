@@ -31,8 +31,8 @@ function encodedPublicPath(base, ...segments) {
 export function storedImagePaths(item = {}) {
   return [
     item.image_path ?? item.imagePath,
-    item.image_small_path ?? item.smallPath,
-    item.image_original_path ?? item.originalPath,
+    item.image_small_path ?? item.small_path ?? item.smallPath,
+    item.image_original_path ?? item.original_path ?? item.originalPath,
   ].map((value) => String(value || '').trim()).filter(Boolean);
 }
 
@@ -58,6 +58,20 @@ function localImagePath(publicPath, uploadDir, publicBase) {
   const root = path.resolve(uploadDir);
   const target = path.resolve(root, ...segments);
   return target.startsWith(`${root}${path.sep}`) ? target : '';
+}
+
+export function existingImageVariants(paths, { uploadDir, publicBase }) {
+  const existing = [];
+  for (const publicPath of new Set(paths)) {
+    const target = localImagePath(publicPath, uploadDir, publicBase);
+    if (!target) continue;
+    try {
+      if (fs.statSync(target, { throwIfNoEntry: false })?.isFile()) existing.push(publicPath);
+    } catch {
+      // A later cleanup pass can retry files that are temporarily inaccessible.
+    }
+  }
+  return existing;
 }
 
 export function removeImageVariants(paths, { uploadDir, publicBase, excludePaths = [] }) {

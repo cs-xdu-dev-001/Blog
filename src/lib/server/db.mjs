@@ -119,6 +119,21 @@ export function initializeSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_blog_posts_published_date
       ON blog_posts(published, date DESC, id DESC);
 
+    CREATE TABLE IF NOT EXISTS post_image_assets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      post_id INTEGER NOT NULL,
+      image_path TEXT NOT NULL UNIQUE,
+      small_path TEXT NOT NULL DEFAULT '',
+      original_path TEXT NOT NULL DEFAULT '',
+      referenced INTEGER NOT NULL DEFAULT 0,
+      unreferenced_at TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(post_id) REFERENCES blog_posts(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_post_image_assets_cleanup
+      ON post_image_assets(referenced, unreferenced_at, id);
+
     CREATE TABLE IF NOT EXISTS post_topic_links (
       post_id INTEGER NOT NULL,
       topic_slug TEXT NOT NULL,

@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import {
   createSessionToken,
   getSessionCookieName,
+  getSessionMaxAgeSeconds,
   verifyPassword,
 } from '../../../lib/server/auth.mjs';
 import { adminLoginAttemptLimiter } from '../../../lib/server/authAttemptLimiter.mjs';
@@ -31,7 +32,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     sameSite: 'strict',
     secure: process.env.NODE_ENV === 'production',
     path: '/',
-    maxAge: 60 * 60 * 24 * 30,
+    maxAge: getSessionMaxAgeSeconds(),
   });
 
   return redirect('/admin/watch', 303);

@@ -122,6 +122,7 @@ test('admin post editor previews through the frontend markdown renderer', () => 
   assert.match(milkdownClient, /event\.preventDefault\(\)/);
   assert.match(milkdownClient, /crepe\.editor\.action\(insert\(/);
   assert.match(milkdownClient, /'X-Image-Name':\s*encodeURIComponent/);
+  assert.match(milkdownClient, /'X-Post-ID':\s*String\(editorPostId\)/);
   assert.match(milkdownClient, /body:\s*file/);
   assert.match(page, /data-editor-fallback/);
   assert.doesNotMatch(page, /data-markdown-input[^>]*\shidden/);
@@ -143,10 +144,13 @@ test('admin post editor previews through the frontend markdown renderer', () => 
   assert.match(milkdownClient, /replaceAll\(input\.value\)/);
   assert.match(milkdownClient, /fallback\.hidden = true/);
   assert.match(client, /'X-Image-Name':\s*encodeURIComponent/);
+  assert.match(client, /'X-Post-ID':\s*String\(post\.id \|\| 0\)/);
   assert.match(client, /body:\s*file/);
   assert.match(imageApi, /saveImageVariants/);
   assert.match(imageApi, /context\.request\.arrayBuffer\(\)/);
   assert.match(imageApi, /x-image-name/);
+  assert.match(imageApi, /x-post-id/);
+  assert.match(imageApi, /registerImageAsset/);
   assert.match(styles, /\.article-prose\s+ul\s*\{[^}]*list-style:\s*disc/s);
   assert.match(styles, /\.article-prose\s+ol\s*\{[^}]*list-style:\s*decimal/s);
   assert.match(styles, /\.article-prose\s+table\s*\{[^}]*border:\s*1px solid var\(--line\)/s);

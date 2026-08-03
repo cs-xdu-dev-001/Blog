@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
-import { servePostImage } from '../src/lib/server/postImageResponse.mjs';
+import { servePostImage, serveUploadedImage } from '../src/lib/server/postImageResponse.mjs';
 
 test('runtime post images are served with safe content headers', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'post-image-response-'));
@@ -28,4 +28,18 @@ test('runtime post images reject traversal and non-image files', async () => {
   assert.equal((await servePostImage('../outside.png', { root })).status, 404);
   assert.equal((await servePostImage('note.txt', { root })).status, 404);
   assert.equal((await servePostImage('missing.webp', { root })).status, 404);
+});
+
+test('runtime media route serves managed reading watch and food images', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-media-response-'));
+  const image = Buffer.from([0x52, 0x49, 0x46, 0x46]);
+  for (const kind of ['reading', 'watch', 'food']) {
+    fs.mkdirSync(path.join(root, kind));
+    fs.writeFileSync(path.join(root, kind, 'sample.webp'), image);
+    const response = await serveUploadedImage(kind, 'sample.webp', { root });
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('content-type'), 'image/webp');
+  }
+  assert.equal((await serveUploadedImage('unknown', 'sample.webp', { root })).status, 404);
+  assert.equal((await serveUploadedImage('reading', '../watch/sample.webp', { root })).status, 404);
 });

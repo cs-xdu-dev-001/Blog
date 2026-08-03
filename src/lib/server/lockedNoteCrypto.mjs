@@ -23,12 +23,17 @@ function contentKey(secret, salt) {
 }
 
 function cookieSecret() {
-  return normalizeKey(
+  const secret = normalizeKey(
     process.env.LOCKED_NOTE_COOKIE_SECRET
     || process.env.ADMIN_SESSION_SECRET
     || process.env.SESSION_SECRET
-    || DEV_COOKIE_SECRET,
+    || '',
   );
+  if (secret) return secret;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('LOCKED_NOTE_COOKIE_SECRET or ADMIN_SESSION_SECRET is required in production');
+  }
+  return DEV_COOKIE_SECRET;
 }
 
 function cookieKey(salt) {

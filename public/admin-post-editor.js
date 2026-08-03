@@ -250,6 +250,7 @@ async function uploadPostImage(file) {
       headers: {
         'Content-Type': file.type,
         'X-Image-Name': encodeURIComponent(file.name || 'image'),
+        'X-Post-ID': String(post.id || 0),
       },
       credentials: 'same-origin',
       body: file,

@@ -94,6 +94,7 @@ cp .env.example .env
 - `ADMIN_USERNAME`：管理端用户名。
 - `ADMIN_PASSWORD_HASH`：管理端密码hash。
 - `ADMIN_SESSION_SECRET`：管理端会话签名密钥。
+- `LOCKED_NOTE_COOKIE_SECRET`：加密笔记解锁Cookie签名密钥；不填时复用`ADMIN_SESSION_SECRET`。
 - `GITHUB_DISCUSSIONS_TOKEN`：管理端读取和删除留言使用的细粒度GitHub Token，仅授予`Blog`仓库的Discussions读写权限。
 - `ASSISTANT_API_MODE`：AI接口类型，`chat`或`responses`。
 - `ASSISTANT_BASE_URL`：AI接口Base URL。
@@ -112,6 +113,7 @@ cp .env.example .env
 - `public/uploads/posts`
 - `public/uploads/reading`
 - `public/uploads/watch`
+- `public/uploads/food`
 
 这些目录已经加入`.gitignore`，不会默认提交。部署前建议单独备份：
 
@@ -138,6 +140,20 @@ npm run images:backfill
 ```
 
 脚本会扫描SQLite里的影像和阅读图片，给已有原图补生成480px和960px WebP，并回写数据库；已经补齐的条目会跳过。
+
+笔记正文中移除图片后，系统会先保留7天。查看待清理图片：
+
+```bash
+npm run images:cleanup-posts
+```
+
+确认无误后执行删除：
+
+```bash
+npm run images:cleanup-posts -- --delete
+```
+
+清理只处理新版本登记过的笔记图片，不会扫描或误删历史未登记文件。
 
 ## 测试
 

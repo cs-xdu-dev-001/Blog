@@ -27,6 +27,8 @@ import '@milkdown/crepe/theme/frame.css';
 const root = document.querySelector('[data-milkdown-editor]');
 const input = document.querySelector('[data-markdown-input]');
 const statusEl = document.querySelector('[data-editor-status]');
+const editorDataEl = document.getElementById('post-editor-data');
+const editorPostId = Number(JSON.parse(editorDataEl?.textContent || '{}').id || 0);
 
 const aiIcon = `
   <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -431,6 +433,7 @@ async function uploadPostImage(file) {
       headers: {
         'Content-Type': file.type,
         'X-Image-Name': encodeURIComponent(file.name || 'image'),
+        'X-Post-ID': String(editorPostId),
       },
       credentials: 'same-origin',
       body: file,

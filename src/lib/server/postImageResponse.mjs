@@ -1,7 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-const defaultRoot = path.resolve(process.cwd(), 'public', 'uploads', 'posts');
+const defaultUploadsRoot = path.resolve(process.cwd(), 'public', 'uploads');
+const allowedUploadKinds = new Set(['posts', 'reading', 'watch', 'food']);
 const contentTypes = new Map([
   ['.avif', 'image/avif'],
   ['.jpeg', 'image/jpeg'],
@@ -22,7 +23,11 @@ function decodeRelativePath(value) {
   }
 }
 
-export async function servePostImage(relativePath, { root = defaultRoot } = {}) {
+export async function servePostImage(relativePath, { root = path.join(defaultUploadsRoot, 'posts') } = {}) {
+  return serveImageFile(relativePath, root);
+}
+
+async function serveImageFile(relativePath, root) {
   const decodedPath = decodeRelativePath(relativePath);
   if (!decodedPath || decodedPath.includes('\0')) return notFound();
 
@@ -56,4 +61,10 @@ export async function servePostImage(relativePath, { root = defaultRoot } = {}) 
     if (error?.code === 'ENOENT' || error?.code === 'EISDIR') return notFound();
     throw error;
   }
+}
+
+export async function serveUploadedImage(kind, relativePath, { root = defaultUploadsRoot } = {}) {
+  const normalizedKind = String(kind || '').trim().toLowerCase();
+  if (!allowedUploadKinds.has(normalizedKind)) return notFound();
+  return serveImageFile(relativePath, path.join(root, normalizedKind));
 }

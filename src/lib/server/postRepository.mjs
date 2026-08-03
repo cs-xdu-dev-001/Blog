@@ -2,6 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { initializeSchema, openDatabase } from './db.mjs';
 import { normalizeAdminPagination, publicPagination } from './adminPagination.mjs';
+import { existingImageVariants, removeImageVariants, storedImagePaths } from './imageVariants.mjs';
+import {
+  collectReferencedPostImagePaths,
+  normalizePostImagePath,
+  postImageAssetIsReferenced,
+} from './postImageAssets.mjs';
 import {
   decryptLockedText,
   encryptLockedText,
@@ -230,8 +236,10 @@ function parseFrontmatter(raw) {
   return { data, body: match[2] };
 }
 
-export function createPostRepository({ dbPath } = {}) {
+export function createPostRepository({ dbPath, uploadDir } = {}) {
   const db = openDatabase(dbPath);
+  const postUploadDir = path.resolve(uploadDir || path.join(process.cwd(), 'public', 'uploads', 'posts'));
+  const postPublicBase = '/uploads/posts';
   let initialized = false;
 
   function migrateLegacyCategories() {
@@ -361,8 +369,41 @@ export function createPostRepository({ dbPath } = {}) {
     return validIds;
   }
 
+  function imageAssetsForPost(postId) {
+    return db.prepare(`
+      SELECT * FROM post_image_assets
+      WHERE post_id = ?
+      ORDER BY id ASC
+    `).all(postId);
+  }
+
+  function syncImageAssets(postId, markdown) {
+    const references = collectReferencedPostImagePaths(markdown);
+    const assets = imageAssetsForPost(postId);
+    const markReferenced = db.prepare(`
+      UPDATE post_image_assets
+      SET referenced = 1, unreferenced_at = NULL
+      WHERE id = ?
+    `);
+    const markUnreferenced = db.prepare(`
+      UPDATE post_image_assets
+      SET referenced = 0, unreferenced_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+    assets.forEach((asset) => {
+      const referenced = postImageAssetIsReferenced(asset, references);
+      if (referenced && !asset.referenced) markReferenced.run(asset.id);
+      if (!referenced && asset.referenced) markUnreferenced.run(asset.id);
+    });
+    return { total: assets.length, referenced: assets.filter((asset) => postImageAssetIsReferenced(asset, references)).length };
+  }
+
   return {
     initialize,
+
+    close() {
+      if (db.open) db.close();
+    },
 
     create(input = {}) {
       initialize();
@@ -530,6 +571,69 @@ export function createPostRepository({ dbPath } = {}) {
 
     setTopicPostOrder,
 
+    registerImageAsset(postId, image = {}) {
+      initialize();
+      const id = Number(postId);
+      if (!Number.isInteger(id) || id <= 0 || !db.prepare('SELECT id FROM blog_posts WHERE id = ?').get(id)) {
+        throw new Error('post not found');
+      }
+      const imagePath = normalizePostImagePath(image.imagePath ?? image.image_path);
+      const smallPath = normalizePostImagePath(image.smallPath ?? image.small_path);
+      const originalPath = normalizePostImagePath(image.originalPath ?? image.original_path);
+      if (!imagePath) throw new Error('invalid post image path');
+      db.prepare(`
+        INSERT INTO post_image_assets
+          (post_id, image_path, small_path, original_path, referenced, unreferenced_at)
+        VALUES
+          (@postId, @imagePath, @smallPath, @originalPath, 0, CURRENT_TIMESTAMP)
+        ON CONFLICT(image_path) DO UPDATE SET
+          post_id = excluded.post_id,
+          small_path = excluded.small_path,
+          original_path = excluded.original_path
+      `).run({ postId: id, imagePath, smallPath, originalPath });
+      return db.prepare('SELECT * FROM post_image_assets WHERE image_path = ?').get(imagePath);
+    },
+
+    listImageAssets(postId) {
+      initialize();
+      return imageAssetsForPost(Number(postId));
+    },
+
+    syncImageAssets(postId, markdown) {
+      initialize();
+      return syncImageAssets(Number(postId), markdown);
+    },
+
+    cleanupUnreferencedImages({ before = new Date(), dryRun = true } = {}) {
+      initialize();
+      const beforeDate = before instanceof Date ? before : new Date(before);
+      if (Number.isNaN(beforeDate.valueOf())) throw new Error('invalid cleanup cutoff');
+      const candidates = db.prepare(`
+        SELECT * FROM post_image_assets
+        WHERE referenced = 0
+          AND unreferenced_at IS NOT NULL
+          AND unreferenced_at <= datetime(@before)
+        ORDER BY id ASC
+      `).all({ before: beforeDate.toISOString() });
+      if (dryRun) return { dryRun: true, candidates, removedAssets: 0, removedFiles: 0 };
+
+      let removedAssets = 0;
+      let removedFiles = 0;
+      candidates.forEach((asset) => {
+        const paths = storedImagePaths(asset);
+        removedFiles += removeImageVariants(paths, {
+          uploadDir: postUploadDir,
+          publicBase: postPublicBase,
+        });
+        if (existingImageVariants(paths, {
+          uploadDir: postUploadDir,
+          publicBase: postPublicBase,
+        }).length) return;
+        removedAssets += db.prepare('DELETE FROM post_image_assets WHERE id = ? AND referenced = 0').run(asset.id).changes;
+      });
+      return { dryRun: false, candidates, removedAssets, removedFiles };
+    },
+
     listTags() {
       initialize();
       const tagMap = new Map();
@@ -629,16 +733,26 @@ export function createPostRepository({ dbPath } = {}) {
         published: input.published ? 1 : 0,
       });
       if (Object.hasOwn(input, 'topicSlugs')) setPostTopics(id, input.topicSlugs);
+      if (Object.hasOwn(input, 'body')) syncImageAssets(id, String(input.body ?? ''));
       return this.get(id);
     },
 
     remove(id) {
       initialize();
+      const assets = imageAssetsForPost(Number(id));
       const tx = db.transaction((postId) => {
         db.prepare('DELETE FROM post_topic_links WHERE post_id = ?').run(postId);
+        db.prepare('DELETE FROM post_image_assets WHERE post_id = ?').run(postId);
         return db.prepare('DELETE FROM blog_posts WHERE id = ?').run(postId).changes > 0;
       });
-      return tx(id);
+      const removed = tx(id);
+      if (removed) {
+        removeImageVariants(assets.flatMap(storedImagePaths), {
+          uploadDir: postUploadDir,
+          publicBase: postPublicBase,
+        });
+      }
+      return removed;
     },
   };
 }
