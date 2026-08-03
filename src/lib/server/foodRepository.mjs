@@ -2,7 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { initializeSchema, openDatabase } from './db.mjs';
 import { normalizeAdminPagination, publicPagination } from './adminPagination.mjs';
-import { safeImageBaseName, saveImageVariants } from './imageVariants.mjs';
+import {
+  removeImageVariants,
+  safeImageBaseName,
+  saveImageVariants,
+  storedImagePaths,
+  uniqueImageBaseName,
+} from './imageVariants.mjs';
 
 const allowedFilters = new Set(['all', 'recent', 'eaten', 'frequent', 'wanted', 'featured', 'draft']);
 const allowedStatuses = new Set(['想去', '吃过', '常去']);
@@ -185,7 +191,16 @@ export function createFoodRepository({ dbPath, uploadDir } = {}) {
 
     remove(id) {
       initialize();
-      return db.prepare('DELETE FROM food_items WHERE id = ?').run(id).changes > 0;
+      const item = this.get(id);
+      if (!item) return false;
+      const result = db.prepare('DELETE FROM food_items WHERE id = ?').run(id);
+      if (result.changes > 0) {
+        removeImageVariants(storedImagePaths(item), {
+          uploadDir: finalUploadDir,
+          publicBase: '/uploads/food',
+        });
+      }
+      return result.changes > 0;
     },
 
     async saveImage(id, { originalName, buffer }) {
@@ -193,22 +208,35 @@ export function createFoodRepository({ dbPath, uploadDir } = {}) {
       const item = this.get(id);
       if (!item) return null;
       const variants = await saveImageVariants({
-        baseName: safeFoodImageBaseName(item.title),
+        baseName: uniqueImageBaseName(item.title, `food-${id}`),
         originalName,
         buffer,
         uploadDir: finalUploadDir,
         publicBase: '/uploads/food',
       });
-      db.prepare(`
-        UPDATE food_items SET
-          image_path = @imagePath,
-          image_small_path = @smallPath,
-          image_original_path = @originalPath,
-          image_width = @width,
-          image_height = @height,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = @id
-      `).run({ id, ...variants });
+      try {
+        db.prepare(`
+          UPDATE food_items SET
+            image_path = @imagePath,
+            image_small_path = @smallPath,
+            image_original_path = @originalPath,
+            image_width = @width,
+            image_height = @height,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = @id
+        `).run({ id, ...variants });
+      } catch (error) {
+        removeImageVariants(storedImagePaths(variants), {
+          uploadDir: finalUploadDir,
+          publicBase: '/uploads/food',
+        });
+        throw error;
+      }
+      removeImageVariants(storedImagePaths(item), {
+        uploadDir: finalUploadDir,
+        publicBase: '/uploads/food',
+        excludePaths: storedImagePaths(variants),
+      });
       return this.get(id);
     },
   };

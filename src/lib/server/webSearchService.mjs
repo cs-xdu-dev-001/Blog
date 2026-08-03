@@ -8,7 +8,7 @@ const authorityProfiles = [
   { pattern: /(?:\bopenai\b|\bchatgpt\b|\bgpt(?:[-\s]?\d|[-\s]?oss)?\b)/i, domains: ['openai.com'] },
   { pattern: /\bastro(?:\.js)?\b/i, domains: ['astro.build'] },
   { pattern: /\bgithub\b/i, domains: ['docs.github.com', 'github.com'] },
-  { pattern: /\bnode(?:\.?js)?\b/i, domains: ['nodejs.org'] },
+  { pattern: /\bnode(?:\.js|js)\b/i, domains: ['nodejs.org'] },
   { pattern: /\btypescript\b/i, domains: ['typescriptlang.org'] },
   { pattern: /\bvite\b/i, domains: ['vite.dev'] },
 ];
@@ -55,6 +55,10 @@ export function planAssistantRetrieval(question, localSources = [], config = {})
   const text = String(question || '').trim();
   const webReady = webSearchConfig(config).enabled === true && Boolean(webSearchApiKey(config));
   const profile = authorityProfile(text);
+  const localScore = localSources.reduce((highest, source) => {
+    const score = Number(source?.score);
+    return Math.max(highest, Number.isFinite(score) ? score : 100);
+  }, 0);
   const result = (intent, useWeb, includeLocal, domains = []) => ({
     intent,
     useWeb,
@@ -67,7 +71,9 @@ export function planAssistantRetrieval(question, localSources = [], config = {})
   if (localSources.length && localIntentPattern.test(text)) return result('local', false, true);
   if (profile) return result('official', webReady, false, profile.domains);
   if (explicitWebPattern.test(text) || /https?:\/\//i.test(text)) return result('web', webReady, false);
-  if (localSources.length) return result('local', false, true);
+  if (localScore >= 40 || (localSources.length && !webReady)) return result('local', false, true);
+  if (localScore >= 10 && factualQuestionPattern.test(text)) return result('hybrid', true, true);
+  if (localScore >= 10) return result('local', false, true);
   if (factualQuestionPattern.test(text)) return result('web', webReady, false);
   return result('chat', false, false);
 }

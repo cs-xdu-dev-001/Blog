@@ -2,7 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { initializeSchema, openDatabase } from './db.mjs';
 import { normalizeAdminPagination, publicPagination } from './adminPagination.mjs';
-import { safeImageBaseName as safeUploadImageBaseName, saveImageVariants } from './imageVariants.mjs';
+import {
+  removeImageVariants,
+  safeImageBaseName as safeUploadImageBaseName,
+  saveImageVariants,
+  storedImagePaths,
+  uniqueImageBaseName,
+} from './imageVariants.mjs';
 
 const allowedFilters = new Set([
   'all',
@@ -223,7 +229,15 @@ export function createWatchRepository({ dbPath, uploadDir } = {}) {
 
     remove(id) {
       initialize();
+      const item = this.get(id);
+      if (!item) return false;
       const result = db.prepare('DELETE FROM watch_items WHERE id = ?').run(id);
+      if (result.changes > 0) {
+        removeImageVariants(storedImagePaths(item), {
+          uploadDir: finalUploadDir,
+          publicBase: '/uploads/watch',
+        });
+      }
       return result.changes > 0;
     },
 
@@ -232,22 +246,35 @@ export function createWatchRepository({ dbPath, uploadDir } = {}) {
       const item = this.get(id);
       if (!item) return null;
       const variants = await saveImageVariants({
-        baseName: safeImageBaseName(item.title),
+        baseName: uniqueImageBaseName(item.title, `watch-${id}`),
         originalName,
         buffer,
         uploadDir: finalUploadDir,
         publicBase: '/uploads/watch',
       });
-      db.prepare(`
-        UPDATE watch_items SET
-          image_path = @imagePath,
-          image_small_path = @smallPath,
-          image_original_path = @originalPath,
-          image_width = @width,
-          image_height = @height,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = @id
-      `).run({ id, ...variants });
+      try {
+        db.prepare(`
+          UPDATE watch_items SET
+            image_path = @imagePath,
+            image_small_path = @smallPath,
+            image_original_path = @originalPath,
+            image_width = @width,
+            image_height = @height,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = @id
+        `).run({ id, ...variants });
+      } catch (error) {
+        removeImageVariants(storedImagePaths(variants), {
+          uploadDir: finalUploadDir,
+          publicBase: '/uploads/watch',
+        });
+        throw error;
+      }
+      removeImageVariants(storedImagePaths(item), {
+        uploadDir: finalUploadDir,
+        publicBase: '/uploads/watch',
+        excludePaths: storedImagePaths(variants),
+      });
       return this.get(id);
     },
   };

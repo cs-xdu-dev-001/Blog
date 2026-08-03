@@ -5,9 +5,14 @@ import path from 'node:path';
 import { createReadingRepository, safeReadingImageBaseName } from '../src/lib/server/readingRepository.mjs';
 
 const tinyPng = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAGUlEQVR4nGP8z8DAwMDAxMDAwMDAAAANHQEDK+mmyQAAAABJRU5ErkJggg==',
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
   'base64',
 );
+
+function uploadedFile(publicPath) {
+  const relative = publicPath.replace('/uploads/reading/', '');
+  return path.join(uploadDir, ...relative.split('/').map(decodeURIComponent));
+}
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'reading-repo-'));
 const dbPath = path.join(tmp, 'reading.sqlite');
@@ -81,12 +86,12 @@ const imageUpdated = await repo.saveImage(item.id, {
   buffer: tinyPng,
 });
 
-assert.equal(imageUpdated.image_path, '/uploads/reading/%E5%8C%97%E5%B9%B3%E6%97%A0%E6%88%98%E4%BA%8B-960.webp');
-assert.equal(imageUpdated.image_small_path, '/uploads/reading/%E5%8C%97%E5%B9%B3%E6%97%A0%E6%88%98%E4%BA%8B-480.webp');
-assert.equal(imageUpdated.image_original_path, '/uploads/reading/original/%E5%8C%97%E5%B9%B3%E6%97%A0%E6%88%98%E4%BA%8B.png');
-assert.ok(fs.existsSync(path.join(uploadDir, '北平无战事-960.webp')));
-assert.ok(fs.existsSync(path.join(uploadDir, '北平无战事-480.webp')));
-assert.ok(fs.existsSync(path.join(uploadDir, 'original', '北平无战事.png')));
+assert.match(imageUpdated.image_path, /^\/uploads\/reading\/.+-960\.webp$/);
+assert.match(imageUpdated.image_small_path, /^\/uploads\/reading\/.+-480\.webp$/);
+assert.match(imageUpdated.image_original_path, /^\/uploads\/reading\/original\/.+\.png$/);
+assert.ok(fs.existsSync(uploadedFile(imageUpdated.image_path)));
+assert.ok(fs.existsSync(uploadedFile(imageUpdated.image_small_path)));
+assert.ok(fs.existsSync(uploadedFile(imageUpdated.image_original_path)));
 assert.equal(safeReadingImageBaseName('六经责我开生面——刘和平谈艺录'), '六经责我开生面——刘和平谈艺录');
 
 const renamed = repo.update(item.id, { title: '北平无战事（重读）' });

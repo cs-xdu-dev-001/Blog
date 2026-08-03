@@ -5,9 +5,14 @@ import path from 'node:path';
 import { createWatchRepository, safeImageBaseName } from '../src/lib/server/watchRepository.mjs';
 
 const tinyPng = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAGUlEQVR4nGP8z8DAwMDAxMDAwMDAAAANHQEDK+mmyQAAAABJRU5ErkJggg==',
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
   'base64',
 );
+
+function uploadedFile(publicPath) {
+  const relative = publicPath.replace('/uploads/watch/', '');
+  return path.join(uploadDir, ...relative.split('/').map(decodeURIComponent));
+}
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'watch-repo-'));
 const dbPath = path.join(tmp, 'watch.sqlite');
@@ -65,12 +70,12 @@ const imageUpdated = await repo.saveImage(item.id, {
   buffer: tinyPng,
 });
 
-assert.equal(imageUpdated.image_path, '/uploads/watch/%E9%9A%90%E5%85%A5%E5%B0%98%E7%83%9F-960.webp');
-assert.equal(imageUpdated.image_small_path, '/uploads/watch/%E9%9A%90%E5%85%A5%E5%B0%98%E7%83%9F-480.webp');
-assert.equal(imageUpdated.image_original_path, '/uploads/watch/original/%E9%9A%90%E5%85%A5%E5%B0%98%E7%83%9F.png');
-assert.ok(fs.existsSync(path.join(uploadDir, '隐入尘烟-960.webp')));
-assert.ok(fs.existsSync(path.join(uploadDir, '隐入尘烟-480.webp')));
-assert.ok(fs.existsSync(path.join(uploadDir, 'original', '隐入尘烟.png')));
+assert.match(imageUpdated.image_path, /^\/uploads\/watch\/.+-960\.webp$/);
+assert.match(imageUpdated.image_small_path, /^\/uploads\/watch\/.+-480\.webp$/);
+assert.match(imageUpdated.image_original_path, /^\/uploads\/watch\/original\/.+\.png$/);
+assert.ok(fs.existsSync(uploadedFile(imageUpdated.image_path)));
+assert.ok(fs.existsSync(uploadedFile(imageUpdated.image_small_path)));
+assert.ok(fs.existsSync(uploadedFile(imageUpdated.image_original_path)));
 assert.equal(safeImageBaseName('百家讲坛《风雨张居正》'), '百家讲坛《风雨张居正》');
 
 const renamed = repo.update(item.id, { title: '隐入尘烟（重看）', type: '纪录片' });

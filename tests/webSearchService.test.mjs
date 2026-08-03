@@ -51,6 +51,27 @@ test('official product routing applies extensible authority domains', () => {
   assert.deepEqual(planAssistantRetrieval('Astro最新版本', [], config).domains, ['astro.build']);
   assert.deepEqual(planAssistantRetrieval('GitHub Actions怎么配置', [], config).domains, ['docs.github.com', 'github.com']);
   assert.deepEqual(planAssistantRetrieval('Node.js最新LTS', [], config).domains, ['nodejs.org']);
+  assert.deepEqual(planAssistantRetrieval('binary tree node是什么', [], config).domains, []);
+});
+
+test('retrieval planner uses local confidence instead of any incidental match', () => {
+  const weakLocal = [{ title: '偶然命中', score: 7 }];
+  const usefulLocal = [{ title: '相关笔记', score: 18 }];
+  const exactLocal = [{ title: '目标笔记', score: 80 }];
+
+  assert.deepEqual(planAssistantRetrieval('binary tree node是什么', weakLocal, config), {
+    intent: 'web',
+    useWeb: true,
+    includeLocal: false,
+    domains: [],
+  });
+  assert.deepEqual(planAssistantRetrieval('量子纠缠是什么', usefulLocal, config), {
+    intent: 'hybrid',
+    useWeb: true,
+    includeLocal: true,
+    domains: [],
+  });
+  assert.equal(planAssistantRetrieval('总结目标笔记', exactLocal, config).intent, 'local');
 });
 
 test('web search uses the fixed Tavily endpoint and normalizes safe sources', async () => {
