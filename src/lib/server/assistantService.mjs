@@ -7,9 +7,8 @@ import { getWatchArchiveFromDb } from './watchArchiveView.mjs';
 import { siteConfigRepository } from './siteConfigRepository.mjs';
 import {
   isServerKnownTimeQuestion,
+  planAssistantRetrieval,
   searchWeb,
-  shouldPreferOfficialWebSources,
-  shouldUseWebSearch,
 } from './webSearchService.mjs';
 
 const minuteBuckets = new Map();
@@ -1032,9 +1031,10 @@ export function createAssistantService({
 
       const directAnswer = answerServerKnownTimeQuestion(question, now());
       const foundLocalSources = directAnswer ? [] : searchDocuments(question, config, deps);
-      const localSources = shouldPreferOfficialWebSources(question) ? [] : foundLocalSources;
+      const retrieval = planAssistantRetrieval(question, foundLocalSources, config);
+      const localSources = retrieval.includeLocal ? foundLocalSources : [];
       let sources = localSources;
-      const useWebSearch = shouldUseWebSearch(question, localSources, config);
+      const useWebSearch = retrieval.useWeb;
       const history = normalizeConversation(historyInput);
       const requestId = crypto.randomUUID();
       const mode = assistantApiMode(config);
@@ -1298,8 +1298,9 @@ export function createAssistantService({
         return { status: 200, body: { refused: false, answer: directAnswer, sources: [] } };
       }
       const foundLocalSources = searchDocuments(question, config, deps);
-      const localSources = shouldPreferOfficialWebSources(question) ? [] : foundLocalSources;
-      const webSources = shouldUseWebSearch(question, localSources, config)
+      const retrieval = planAssistantRetrieval(question, foundLocalSources, config);
+      const localSources = retrieval.includeLocal ? foundLocalSources : [];
+      const webSources = retrieval.useWeb
         ? await searchWeb(question, config, {
             signal: request.signal,
             fetchImpl: (url, options) => fetch(url, assistantFetchOptions(config, options)),

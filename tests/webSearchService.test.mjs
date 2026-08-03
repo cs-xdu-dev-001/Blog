@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { searchWeb, shouldUseWebSearch } from '../src/lib/server/webSearchService.mjs';
+import {
+  planAssistantRetrieval,
+  searchWeb,
+  shouldUseWebSearch,
+} from '../src/lib/server/webSearchService.mjs';
 
 const config = {
   assistant: {
@@ -27,6 +31,28 @@ test('web search does not handle server-known current date and time questions', 
   assert.equal(shouldUseWebSearch('查一下今天的AI新闻', [], config), true);
 });
 
+test('retrieval planner separates local, official, web, time, and chat intents', () => {
+  const localSources = [{ title: '站内RAG笔记' }];
+  assert.deepEqual(planAssistantRetrieval('今天星期几', [], config), {
+    intent: 'server_time',
+    useWeb: false,
+    includeLocal: false,
+    domains: [],
+  });
+  assert.equal(planAssistantRetrieval('总结这篇站内笔记', localSources, config).intent, 'local');
+  assert.equal(planAssistantRetrieval('总结这篇站内笔记', localSources, config).includeLocal, true);
+  assert.deepEqual(planAssistantRetrieval('OpenAI最新模型是什么', localSources, config).domains, ['openai.com']);
+  assert.equal(planAssistantRetrieval('OpenAI最新模型是什么', localSources, config).includeLocal, false);
+  assert.equal(planAssistantRetrieval('解释一下量子纠缠', [], config).intent, 'web');
+  assert.equal(planAssistantRetrieval('你好', [], config).intent, 'chat');
+});
+
+test('official product routing applies extensible authority domains', () => {
+  assert.deepEqual(planAssistantRetrieval('Astro最新版本', [], config).domains, ['astro.build']);
+  assert.deepEqual(planAssistantRetrieval('GitHub Actions怎么配置', [], config).domains, ['docs.github.com', 'github.com']);
+  assert.deepEqual(planAssistantRetrieval('Node.js最新LTS', [], config).domains, ['nodejs.org']);
+});
+
 test('web search uses the fixed Tavily endpoint and normalizes safe sources', async () => {
   const calls = [];
   const sources = await searchWeb('Astro最新版本', config, {
@@ -50,7 +76,7 @@ test('web search uses the fixed Tavily endpoint and normalizes safe sources', as
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, 'https://api.tavily.com/search');
   assert.equal(calls[0].options.headers.Authorization, 'Bearer tvly-test');
-  assert.equal(calls[0].body.search_depth, 'basic');
+  assert.equal(calls[0].body.search_depth, 'advanced');
   assert.equal(calls[0].body.include_raw_content, 'markdown');
   assert.equal(calls[0].body.max_results, 3);
   assert.deepEqual(sources, [{
@@ -88,10 +114,30 @@ test('OpenAI product searches only keep official OpenAI sources', async () => {
   });
 
   assert.deepEqual(calls[0].include_domains, ['openai.com']);
+  assert.equal(calls[0].search_depth, 'advanced');
   assert.match(calls[0].query, /official documentation/i);
   assert.deepEqual(sources.map((source) => source.url), [
     'https://developers.openai.com/api/docs/models',
   ]);
+});
+
+test('web search reranks relevance, removes duplicates, and returns at most three sources', async () => {
+  const sources = await searchWeb('量子纠缠是什么', config, {
+    fetchImpl: async () => Response.json({
+      results: [
+        { title: '高分但无关', url: 'https://noise.example/a', raw_content: '今日体育赛事。', score: 0.98 },
+        { title: '量子纠缠解释', url: 'https://science.example/entanglement?utm_source=x', raw_content: '量子纠缠的基本原理。', score: 0.62 },
+        { title: '量子纠缠解释副本', url: 'https://science.example/entanglement?ref=copy', raw_content: '重复页面。', score: 0.8 },
+        { title: '量子力学基础', url: 'https://physics.example/quantum', raw_content: '包含量子纠缠。', score: 0.58 },
+        { title: '纠缠实验', url: 'https://lab.example/result', raw_content: '实验验证量子纠缠。', score: 0.55 },
+      ],
+    }),
+  });
+
+  assert.equal(sources.length, 3);
+  assert.equal(sources[0].url.startsWith('https://science.example/entanglement'), true);
+  assert.equal(sources.filter((source) => source.url.includes('/entanglement')).length, 1);
+  assert.equal(sources.some((source) => source.title === '高分但无关'), false);
 });
 
 test('web search fails closed without breaking the assistant request', async () => {
