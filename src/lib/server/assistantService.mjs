@@ -5,7 +5,12 @@ import { postRepository } from './postRepository.mjs';
 import { getAllReadingFromDb } from './readingArchiveView.mjs';
 import { getWatchArchiveFromDb } from './watchArchiveView.mjs';
 import { siteConfigRepository } from './siteConfigRepository.mjs';
-import { searchWeb, shouldUseWebSearch } from './webSearchService.mjs';
+import {
+  isServerKnownTimeQuestion,
+  searchWeb,
+  shouldPreferOfficialWebSources,
+  shouldUseWebSearch,
+} from './webSearchService.mjs';
 
 const minuteBuckets = new Map();
 const proxyAgents = new Map();
@@ -58,6 +63,34 @@ function cleanQuestion(input) {
 
 function textOf(parts) {
   return parts.filter(Boolean).map((part) => String(part).trim()).filter(Boolean).join('\n');
+}
+
+function assistantClockParts(date = new Date()) {
+  return Object.fromEntries(new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    weekday: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date).map((part) => [part.type, part.value]));
+}
+
+export function formatAssistantCurrentTime(date = new Date()) {
+  const parts = assistantClockParts(date);
+
+  return `${parts.year}年${parts.month}月${parts.day}日，${parts.weekday}，${parts.hour}:${parts.minute}（Asia/Shanghai）`;
+}
+
+export function answerServerKnownTimeQuestion(question, date = new Date()) {
+  if (!isServerKnownTimeQuestion(question)) return '';
+  const parts = assistantClockParts(date);
+  if (/(?:几点|时间|what\s+time)/i.test(String(question || ''))) {
+    return `现在是${parts.year}年${parts.month}月${parts.day}日，${parts.weekday}，${parts.hour}:${parts.minute}。`;
+  }
+  return `今天是${parts.year}年${parts.month}月${parts.day}日，${parts.weekday}。`;
 }
 
 function compactText(input) {
@@ -298,6 +331,8 @@ function assistantRequestBody(question, sources, config, historyInput = [], opti
     : 'No matching site context.';
   const systemText = [
     'You are the AI assistant embedded in the Dev Notes blog.',
+    `当前日期和时间：${formatAssistantCurrentTime()}`,
+    '服务端提供的当前日期和时间是权威信息。回答今天、日期、星期或时间时直接使用它，不要根据网页摘要猜测。',
     'Talk naturally. Do not behave like a narrow site-search bot.',
     'When site context is relevant, use it as reference. When it is not relevant, answer normally.',
     'When external web sources are provided, cite factual claims with their source number like [1]. Do not invent citations.',
@@ -905,6 +940,7 @@ export function createAssistantService({
   logger = console,
   timeoutMs = 45000,
   maxStreamChars = 2000000,
+  now = () => new Date(),
 } = {}) {
   const db = openDatabase(dbPath);
   const deps = { posts, getReading, getWatch };
@@ -994,7 +1030,9 @@ export function createAssistantService({
         };
       }
 
-      const localSources = searchDocuments(question, config, deps);
+      const directAnswer = answerServerKnownTimeQuestion(question, now());
+      const foundLocalSources = directAnswer ? [] : searchDocuments(question, config, deps);
+      const localSources = shouldPreferOfficialWebSources(question) ? [] : foundLocalSources;
       let sources = localSources;
       const useWebSearch = shouldUseWebSearch(question, localSources, config);
       const history = normalizeConversation(historyInput);
@@ -1051,6 +1089,13 @@ export function createAssistantService({
           sourceCount: localSources.length,
         });
         yield { event: 'start', data: { requestId } };
+        if (directAnswer) {
+          output = directAnswer;
+          yield { event: 'sources', data: { sources: [] } };
+          yield { event: 'delta', data: { text: output } };
+          yield { event: 'done', data: { requestId } };
+          return;
+        }
         if (useWebSearch) {
           yield { event: 'tool', data: { name: 'web_search', status: 'running' } };
           const webSources = await searchWeb(question, config, {
@@ -1248,7 +1293,12 @@ export function createAssistantService({
       const limit = checkRateLimit(request, config);
       if (!limit.ok) return { status: 429, body: { error: limit.error, limited: true } };
 
-      const localSources = searchDocuments(question, config, deps);
+      const directAnswer = answerServerKnownTimeQuestion(question, now());
+      if (directAnswer) {
+        return { status: 200, body: { refused: false, answer: directAnswer, sources: [] } };
+      }
+      const foundLocalSources = searchDocuments(question, config, deps);
+      const localSources = shouldPreferOfficialWebSources(question) ? [] : foundLocalSources;
       const webSources = shouldUseWebSearch(question, localSources, config)
         ? await searchWeb(question, config, {
             signal: request.signal,

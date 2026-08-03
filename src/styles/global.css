@@ -1714,11 +1714,24 @@ button:focus-visible {
 
 .qzq-topic-card[data-topic-href] {
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .qzq-topic-card[data-topic-href]:focus-visible {
   outline: 2px solid rgba(249, 115, 22, 0.58);
   outline-offset: 4px;
+}
+
+[data-watch-detail],
+.qzq-time-area,
+.qzq-radar-point {
+  touch-action: manipulation;
+}
+
+.qzq-time-area:focus-visible,
+.qzq-radar-point:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.62);
+  outline-offset: 3px;
 }
 
 .qzq-topic-card:hover {

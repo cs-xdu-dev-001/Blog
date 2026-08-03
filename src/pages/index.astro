@@ -50,11 +50,20 @@ const takeWatchBatch = (items, offset, size = WATCH_TRACK_BATCH_SIZE) => Array.f
   { length: Math.min(size, items.length) },
   (_, index) => items[(offset + index) % items.length],
 );
+const stableWatchOffset = (items, rowIndex) => {
+  if (!items.length) return 0;
+  const seed = items.map((item) => `${item.href || ''}:${item.title || ''}`).join('|');
+  let hash = rowIndex + 1;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = (Math.imul(hash, 31) + seed.charCodeAt(index)) >>> 0;
+  }
+  return hash % items.length;
+};
 const watchTrackRows = watchArchive.rows.map((row, rowIndex) => {
   const fullCatalog = row.items.map(compactWatchItem);
-  const catalogStart = fullCatalog.length ? Math.floor(Math.random() * fullCatalog.length) : 0;
+  const catalogStart = stableWatchOffset(fullCatalog, rowIndex);
   const catalog = takeWatchBatch(fullCatalog, catalogStart, WATCH_TRACK_CATALOG_SIZE);
-  const startIndex = catalog.length ? Math.floor(Math.random() * catalog.length) : 0;
+  const startIndex = stableWatchOffset(catalog, rowIndex + watchArchive.rows.length);
   return {
     direction: row.direction,
     rowIndex,
@@ -200,7 +209,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
         {isSectionEnabled('statistics') && <a class="qzq-nav-item" href="#statistics"><span>{section('statistics', { navLabel: '统计' }).navLabel}</span><small>{navSmall('statistics', '∞')}</small></a>}
         {isSectionEnabled('comments') && commentsReady && <a class="qzq-nav-item" href="#comments"><span>{section('comments', { navLabel: '留言' }).navLabel}</span><small>{navSmall('comments', 'GitHub')}</small></a>}
       </div>
-      <div class="qzq-socials" aria-label="Social links">
+      <div class="qzq-socials" role="group" aria-label="社交链接">
         <button type="button" class="global-search-trigger" data-global-search-open aria-label="打开全站搜索">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="11" cy="11" r="7"></circle>
@@ -313,7 +322,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
         <p class="qzq-data-line">
           {siteConfig.heroSubline}
         </p>
-        <div class="qzq-stat-rhythm" aria-label="站点内容统计">
+        <div class="qzq-stat-rhythm" role="group" aria-label="站点内容统计">
           <span><strong data-count-to={publishedPostCount}>0</strong><em>公开笔记</em></span>
           <span><strong data-count-to={watchStats.total}>0</strong><em>影像作品</em></span>
           <span><strong data-count-to={watchStats.watched}>0</strong><em>已看</em></span>
@@ -334,7 +343,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
         </div>
       </div>
 
-      <div class="qzq-topic-grid" aria-label="主线频道">
+      <div class="qzq-topic-grid" role="group" aria-label="主线频道">
         {topicRows.map((row, rowIndex) => (
           <div
             class={`qzq-topic-row ${rowIndex === 0 ? 'is-top' : 'is-bottom'}`}
@@ -460,7 +469,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
         </div>
       )}
 
-      <div class="qzq-watch-marquee is-motion-paused" aria-label="影像档案卡片">
+      <div class="qzq-watch-marquee is-motion-paused" role="group" aria-label="影像档案卡片">
         {watchTrackRows.map((row) => (
           <div
             class={`qzq-watch-track qzq-watch-track-${row.direction}`}
@@ -518,7 +527,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
           <h2>{section('food', { title: '美食' }).title}</h2>
           <a href="/food">查看全部</a>
         </div>
-        {foodHomepageItems.length > 0 && <div class="qzq-food-filters" aria-label="美食视图">
+        {foodHomepageItems.length > 0 && <div class="qzq-food-filters" role="group" aria-label="美食视图">
           <button type="button" class="is-active" data-food-filter="recent">近期</button>
           <button type="button" data-food-filter="frequent">常去</button>
           <button type="button" data-food-filter="wanted">想去</button>
@@ -612,7 +621,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
             <strong>0-25</strong>
           </div>
 
-          <div class="qzq-time-chart" aria-label="精力分布面积图">
+          <div class="qzq-time-chart">
             <svg viewBox="-30 -18 550 342" role="img" aria-label="时间兴趣分布图">
               <defs>
                 <linearGradient id="time-study" x1="0" x2="1" y1="1" y2="0">
@@ -648,11 +657,11 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
               </g>
               <g class="qzq-time-draw" clip-path="url(#timeChartClip)">
                 <g class="qzq-time-areas">
-                  <path class="qzq-time-area qzq-time-area-study" fill="url(#time-study)" style="--time-area-index: 0" d="M0,300L2.976,300C5.952,300,11.905,300,32.738,270C53.571,240,89.286,180,116.071,160C142.857,140,160.714,160,196.429,175C232.143,190,285.714,200,327.381,210C369.048,220,398.81,230,419.643,235C440.476,240,452.381,240,464.286,235C476.19,230,488.095,220,494.048,215L500,210L500,300L494.048,300C488.095,300,476.19,300,464.286,300C452.381,300,440.476,300,419.643,300C398.81,300,369.048,300,327.381,300C285.714,300,232.143,300,196.429,300C160.714,300,142.857,300,116.071,300C89.286,300,53.571,300,32.738,300C11.905,300,5.952,300,2.976,300L0,300Z" />
-                  <path class="qzq-time-area qzq-time-area-music" fill="url(#time-music)" style="--time-area-index: 1" d="M0,300L2.976,300C5.952,300,11.905,300,32.738,270C53.571,240,89.286,180,116.071,160C142.857,140,160.714,160,196.429,175C232.143,190,285.714,200,327.381,205C369.048,210,398.81,210,419.643,210C440.476,210,452.381,210,464.286,210C476.19,210,488.095,210,494.048,210L500,210L500,210L494.048,215C488.095,220,476.19,230,464.286,235C452.381,240,440.476,240,419.643,235C398.81,230,369.048,220,327.381,210C285.714,200,232.143,190,196.429,175C160.714,160,142.857,140,116.071,160C89.286,180,53.571,240,32.738,270C11.905,300,5.952,300,2.976,300L0,300Z" />
-                  <path class="qzq-time-area qzq-time-area-game" fill="url(#time-game)" style="--time-area-index: 2" d="M0,300L2.976,300C5.952,300,11.905,300,32.738,270C53.571,240,89.286,180,116.071,145C142.857,110,160.714,100,196.429,105C232.143,110,285.714,130,327.381,140C369.048,150,398.81,150,419.643,150C440.476,150,452.381,150,464.286,155C476.19,160,488.095,170,494.048,175L500,180L500,210L494.048,210C488.095,210,476.19,210,464.286,210C452.381,210,440.476,210,419.643,210C398.81,210,369.048,210,327.381,205C285.714,200,232.143,190,196.429,175C160.714,160,142.857,140,116.071,160C89.286,180,53.571,240,32.738,270C11.905,300,5.952,300,2.976,300L0,300Z" />
-                  <path class="qzq-time-area qzq-time-area-coding" fill="url(#time-coding)" style="--time-area-index: 3" d="M0,300L2.976,300C5.952,300,11.905,300,32.738,270C53.571,240,89.286,180,116.071,145C142.857,110,160.714,100,196.429,90C232.143,80,285.714,70,327.381,65C369.048,60,398.81,60,419.643,60C440.476,60,452.381,60,464.286,60C476.19,60,488.095,60,494.048,60L500,60L500,180L494.048,175C488.095,170,476.19,160,464.286,155C452.381,150,440.476,150,419.643,150C398.81,150,369.048,150,327.381,140C285.714,130,232.143,110,196.429,105C160.714,100,142.857,110,116.071,145C89.286,180,53.571,240,32.738,270C11.905,300,5.952,300,2.976,300L0,300Z" />
-                  <path class="qzq-time-area qzq-time-area-social" fill="url(#time-social)" style="--time-area-index: 4" d="M0,0L2.976,0C5.952,0,11.905,0,32.738,0C53.571,0,89.286,0,116.071,0C142.857,0,160.714,0,196.429,0C232.143,0,285.714,0,327.381,0C369.048,0,398.81,0,419.643,0C440.476,0,452.381,0,464.286,0C476.19,0,488.095,0,494.048,0L500,0L500,60L494.048,60C488.095,60,476.19,60,464.286,60C452.381,60,440.476,60,419.643,60C398.81,60,369.048,60,327.381,65C285.714,70,232.143,80,196.429,90C160.714,100,142.857,110,116.071,145C89.286,180,53.571,240,32.738,270C11.905,300,5.952,300,2.976,300L0,300Z" />
+                  <path class="qzq-time-area qzq-time-area-study" fill="url(#time-study)" style="--time-area-index: 0" tabindex="0" role="button" aria-label="突出学习区域" d="M0,300L2.976,300C5.952,300,11.905,300,32.738,270C53.571,240,89.286,180,116.071,160C142.857,140,160.714,160,196.429,175C232.143,190,285.714,200,327.381,210C369.048,220,398.81,230,419.643,235C440.476,240,452.381,240,464.286,235C476.19,230,488.095,220,494.048,215L500,210L500,300L494.048,300C488.095,300,476.19,300,464.286,300C452.381,300,440.476,300,419.643,300C398.81,300,369.048,300,327.381,300C285.714,300,232.143,300,196.429,300C160.714,300,142.857,300,116.071,300C89.286,300,53.571,300,32.738,300C11.905,300,5.952,300,2.976,300L0,300Z" />
+                  <path class="qzq-time-area qzq-time-area-music" fill="url(#time-music)" style="--time-area-index: 1" tabindex="0" role="button" aria-label="突出音乐区域" d="M0,300L2.976,300C5.952,300,11.905,300,32.738,270C53.571,240,89.286,180,116.071,160C142.857,140,160.714,160,196.429,175C232.143,190,285.714,200,327.381,205C369.048,210,398.81,210,419.643,210C440.476,210,452.381,210,464.286,210C476.19,210,488.095,210,494.048,210L500,210L500,210L494.048,215C488.095,220,476.19,230,464.286,235C452.381,240,440.476,240,419.643,235C398.81,230,369.048,220,327.381,210C285.714,200,232.143,190,196.429,175C160.714,160,142.857,140,116.071,160C89.286,180,53.571,240,32.738,270C11.905,300,5.952,300,2.976,300L0,300Z" />
+                  <path class="qzq-time-area qzq-time-area-game" fill="url(#time-game)" style="--time-area-index: 2" tabindex="0" role="button" aria-label="突出游戏区域" d="M0,300L2.976,300C5.952,300,11.905,300,32.738,270C53.571,240,89.286,180,116.071,145C142.857,110,160.714,100,196.429,105C232.143,110,285.714,130,327.381,140C369.048,150,398.81,150,419.643,150C440.476,150,452.381,150,464.286,155C476.19,160,488.095,170,494.048,175L500,180L500,210L494.048,210C488.095,210,476.19,210,464.286,210C452.381,210,440.476,210,419.643,210C398.81,210,369.048,210,327.381,205C285.714,200,232.143,190,196.429,175C160.714,160,142.857,140,116.071,160C89.286,180,53.571,240,32.738,270C11.905,300,5.952,300,2.976,300L0,300Z" />
+                  <path class="qzq-time-area qzq-time-area-coding" fill="url(#time-coding)" style="--time-area-index: 3" tabindex="0" role="button" aria-label="突出编程区域" d="M0,300L2.976,300C5.952,300,11.905,300,32.738,270C53.571,240,89.286,180,116.071,145C142.857,110,160.714,100,196.429,90C232.143,80,285.714,70,327.381,65C369.048,60,398.81,60,419.643,60C440.476,60,452.381,60,464.286,60C476.19,60,488.095,60,494.048,60L500,60L500,180L494.048,175C488.095,170,476.19,160,464.286,155C452.381,150,440.476,150,419.643,150C398.81,150,369.048,150,327.381,140C285.714,130,232.143,110,196.429,105C160.714,100,142.857,110,116.071,145C89.286,180,53.571,240,32.738,270C11.905,300,5.952,300,2.976,300L0,300Z" />
+                  <path class="qzq-time-area qzq-time-area-social" fill="url(#time-social)" style="--time-area-index: 4" tabindex="0" role="button" aria-label="突出社交与家庭区域" d="M0,0L2.976,0C5.952,0,11.905,0,32.738,0C53.571,0,89.286,0,116.071,0C142.857,0,160.714,0,196.429,0C232.143,0,285.714,0,327.381,0C369.048,0,398.81,0,419.643,0C440.476,0,452.381,0,464.286,0C476.19,0,488.095,0,494.048,0L500,0L500,60L494.048,60C488.095,60,476.19,60,464.286,60C452.381,60,440.476,60,419.643,60C398.81,60,369.048,60,327.381,65C285.714,70,232.143,80,196.429,90C160.714,100,142.857,110,116.071,145C89.286,180,53.571,240,32.738,270C11.905,300,5.952,300,2.976,300L0,300Z" />
                 </g>
               </g>
               <g class="qzq-time-labels">
@@ -688,6 +697,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
             </div>
             <div
               class={`qzq-space-map ${travelMap.visual.showCityLabels ? 'show-city-labels' : ''}`}
+              role="img"
               aria-label="个人空间坐标图"
               style={travelMapStyle}
             >
@@ -768,6 +778,9 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
                   data-radar-point={item.label}
                   data-radar-title={item.zh || item.label}
                   data-radar-count={item.count}
+                  tabindex="0"
+                  role="button"
+                  aria-label={`${item.zh || item.label}：${item.count}`}
                 >
                   <polygon class="qzq-radar-hit-area" points={radarHitPoints(movieRadar, item, index)} />
                   <circle cx={item.valueX} cy={item.valueY} r="7" />
@@ -809,6 +822,9 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
                   data-radar-point={item.label}
                   data-radar-title={item.zh || item.label}
                   data-radar-count={item.count}
+                  tabindex="0"
+                  role="button"
+                  aria-label={`${item.zh || item.label}：${item.count}`}
                 >
                   <polygon class="qzq-radar-hit-area" points={radarHitPoints(codeRadar, item, index)} />
                   <circle cx={item.valueX} cy={item.valueY} r="7" />
@@ -840,6 +856,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
   <script>
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const coarsePointer = window.matchMedia('(hover: none), (pointer: coarse)');
     const foodFilters = document.querySelectorAll('[data-food-filter]');
     const foodCards = [...document.querySelectorAll('[data-food-card]')];
     foodFilters.forEach((button) => {
@@ -879,6 +896,10 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
     topicSection?.addEventListener('click', (event) => {
       const card = topicCardFromEvent(event);
       if (!card) return;
+      if (coarsePointer.matches) {
+        openTopicHref(card);
+        return;
+      }
       const now = Date.now();
       if (card === lastTopicCard && now - lastTopicClickAt < 420) {
         openTopicHref(card);
@@ -1064,6 +1085,10 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
       if (/^\/watch\/\d+$/.test(href)) window.location.href = href;
     };
     watchSection?.addEventListener('dblclick', (event) => openWatchDetail(watchCardFromEvent(event)));
+    watchMarquee?.addEventListener('click', (event) => {
+      if (!coarsePointer.matches) return;
+      openWatchDetail(watchCardFromEvent(event));
+    });
     watchSection?.addEventListener('keydown', (event) => {
       if (event.key !== 'Enter') return;
       const card = watchCardFromEvent(event);
@@ -1129,17 +1154,27 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
     }
 
     const timeAreas = document.querySelectorAll('.qzq-time-area');
+    const activateTimeArea = (area) => {
+      const group = area.closest('.qzq-time-areas');
+      group?.classList.add('is-hovering');
+      timeAreas.forEach((item) => item.classList.remove('is-active'));
+      area.classList.add('is-active');
+    };
     timeAreas.forEach((area) => {
       area.addEventListener('pointerenter', () => {
-        const group = area.closest('.qzq-time-areas');
-        group?.classList.add('is-hovering');
-        timeAreas.forEach((item) => item.classList.remove('is-active'));
-        area.classList.add('is-active');
+        if (finePointer.matches) activateTimeArea(area);
       });
       area.addEventListener('pointerleave', () => {
+        if (!finePointer.matches) return;
         const group = area.closest('.qzq-time-areas');
         group?.classList.remove('is-hovering');
         area.classList.remove('is-active');
+      });
+      area.addEventListener('click', () => activateTimeArea(area));
+      area.addEventListener('keydown', (event) => {
+        if (!['Enter', ' '].includes(event.key)) return;
+        event.preventDefault();
+        activateTimeArea(area);
       });
     });
 
@@ -1393,8 +1428,12 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
     };
 
     readingShelf?.querySelectorAll('[data-reading-book]').forEach((book) => {
-      book.addEventListener('click', () => {
-        readingRotationHoldUntil = Date.now() + 18000;
+        book.addEventListener('click', () => {
+          if (coarsePointer.matches) {
+            window.location.href = book.getAttribute('data-href');
+            return;
+          }
+          readingRotationHoldUntil = Date.now() + 18000;
         activateBook(book);
       });
       book.addEventListener('keydown', (event) => {

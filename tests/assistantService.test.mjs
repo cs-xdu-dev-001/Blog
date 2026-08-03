@@ -3,7 +3,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { createAssistantService, testAssistantConfig } from '../src/lib/server/assistantService.mjs';
+import {
+  createAssistantService,
+  formatAssistantCurrentTime,
+  testAssistantConfig,
+} from '../src/lib/server/assistantService.mjs';
 import { createPostRepository } from '../src/lib/server/postRepository.mjs';
 import { createSiteConfigRepository } from '../src/lib/server/siteConfigRepository.mjs';
 
@@ -37,6 +41,104 @@ async function collectAssistantEvents(result) {
   for await (const event of result.events || []) events.push(event);
   return events;
 }
+
+test('assistant formats an authoritative Shanghai clock for relative date questions', () => {
+  assert.equal(
+    formatAssistantCurrentTime(new Date('2026-08-03T03:30:00.000Z')),
+    '2026年8月3日，星期一，11:30（Asia/Shanghai）',
+  );
+});
+
+test('assistant model prompt includes authoritative server time', async () => {
+  const { site, assistant } = createIsolatedAssistant(tempDbPath());
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url: String(url), body: JSON.parse(options.body) });
+    return Response.json({ choices: [{ message: { content: '收到' } }] });
+  };
+
+  try {
+    site.updateSiteConfig({ assistant: {
+      apiBaseUrl: 'https://example.com/v1',
+      apiKey: 'test-key',
+      model: 'test-model',
+      apiMode: 'chat',
+    } });
+    await assistant.answer('解释一下RAG', requestWithIp('10.0.3.1'));
+    const systemText = calls[0].body.messages[0].content;
+    assert.match(systemText, /Asia\/Shanghai/);
+    assert.match(systemText, /服务端提供的当前日期和时间是权威信息/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('assistant answers current date from the server without web or model calls', async () => {
+  const { site, assistant } = createIsolatedAssistant(tempDbPath(), {
+    now: () => new Date('2026-08-03T03:30:00.000Z'),
+  });
+  const originalFetch = globalThis.fetch;
+  let fetchCount = 0;
+  globalThis.fetch = async () => {
+    fetchCount += 1;
+    throw new Error('date questions must not call external services');
+  };
+
+  try {
+    site.updateSiteConfig({ assistant: {
+      apiKey: 'test-key',
+      apiMode: 'chat',
+      webSearch: { enabled: true, apiKey: 'tvly-test' },
+    } });
+    const result = await assistant.streamAnswer('今天几月几号？', requestWithIp('10.0.3.2'));
+    const events = await collectAssistantEvents(result);
+    assert.equal(fetchCount, 0);
+    assert.equal(events.filter((event) => event.event === 'delta').map((event) => event.data.text).join(''), '今天是2026年8月3日，星期一。');
+    assert.equal(events.some((event) => event.event === 'tool'), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('assistant excludes local notes from authoritative OpenAI product lookups', async () => {
+  const { posts, site, assistant } = createIsolatedAssistant(tempDbPath());
+  posts.create({
+    title: '124.二叉树中的最大路径和',
+    description: '算法笔记',
+    category: 'Algorithms',
+    body: '这是一篇使用OpenAI模型辅助整理的算法笔记。',
+    published: true,
+  });
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => String(url) === 'https://api.tavily.com/search'
+    ? Response.json({ results: [{
+        title: 'Models',
+        url: 'https://developers.openai.com/api/docs/models',
+        raw_content: 'Official current model documentation.',
+        score: 0.95,
+      }] })
+    : new Response('data: {"choices":[{"delta":{"content":"官方结果"}}]}\n\ndata: [DONE]\n\n', {
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream' },
+      });
+
+  try {
+    site.updateSiteConfig({ assistant: {
+      apiBaseUrl: 'https://example.com/v1',
+      apiKey: 'test-key',
+      apiMode: 'chat',
+      webSearch: { enabled: true, apiKey: 'tvly-test' },
+    } });
+    const result = await assistant.streamAnswer('openai的最新模型是啥', requestWithIp('10.0.3.3'));
+    const events = await collectAssistantEvents(result);
+    const sources = events.find((event) => event.event === 'sources').data.sources;
+    assert.deepEqual(sources.map((source) => source.type), ['web']);
+    assert.deepEqual(sources.map((source) => source.url), ['https://developers.openai.com/api/docs/models']);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
 
 test('assistant streams chat completion deltas and requests upstream streaming', async () => {
   const { site, assistant } = createIsolatedAssistant(tempDbPath());

@@ -20,6 +20,13 @@ test('web search runs for general questions without site matches and explicit lo
   assert.equal(shouldUseWebSearch('查一下今天的AI新闻', [], { assistant: { webSearch: { enabled: false } } }), false);
 });
 
+test('web search does not handle server-known current date and time questions', () => {
+  assert.equal(shouldUseWebSearch('今天几月几号？', [], config), false);
+  assert.equal(shouldUseWebSearch('今天星期几', [], config), false);
+  assert.equal(shouldUseWebSearch('现在几点了', [], config), false);
+  assert.equal(shouldUseWebSearch('查一下今天的AI新闻', [], config), true);
+});
+
 test('web search uses the fixed Tavily endpoint and normalizes safe sources', async () => {
   const calls = [];
   const sources = await searchWeb('Astro最新版本', config, {
@@ -54,6 +61,37 @@ test('web search uses the fixed Tavily endpoint and normalizes safe sources', as
     excerpt: 'Astro releases Current release details.',
     score: 0.92,
   }]);
+});
+
+test('OpenAI product searches only keep official OpenAI sources', async () => {
+  const calls = [];
+  const sources = await searchWeb('openai的最新模型是啥', config, {
+    fetchImpl: async (_url, options) => {
+      calls.push(JSON.parse(options.body));
+      return Response.json({
+        results: [
+          {
+            title: 'Models',
+            url: 'https://developers.openai.com/api/docs/models',
+            raw_content: 'Official current model documentation.',
+            score: 0.95,
+          },
+          {
+            title: '转载文章',
+            url: 'https://example.cn/openai-models',
+            raw_content: 'Outdated model list.',
+            score: 0.99,
+          },
+        ],
+      });
+    },
+  });
+
+  assert.deepEqual(calls[0].include_domains, ['openai.com']);
+  assert.match(calls[0].query, /official documentation/i);
+  assert.deepEqual(sources.map((source) => source.url), [
+    'https://developers.openai.com/api/docs/models',
+  ]);
 });
 
 test('web search fails closed without breaking the assistant request', async () => {

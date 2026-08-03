@@ -5,6 +5,20 @@ import test from 'node:test';
 const indexPage = fs.readFileSync(new URL('../src/pages/index.astro', import.meta.url), 'utf8');
 const styles = fs.readFileSync(new URL('../src/styles/global.css', import.meta.url), 'utf8');
 
+test('homepage SSR output is deterministic for the same archive data', () => {
+  const frontmatterEnd = indexPage.indexOf('\n---', 4);
+  const serverFrontmatter = indexPage.slice(0, frontmatterEnd);
+
+  assert.doesNotMatch(serverFrontmatter, /Math\.random/);
+  assert.match(serverFrontmatter, /stableWatchOffset/);
+});
+
+test('homepage generic containers do not expose ineffective aria labels', () => {
+  const labeledDivs = [...indexPage.matchAll(/<div\b[^>]*\baria-label=[^>]*>/g)].map(([tag]) => tag);
+  assert.ok(labeledDivs.length > 0);
+  labeledDivs.forEach((tag) => assert.match(tag, /\brole=/));
+});
+
 test('homepage watch archive renders a fixed card pool instead of the full duplicated archive', () => {
   assert.doesNotMatch(indexPage, /\[\.\.\.row\.items,\s*\.\.\.row\.items\]/);
   assert.match(indexPage, /const WATCH_TRACK_BATCH_SIZE = 12/);
@@ -23,6 +37,12 @@ test('homepage motion uses delegated interactions and pauses work outside the vi
   assert.match(indexPage, /document\.addEventListener\('visibilitychange'/);
   assert.match(indexPage, /new ResizeObserver/);
   assert.doesNotMatch(indexPage, /orbitStage\?\.getBoundingClientRect\(\)\.width/);
+});
+
+test('touch users can open topic and watch cards with one tap', () => {
+  assert.match(indexPage, /const coarsePointer = window\.matchMedia/);
+  assert.match(indexPage, /if \(coarsePointer\.matches\) \{\s*openTopicHref\(card\)/);
+  assert.match(indexPage, /watchMarquee\?\.addEventListener\('click'/);
 });
 
 test('mobile watch tracks keep lightweight motion and expose a shared pause state', () => {
