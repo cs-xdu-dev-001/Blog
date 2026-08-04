@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { initializeSchema, openDatabase } from './db.mjs';
+import { initializeSchema, isSharedDatabase, openRepositoryDatabase } from './db.mjs';
 import { normalizeAdminPagination, publicPagination } from './adminPagination.mjs';
 import { existingImageVariants, removeImageVariants, storedImagePaths } from './imageVariants.mjs';
 import {
@@ -237,7 +237,7 @@ function parseFrontmatter(raw) {
 }
 
 export function createPostRepository({ dbPath, uploadDir } = {}) {
-  const db = openDatabase(dbPath);
+  const db = openRepositoryDatabase(dbPath);
   const postUploadDir = path.resolve(uploadDir || path.join(process.cwd(), 'public', 'uploads', 'posts'));
   const postPublicBase = '/uploads/posts';
   let initialized = false;
@@ -317,7 +317,7 @@ export function createPostRepository({ dbPath, uploadDir } = {}) {
 
   function setPostTopics(postId, topicSlugs = []) {
     const slugs = normalizeTopicSlugs(topicSlugs);
-    const tx = db.transaction((items) => {
+    const replace = (items) => {
       const existingOrders = new Map(db.prepare(`
         SELECT topic_slug, sort_order
         FROM post_topic_links
@@ -340,8 +340,9 @@ export function createPostRepository({ dbPath, uploadDir } = {}) {
           : currentMax > 0 ? currentMax + 10 : 0;
         stmt.run({ postId, topicSlug, sortOrder });
       });
-    });
-    tx(slugs);
+    };
+    if (db.inTransaction) replace(slugs);
+    else db.transaction(replace)(slugs);
     return slugs;
   }
 
@@ -402,7 +403,7 @@ export function createPostRepository({ dbPath, uploadDir } = {}) {
     initialize,
 
     close() {
-      if (db.open) db.close();
+      if (!isSharedDatabase(db) && db.open) db.close();
     },
 
     create(input = {}) {
@@ -412,27 +413,30 @@ export function createPostRepository({ dbPath, uploadDir } = {}) {
       const slug = uniqueSlug(input.slug || title);
       const content = preparePostContent(input);
       const taxonomy = preparePostTaxonomy(input);
-      const result = db.prepare(`
-        INSERT INTO blog_posts
-          (slug, title, description, category, tags, body, visibility, encrypted_description, encrypted_body, date, featured, published)
-        VALUES
-          (@slug, @title, @description, @category, @tags, @body, @visibility, @encryptedDescription, @encryptedBody, @date, @featured, @published)
-      `).run({
-        slug,
-        title,
-        description: content.description,
-        category: taxonomy.category,
-        tags: JSON.stringify(taxonomy.tags),
-        body: content.body,
-        visibility: content.visibility,
-        encryptedDescription: content.encryptedDescription,
-        encryptedBody: content.encryptedBody,
-        date: normalizeDate(input.date),
-        featured: input.featured ? 1 : 0,
-        published: input.published === false ? 0 : 1,
+      const save = db.transaction(() => {
+        const result = db.prepare(`
+          INSERT INTO blog_posts
+            (slug, title, description, category, tags, body, visibility, encrypted_description, encrypted_body, date, featured, published)
+          VALUES
+            (@slug, @title, @description, @category, @tags, @body, @visibility, @encryptedDescription, @encryptedBody, @date, @featured, @published)
+        `).run({
+          slug,
+          title,
+          description: content.description,
+          category: taxonomy.category,
+          tags: JSON.stringify(taxonomy.tags),
+          body: content.body,
+          visibility: content.visibility,
+          encryptedDescription: content.encryptedDescription,
+          encryptedBody: content.encryptedBody,
+          date: normalizeDate(input.date),
+          featured: input.featured ? 1 : 0,
+          published: input.published === false ? 0 : 1,
+        });
+        setPostTopics(result.lastInsertRowid, input.topicSlugs || []);
+        return result.lastInsertRowid;
       });
-      setPostTopics(result.lastInsertRowid, input.topicSlugs || []);
-      return this.get(result.lastInsertRowid);
+      return this.get(save());
     },
 
     upsertBySlug(input = {}) {
@@ -442,40 +446,44 @@ export function createPostRepository({ dbPath, uploadDir } = {}) {
       const slug = slugifyPost(input.slug || title);
       const content = preparePostContent(input);
       const taxonomy = preparePostTaxonomy(input);
-      db.prepare(`
-        INSERT INTO blog_posts
-          (slug, title, description, category, tags, body, visibility, encrypted_description, encrypted_body, date, featured, published)
-        VALUES
-          (@slug, @title, @description, @category, @tags, @body, @visibility, @encryptedDescription, @encryptedBody, @date, @featured, @published)
-        ON CONFLICT(slug) DO UPDATE SET
-          title = excluded.title,
-          description = excluded.description,
-          category = excluded.category,
-          tags = excluded.tags,
-          body = excluded.body,
-          visibility = excluded.visibility,
-          encrypted_description = excluded.encrypted_description,
-          encrypted_body = excluded.encrypted_body,
-          date = excluded.date,
-          featured = excluded.featured,
-          published = excluded.published,
-          updated_at = CURRENT_TIMESTAMP
-      `).run({
-        slug,
-        title,
-        description: content.description,
-        category: taxonomy.category,
-        tags: JSON.stringify(taxonomy.tags),
-        body: content.body,
-        visibility: content.visibility,
-        encryptedDescription: content.encryptedDescription,
-        encryptedBody: content.encryptedBody,
-        date: normalizeDate(input.date),
-        featured: input.featured ? 1 : 0,
-        published: input.published === false ? 0 : 1,
+      const save = db.transaction(() => {
+        db.prepare(`
+          INSERT INTO blog_posts
+            (slug, title, description, category, tags, body, visibility, encrypted_description, encrypted_body, date, featured, published)
+          VALUES
+            (@slug, @title, @description, @category, @tags, @body, @visibility, @encryptedDescription, @encryptedBody, @date, @featured, @published)
+          ON CONFLICT(slug) DO UPDATE SET
+            title = excluded.title,
+            description = excluded.description,
+            category = excluded.category,
+            tags = excluded.tags,
+            body = excluded.body,
+            visibility = excluded.visibility,
+            encrypted_description = excluded.encrypted_description,
+            encrypted_body = excluded.encrypted_body,
+            date = excluded.date,
+            featured = excluded.featured,
+            published = excluded.published,
+            updated_at = CURRENT_TIMESTAMP
+        `).run({
+          slug,
+          title,
+          description: content.description,
+          category: taxonomy.category,
+          tags: JSON.stringify(taxonomy.tags),
+          body: content.body,
+          visibility: content.visibility,
+          encryptedDescription: content.encryptedDescription,
+          encryptedBody: content.encryptedBody,
+          date: normalizeDate(input.date),
+          featured: input.featured ? 1 : 0,
+          published: input.published === false ? 0 : 1,
+        });
+        const saved = db.prepare('SELECT id FROM blog_posts WHERE slug = ?').get(slug);
+        if (Object.hasOwn(input, 'topicSlugs')) setPostTopics(saved.id, input.topicSlugs);
+        if (Object.hasOwn(input, 'body')) syncImageAssets(saved.id, String(input.body ?? ''));
       });
-      const saved = this.getBySlug(slug, { includeDraft: true });
-      if (Object.hasOwn(input, 'topicSlugs')) setPostTopics(saved.id, input.topicSlugs);
+      save();
       return this.getBySlug(slug);
     },
 
@@ -701,8 +709,9 @@ export function createPostRepository({ dbPath, uploadDir } = {}) {
       const slug = uniqueSlug(input.slug || existing.slug || title, id);
       const content = preparePostContent(input, existing);
       const taxonomy = preparePostTaxonomy(input, existing);
-      db.prepare(`
-        UPDATE blog_posts SET
+      const save = db.transaction(() => {
+        db.prepare(`
+          UPDATE blog_posts SET
           slug = @slug,
           title = @title,
           description = @description,
@@ -716,24 +725,26 @@ export function createPostRepository({ dbPath, uploadDir } = {}) {
           featured = @featured,
           published = @published,
           updated_at = CURRENT_TIMESTAMP
-        WHERE id = @id
-      `).run({
-        id,
-        slug,
-        title,
-        description: content.description,
-        category: taxonomy.category,
-        tags: JSON.stringify(taxonomy.tags),
-        body: content.body,
-        visibility: content.visibility,
-        encryptedDescription: content.encryptedDescription,
-        encryptedBody: content.encryptedBody,
-        date: normalizeDate(input.date),
-        featured: input.featured ? 1 : 0,
-        published: input.published ? 1 : 0,
+          WHERE id = @id
+        `).run({
+          id,
+          slug,
+          title,
+          description: content.description,
+          category: taxonomy.category,
+          tags: JSON.stringify(taxonomy.tags),
+          body: content.body,
+          visibility: content.visibility,
+          encryptedDescription: content.encryptedDescription,
+          encryptedBody: content.encryptedBody,
+          date: normalizeDate(input.date),
+          featured: input.featured ? 1 : 0,
+          published: input.published ? 1 : 0,
+        });
+        if (Object.hasOwn(input, 'topicSlugs')) setPostTopics(id, input.topicSlugs);
+        if (Object.hasOwn(input, 'body')) syncImageAssets(id, String(input.body ?? ''));
       });
-      if (Object.hasOwn(input, 'topicSlugs')) setPostTopics(id, input.topicSlugs);
-      if (Object.hasOwn(input, 'body')) syncImageAssets(id, String(input.body ?? ''));
+      save();
       return this.get(id);
     },
 

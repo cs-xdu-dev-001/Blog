@@ -1,6 +1,6 @@
 ﻿import crypto from 'node:crypto';
 import { ProxyAgent } from 'undici';
-import { initializeSchema, openDatabase } from './db.mjs';
+import { initializeSchema, openRepositoryDatabase } from './db.mjs';
 import { postRepository } from './postRepository.mjs';
 import { getAllReadingFromDb } from './readingArchiveView.mjs';
 import { getWatchArchiveFromDb } from './watchArchiveView.mjs';
@@ -941,7 +941,7 @@ export function createAssistantService({
   maxStreamChars = 2000000,
   now = () => new Date(),
 } = {}) {
-  const db = openDatabase(dbPath);
+  const db = openRepositoryDatabase(dbPath);
   const deps = { posts, getReading, getWatch };
   let initialized = false;
 

@@ -206,6 +206,40 @@ test('post repository migrates legacy categories into shared tags and keeps note
   assert.deepEqual(repo.listTags(), ['ai knowledge', 'RAG']);
 });
 
+test('post updates roll back content when topic persistence fails', () => {
+  const dbPath = tempDbPath();
+  const repo = createPostRepository({ dbPath });
+  const post = repo.create({
+    title: '事务原文',
+    body: '原始正文',
+    topicSlugs: ['stable-topic'],
+    published: true,
+  });
+  const db = openDatabase(dbPath);
+  db.exec(`
+    CREATE TRIGGER fail_post_topic_insert
+    BEFORE INSERT ON post_topic_links
+    WHEN NEW.topic_slug = 'fail-topic'
+    BEGIN
+      SELECT RAISE(ABORT, 'forced topic failure');
+    END;
+  `);
+  db.close();
+
+  assert.throws(() => repo.update(post.id, {
+    title: '不应保存的新标题',
+    body: '不应保存的新正文',
+    topicSlugs: ['fail-topic'],
+    published: true,
+  }), /forced topic failure/);
+
+  const persisted = repo.get(post.id);
+  assert.equal(persisted.title, '事务原文');
+  assert.equal(persisted.body, '原始正文');
+  assert.deepEqual(persisted.topicSlugs, ['stable-topic']);
+  repo.close();
+});
+
 test('markdown renderer supports common writing syntax and extracts headings', () => {
   const rendered = markdownToHtml(`# 标题
 

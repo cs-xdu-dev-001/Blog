@@ -4,7 +4,11 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { createFoodRepository } from '../src/lib/server/foodRepository.mjs';
-import { removeImageVariants } from '../src/lib/server/imageVariants.mjs';
+import {
+  cleanupImageStaging,
+  removeImageVariants,
+  saveImageVariants,
+} from '../src/lib/server/imageVariants.mjs';
 import { createReadingRepository } from '../src/lib/server/readingRepository.mjs';
 import { createWatchRepository } from '../src/lib/server/watchRepository.mjs';
 
@@ -89,4 +93,47 @@ test('image cleanup cannot escape the managed upload directory', () => {
 
   assert.equal(removed, 0);
   assert.equal(fs.readFileSync(outsideFile, 'utf8'), 'keep');
+});
+
+test('image variants are promoted together without leaving staging files', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'image-staging-success-'));
+  const uploadDir = path.join(tmp, 'uploads');
+
+  const result = await saveImageVariants({
+    baseName: 'example',
+    originalName: 'example.png',
+    buffer: tinyPng,
+    uploadDir,
+    publicBase: '/uploads/posts',
+  });
+
+  assert.deepEqual(
+    [result.imagePath, result.smallPath, result.originalPath],
+    ['/uploads/posts/example-960.webp', '/uploads/posts/example-480.webp', '/uploads/posts/original/example.png'],
+  );
+  assert.equal(fs.existsSync(path.join(uploadDir, '.staging')), false);
+  assert.equal(fs.existsSync(path.join(uploadDir, 'example-960.webp')), true);
+  assert.equal(fs.existsSync(path.join(uploadDir, 'example-480.webp')), true);
+  assert.equal(fs.existsSync(path.join(uploadDir, 'original', 'example.png')), true);
+});
+
+test('staging cleanup removes stale operations and preserves active uploads', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'image-staging-cleanup-'));
+  const uploadDir = path.join(tmp, 'uploads');
+  const stagingRoot = path.join(uploadDir, '.staging');
+  const stale = path.join(stagingRoot, 'stale');
+  const active = path.join(stagingRoot, 'active');
+  fs.mkdirSync(stale, { recursive: true });
+  fs.mkdirSync(active, { recursive: true });
+  fs.writeFileSync(path.join(stale, 'file'), 'stale');
+  fs.writeFileSync(path.join(active, 'file'), 'active');
+  const now = Date.now();
+  const old = new Date(now - 2 * 60 * 60 * 1000);
+  fs.utimesSync(stale, old, old);
+
+  const removed = cleanupImageStaging(uploadDir, { olderThanMs: 60 * 60 * 1000, now });
+
+  assert.equal(removed, 1);
+  assert.equal(fs.existsSync(stale), false);
+  assert.equal(fs.existsSync(active), true);
 });

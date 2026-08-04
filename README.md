@@ -123,6 +123,29 @@ tar -czf blog-data-backup.tgz data public/uploads
 
 如果要迁移服务器，需要同时迁移数据库和上传文件，否则管理端配置、笔记正文图片、影像封面、书籍封面可能不完整。
 
+生产环境建议让Nginx直接响应`/uploads/`，避免图片请求占用Astro进程。将[`deploy/nginx-uploads.conf`](deploy/nginx-uploads.conf)中的`location`放进博客HTTPS的`server`块，并确认项目路径为`/srv/blog`。修改后执行：
+
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+未配置该片段时，Astro仍会流式响应上传图片，适合本地开发和部署兜底。
+
+生产环境应通过`npm start`启动，不要直接运行`dist/server/entry.mjs`。启动脚本会在监听端口前完成数据库迁移、上传目录检查和过期临时文件清理；任一步失败都会直接退出，避免带着半迁移状态提供服务。
+
+运行探针：
+
+- `/health`：只检查Web进程能否响应。
+- `/ready`：检查数据库schema和上传目录是否可用；未就绪返回HTTP 503。
+
+systemd服务的`ExecStart`可配置为：
+
+```ini
+WorkingDirectory=/srv/blog
+ExecStart=/usr/bin/npm start
+```
+
 ## 内容维护
 
 文章的Markdown源文件在`src/content/posts`，管理端文章数据会写入SQLite。首次导入本地Markdown可以运行：

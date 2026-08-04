@@ -12,7 +12,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "start": "node ./dist/server/entry.mjs",
+    "start": "node ./scripts/start-server.mjs",
     "db:init": "node scripts/init-watch-db.mjs",
     "images:backfill": "node scripts/backfill-image-variants.mjs",
     "images:cleanup-posts": "node scripts/cleanup-post-images.mjs",

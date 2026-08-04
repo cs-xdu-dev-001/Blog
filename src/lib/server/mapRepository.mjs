@@ -1,4 +1,4 @@
-import { initializeSchema, openDatabase } from './db.mjs';
+import { initializeSchema, openRepositoryDatabase } from './db.mjs';
 
 const SETTING_KEY = 'travel_map';
 
@@ -86,7 +86,7 @@ function normalizeConfig(input = {}) {
 }
 
 export function createMapRepository({ dbPath } = {}) {
-  const db = openDatabase(dbPath);
+  const db = openRepositoryDatabase(dbPath);
   let initialized = false;
 
   function initialize() {

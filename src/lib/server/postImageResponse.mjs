@@ -1,5 +1,7 @@
+import { createReadStream } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { Readable } from 'node:stream';
 
 const defaultUploadsRoot = path.resolve(process.cwd(), 'public', 'uploads');
 const allowedUploadKinds = new Set(['posts', 'reading', 'watch', 'food']);
@@ -47,12 +49,14 @@ async function serveImageFile(relativePath, root) {
   if (!contentType) return notFound();
 
   try {
-    const file = await fs.readFile(target);
-    return new Response(new Uint8Array(file), {
+    const stats = await fs.stat(target);
+    if (!stats.isFile()) return notFound();
+    const stream = Readable.toWeb(createReadStream(target));
+    return new Response(stream, {
       status: 200,
       headers: {
         'Cache-Control': 'public, max-age=3600',
-        'Content-Length': String(file.length),
+        'Content-Length': String(stats.size),
         'Content-Type': contentType,
         'X-Content-Type-Options': 'nosniff',
       },

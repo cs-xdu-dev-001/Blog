@@ -1,4 +1,4 @@
-﻿import { initializeSchema, openDatabase } from './db.mjs';
+﻿import { initializeSchema, openRepositoryDatabase } from './db.mjs';
 
 export const defaultTopicCards = [
   {
@@ -251,7 +251,7 @@ function normalizeSiteConfig(value) {
 }
 
 export function createSiteConfigRepository({ dbPath } = {}) {
-  const db = openDatabase(dbPath);
+  const db = openRepositoryDatabase(dbPath);
   let initialized = false;
 
   function initialize() {

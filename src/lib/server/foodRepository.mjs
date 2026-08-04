@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { initializeSchema, openDatabase } from './db.mjs';
+import { initializeSchema, openRepositoryDatabase } from './db.mjs';
 import { normalizeAdminPagination, publicPagination } from './adminPagination.mjs';
 import {
   removeImageVariants,
@@ -18,7 +18,7 @@ export function safeFoodImageBaseName(title) {
 }
 
 export function createFoodRepository({ dbPath, uploadDir } = {}) {
-  const db = openDatabase(dbPath);
+  const db = openRepositoryDatabase(dbPath);
   const finalUploadDir = uploadDir || path.resolve(process.cwd(), 'public', 'uploads', 'food');
   let initialized = false;
 

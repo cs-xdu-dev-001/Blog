@@ -22,6 +22,7 @@ const existingColumns = [
 
 function createFakeDatabase({ failFirstExec = false } = {}) {
   let execCalls = 0;
+  let userVersion = 0;
   return {
     exec() {
       execCalls += 1;
@@ -29,6 +30,15 @@ function createFakeDatabase({ failFirstExec = false } = {}) {
     },
     prepare() {
       return { all: () => existingColumns.map((name) => ({ name })) };
+    },
+    pragma(statement, options = {}) {
+      const version = String(statement).match(/^user_version\s*=\s*(\d+)$/);
+      if (version) userVersion = Number(version[1]);
+      if (options.simple) return userVersion;
+      return [];
+    },
+    transaction(callback) {
+      return (...args) => callback(...args);
     },
     get execCalls() {
       return execCalls;

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { initializeSchema, openDatabase } from './db.mjs';
+import { initializeSchema, openRepositoryDatabase } from './db.mjs';
 import { normalizeAdminPagination, publicPagination } from './adminPagination.mjs';
 import {
   removeImageVariants,
@@ -27,7 +27,7 @@ export function safeImageBaseName(title) {
 }
 
 export function createWatchRepository({ dbPath, uploadDir } = {}) {
-  const db = openDatabase(dbPath);
+  const db = openRepositoryDatabase(dbPath);
   const finalUploadDir = uploadDir || path.resolve(process.cwd(), 'public', 'uploads', 'watch');
   let initialized = false;
 

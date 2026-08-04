@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const initializedSchemas = new WeakSet();
+const SCHEMA_VERSION = 2;
+let sharedDatabase = null;
 
 export function getDefaultDbPath() {
   return process.env.BLOG_DB_PATH || path.resolve(process.cwd(), 'data', 'blog.sqlite');
@@ -11,8 +13,25 @@ export function getDefaultDbPath() {
 export function openDatabase(dbPath = getDefaultDbPath()) {
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
   const db = new Database(dbPath);
+  db.pragma('foreign_keys = ON');
+  db.pragma('busy_timeout = 5000');
   db.pragma('journal_mode = WAL');
   return db;
+}
+
+export function openRepositoryDatabase(dbPath) {
+  if (dbPath !== undefined) return openDatabase(dbPath);
+  if (!sharedDatabase?.open) sharedDatabase = openDatabase();
+  return sharedDatabase;
+}
+
+export function isSharedDatabase(db) {
+  return db === sharedDatabase;
+}
+
+export function closeSharedDatabase() {
+  if (sharedDatabase?.open) sharedDatabase.close();
+  sharedDatabase = null;
 }
 
 function ensureColumn(db, table, name, definition) {
@@ -22,8 +41,15 @@ function ensureColumn(db, table, name, definition) {
 
 export function initializeSchema(db) {
   if (initializedSchemas.has(db)) return;
+  const currentVersion = Number(db.pragma('user_version', { simple: true }) || 0);
+  if (currentVersion >= SCHEMA_VERSION) {
+    initializedSchemas.add(db);
+    return;
+  }
 
-  db.exec(`
+  const migrate = db.transaction(() => {
+    if (currentVersion < 1) {
+      db.exec(`
     DROP INDEX IF EXISTS idx_watch_items_title_type_status;
 
     CREATE TABLE IF NOT EXISTS watch_items (
@@ -119,21 +145,6 @@ export function initializeSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_blog_posts_published_date
       ON blog_posts(published, date DESC, id DESC);
 
-    CREATE TABLE IF NOT EXISTS post_image_assets (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      post_id INTEGER NOT NULL,
-      image_path TEXT NOT NULL UNIQUE,
-      small_path TEXT NOT NULL DEFAULT '',
-      original_path TEXT NOT NULL DEFAULT '',
-      referenced INTEGER NOT NULL DEFAULT 0,
-      unreferenced_at TEXT,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY(post_id) REFERENCES blog_posts(id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_post_image_assets_cleanup
-      ON post_image_assets(referenced, unreferenced_at, id);
-
     CREATE TABLE IF NOT EXISTS post_topic_links (
       post_id INTEGER NOT NULL,
       topic_slug TEXT NOT NULL,
@@ -191,34 +202,34 @@ export function initializeSchema(db) {
 
     CREATE INDEX IF NOT EXISTS idx_assistant_usage_day
       ON assistant_usage(day, ip_hash);
-  `);
+      `);
 
-  ensureColumn(db, 'watch_items', 'progress_text', "TEXT NOT NULL DEFAULT ''");
-  ensureColumn(db, 'watch_items', 'completed_at', "TEXT NOT NULL DEFAULT ''");
-  ensureColumn(db, 'watch_items', 'is_activity_featured', 'INTEGER NOT NULL DEFAULT 0');
-  ensureColumn(db, 'watch_items', 'image_small_path', "TEXT NOT NULL DEFAULT ''");
-  ensureColumn(db, 'watch_items', 'image_original_path', "TEXT NOT NULL DEFAULT ''");
-  ensureColumn(db, 'watch_items', 'image_width', 'INTEGER NOT NULL DEFAULT 0');
-  ensureColumn(db, 'watch_items', 'image_height', 'INTEGER NOT NULL DEFAULT 0');
-  ensureColumn(db, 'reading_items', 'image_small_path', "TEXT NOT NULL DEFAULT ''");
-  ensureColumn(db, 'reading_items', 'image_original_path', "TEXT NOT NULL DEFAULT ''");
-  ensureColumn(db, 'reading_items', 'image_width', 'INTEGER NOT NULL DEFAULT 0');
-  ensureColumn(db, 'reading_items', 'image_height', 'INTEGER NOT NULL DEFAULT 0');
-  ensureColumn(db, 'reading_items', 'published', 'INTEGER NOT NULL DEFAULT 1');
-  ensureColumn(db, 'food_items', 'image_small_path', "TEXT NOT NULL DEFAULT ''");
-  ensureColumn(db, 'food_items', 'image_original_path', "TEXT NOT NULL DEFAULT ''");
-  ensureColumn(db, 'food_items', 'image_width', 'INTEGER NOT NULL DEFAULT 0');
-  ensureColumn(db, 'food_items', 'image_height', 'INTEGER NOT NULL DEFAULT 0');
-  ensureColumn(db, 'food_items', 'would_revisit', 'INTEGER NOT NULL DEFAULT 0');
-  ensureColumn(db, 'food_items', 'is_featured', 'INTEGER NOT NULL DEFAULT 0');
-  ensureColumn(db, 'food_items', 'published', 'INTEGER NOT NULL DEFAULT 1');
-  ensureColumn(db, 'food_items', 'sort_order', 'INTEGER NOT NULL DEFAULT 0');
-  ensureColumn(db, 'blog_posts', 'tags', "TEXT NOT NULL DEFAULT '[]'");
-  ensureColumn(db, 'blog_posts', 'visibility', "TEXT NOT NULL DEFAULT 'public'");
-  ensureColumn(db, 'blog_posts', 'encrypted_description', "TEXT NOT NULL DEFAULT ''");
-  ensureColumn(db, 'blog_posts', 'encrypted_body', "TEXT NOT NULL DEFAULT ''");
-  ensureColumn(db, 'post_topic_links', 'sort_order', 'INTEGER NOT NULL DEFAULT 0');
-  db.exec(`
+      ensureColumn(db, 'watch_items', 'progress_text', "TEXT NOT NULL DEFAULT ''");
+      ensureColumn(db, 'watch_items', 'completed_at', "TEXT NOT NULL DEFAULT ''");
+      ensureColumn(db, 'watch_items', 'is_activity_featured', 'INTEGER NOT NULL DEFAULT 0');
+      ensureColumn(db, 'watch_items', 'image_small_path', "TEXT NOT NULL DEFAULT ''");
+      ensureColumn(db, 'watch_items', 'image_original_path', "TEXT NOT NULL DEFAULT ''");
+      ensureColumn(db, 'watch_items', 'image_width', 'INTEGER NOT NULL DEFAULT 0');
+      ensureColumn(db, 'watch_items', 'image_height', 'INTEGER NOT NULL DEFAULT 0');
+      ensureColumn(db, 'reading_items', 'image_small_path', "TEXT NOT NULL DEFAULT ''");
+      ensureColumn(db, 'reading_items', 'image_original_path', "TEXT NOT NULL DEFAULT ''");
+      ensureColumn(db, 'reading_items', 'image_width', 'INTEGER NOT NULL DEFAULT 0');
+      ensureColumn(db, 'reading_items', 'image_height', 'INTEGER NOT NULL DEFAULT 0');
+      ensureColumn(db, 'reading_items', 'published', 'INTEGER NOT NULL DEFAULT 1');
+      ensureColumn(db, 'food_items', 'image_small_path', "TEXT NOT NULL DEFAULT ''");
+      ensureColumn(db, 'food_items', 'image_original_path', "TEXT NOT NULL DEFAULT ''");
+      ensureColumn(db, 'food_items', 'image_width', 'INTEGER NOT NULL DEFAULT 0');
+      ensureColumn(db, 'food_items', 'image_height', 'INTEGER NOT NULL DEFAULT 0');
+      ensureColumn(db, 'food_items', 'would_revisit', 'INTEGER NOT NULL DEFAULT 0');
+      ensureColumn(db, 'food_items', 'is_featured', 'INTEGER NOT NULL DEFAULT 0');
+      ensureColumn(db, 'food_items', 'published', 'INTEGER NOT NULL DEFAULT 1');
+      ensureColumn(db, 'food_items', 'sort_order', 'INTEGER NOT NULL DEFAULT 0');
+      ensureColumn(db, 'blog_posts', 'tags', "TEXT NOT NULL DEFAULT '[]'");
+      ensureColumn(db, 'blog_posts', 'visibility', "TEXT NOT NULL DEFAULT 'public'");
+      ensureColumn(db, 'blog_posts', 'encrypted_description', "TEXT NOT NULL DEFAULT ''");
+      ensureColumn(db, 'blog_posts', 'encrypted_body', "TEXT NOT NULL DEFAULT ''");
+      ensureColumn(db, 'post_topic_links', 'sort_order', 'INTEGER NOT NULL DEFAULT 0');
+      db.exec(`
     CREATE INDEX IF NOT EXISTS idx_watch_items_status_order
       ON watch_items(status, is_activity_featured DESC, is_featured DESC, updated_at DESC, id ASC);
 
@@ -227,6 +238,30 @@ export function initializeSchema(db) {
 
     CREATE INDEX IF NOT EXISTS idx_post_topic_links_topic_order
       ON post_topic_links(topic_slug, sort_order, post_id);
-  `);
+      `);
+    }
+
+    if (currentVersion < 2) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS post_image_assets (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          post_id INTEGER NOT NULL,
+          image_path TEXT NOT NULL UNIQUE,
+          small_path TEXT NOT NULL DEFAULT '',
+          original_path TEXT NOT NULL DEFAULT '',
+          referenced INTEGER NOT NULL DEFAULT 0,
+          unreferenced_at TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY(post_id) REFERENCES blog_posts(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_post_image_assets_cleanup
+          ON post_image_assets(referenced, unreferenced_at, id);
+      `);
+    }
+
+    db.pragma(`user_version = ${SCHEMA_VERSION}`);
+  });
+  migrate();
   initializedSchemas.add(db);
 }

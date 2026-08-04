@@ -1,4 +1,4 @@
-import { initializeSchema, openDatabase } from './db.mjs';
+import { initializeSchema, openRepositoryDatabase } from './db.mjs';
 
 const allowedScopes = new Set(['movie', 'code']);
 
@@ -39,7 +39,7 @@ function clampNumber(value, min, max) {
 }
 
 export function createRadarRepository({ dbPath } = {}) {
-  const db = openDatabase(dbPath);
+  const db = openRepositoryDatabase(dbPath);
   let initialized = false;
 
   function initialize() {

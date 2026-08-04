@@ -9,6 +9,7 @@ const formatExtensions = new Map([
   ['webp', '.webp'],
   ['avif', '.avif'],
 ]);
+const stagingDirectoryName = '.staging';
 
 export function safeImageBaseName(value, fallback = 'image') {
   return String(value || '')
@@ -93,6 +94,35 @@ export function removeImageVariants(paths, { uploadDir, publicBase, excludePaths
   return removed;
 }
 
+export function cleanupImageStaging(uploadDir, {
+  olderThanMs = 24 * 60 * 60 * 1000,
+  now = Date.now(),
+} = {}) {
+  const stagingRoot = path.join(uploadDir, stagingDirectoryName);
+  let removed = 0;
+  let entries = [];
+  try {
+    entries = fs.readdirSync(stagingRoot, { withFileTypes: true });
+  } catch (error) {
+    if (error?.code === 'ENOENT') return removed;
+    throw error;
+  }
+
+  entries.forEach((entry) => {
+    const target = path.join(stagingRoot, entry.name);
+    try {
+      const stat = fs.statSync(target);
+      if (now - stat.mtimeMs < olderThanMs) return;
+      fs.rmSync(target, { recursive: true, force: true });
+      removed += 1;
+    } catch {
+      // A later startup can retry a temporarily inaccessible staging entry.
+    }
+  });
+  try { fs.rmdirSync(stagingRoot); } catch { /* keep non-empty staging roots */ }
+  return removed;
+}
+
 export async function saveImageVariants({
   baseName,
   originalName,
@@ -112,36 +142,56 @@ export async function saveImageVariants({
   const smallFile = `${baseName}-480.webp`;
   const mainFile = `${baseName}-960.webp`;
   const originalDir = path.join(uploadDir, 'original');
+  const stagingRoot = path.join(uploadDir, stagingDirectoryName);
+  const stagingDir = path.join(stagingRoot, crypto.randomUUID());
+  const stagedOriginalDir = path.join(stagingDir, 'original');
 
   const width = Number(metadata.width || 0);
   const height = Number(metadata.height || 0);
   const originalPath = path.join(originalDir, originalFile);
   const smallPath = path.join(uploadDir, smallFile);
   const mainPath = path.join(uploadDir, mainFile);
+  const stagedOriginalPath = path.join(stagedOriginalDir, originalFile);
+  const stagedSmallPath = path.join(stagingDir, smallFile);
+  const stagedMainPath = path.join(stagingDir, mainFile);
+  const promoted = [];
 
-  fs.mkdirSync(uploadDir, { recursive: true });
-  fs.mkdirSync(originalDir, { recursive: true });
   try {
-    fs.writeFileSync(originalPath, buffer);
+    fs.mkdirSync(stagedOriginalDir, { recursive: true });
+    fs.writeFileSync(stagedOriginalPath, buffer);
     const results = await Promise.allSettled([
       image
         .clone()
         .resize({ width: 480, withoutEnlargement: true })
         .webp({ quality: 84, effort: 4 })
-        .toFile(smallPath),
+        .toFile(stagedSmallPath),
       image
         .clone()
         .resize({ width: 960, withoutEnlargement: true })
         .webp({ quality: 86, effort: 4 })
-        .toFile(mainPath),
+        .toFile(stagedMainPath),
     ]);
     const failed = results.find((result) => result.status === 'rejected');
     if (failed) throw failed.reason;
+
+    fs.mkdirSync(uploadDir, { recursive: true });
+    fs.mkdirSync(originalDir, { recursive: true });
+    [
+      [stagedOriginalPath, originalPath],
+      [stagedSmallPath, smallPath],
+      [stagedMainPath, mainPath],
+    ].forEach(([source, destination]) => {
+      fs.renameSync(source, destination);
+      promoted.push(destination);
+    });
   } catch (error) {
-    [originalPath, smallPath, mainPath].forEach((file) => {
+    promoted.forEach((file) => {
       try { fs.rmSync(file, { force: true }); } catch { /* best effort */ }
     });
     throw error;
+  } finally {
+    try { fs.rmSync(stagingDir, { recursive: true, force: true }); } catch { /* best effort */ }
+    try { fs.rmdirSync(stagingRoot); } catch { /* keep active staging work */ }
   }
 
   return {
