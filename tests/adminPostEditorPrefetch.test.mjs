@@ -19,5 +19,5 @@ test('post index prefetches the editor only after edit intent', () => {
 
 test('editor loader clears a rejected module before retrying', () => {
   const loader = fs.readFileSync(new URL('../src/scripts/admin-post-milkdown-loader.js', import.meta.url), 'utf8');
-  assert.match(loader, /\.catch\(\(error\) => \{[\s\S]*editorModulePromise = null[\s\S]*renderRetry\(\)/);
+  assert.match(loader, /\.catch\(\(error\) => \{[\s\S]*editorModulePromise = null[\s\S]*activateFallback\(error\)/);
 });

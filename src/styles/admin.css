@@ -1676,19 +1676,40 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
   pointer-events: none;
 }
 
-.post-editor-load-retry {
+.post-editor-fallback-notice {
   position: absolute;
   z-index: 4;
   top: 14px;
   right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   border: 1px solid var(--cms-line-strong);
   border-radius: 6px;
   background: var(--cms-surface-raised);
   color: var(--cms-text);
-  padding: 9px 14px;
-  font: inherit;
+  padding: 6px 7px 6px 11px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  font-size: 13px;
   font-weight: 700;
+}
+
+.post-editor-fallback-notice button {
+  border: 1px solid var(--cms-line);
+  border-radius: 5px;
+  background: var(--cms-active-bg);
+  color: var(--cms-text);
+  padding: 6px 9px;
+  font: inherit;
   cursor: pointer;
+}
+
+.post-editor-write.is-editor-fallback .post-editor-milkdown {
+  display: none;
+}
+
+.post-editor-write.is-editor-fallback .post-editor-textarea {
+  display: block;
 }
 
 .post-editor-milkdown .milkdown {
@@ -2109,6 +2130,194 @@ html[data-admin-theme="light"] .post-reference-picker-item em {
   padding: 7px 12px;
   font: inherit;
   cursor: pointer;
+}
+
+.post-history-dialog {
+  width: min(980px, calc(100vw - 48px));
+  height: min(680px, calc(100vh - 72px));
+  max-width: none;
+  max-height: none;
+  overflow: hidden;
+  border: 1px solid var(--cms-line-strong);
+  border-radius: 10px;
+  background: var(--cms-surface);
+  color: var(--cms-text);
+  padding: 0;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.24);
+}
+
+.post-history-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.34);
+  backdrop-filter: blur(3px);
+}
+
+.post-history-dialog > header,
+.post-history-detail > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--cms-line);
+}
+
+.post-history-dialog > header {
+  height: 52px;
+  padding: 0 12px 0 18px;
+}
+
+.post-history-dialog > header strong {
+  font-size: 16px;
+}
+
+.post-history-dialog > header button,
+.post-history-detail > header button {
+  border: 1px solid var(--cms-line);
+  border-radius: 7px;
+  background: var(--cms-surface-raised);
+  color: var(--cms-text);
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.post-history-dialog > header button {
+  width: 34px;
+  height: 34px;
+  font-size: 20px;
+}
+
+.post-history-layout {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  height: calc(100% - 52px);
+  min-height: 0;
+}
+
+.post-history-layout > nav {
+  min-height: 0;
+  overflow: auto;
+  border-right: 1px solid var(--cms-line);
+  padding: 8px;
+}
+
+.post-history-layout > nav button {
+  display: grid;
+  width: 100%;
+  gap: 3px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  padding: 10px 12px;
+  color: var(--cms-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.post-history-layout > nav button:hover,
+.post-history-layout > nav button.active {
+  background: var(--cms-active-bg);
+}
+
+.post-history-layout > nav button strong {
+  font-size: 14px;
+}
+
+.post-history-layout > nav button span {
+  color: var(--cms-muted);
+  font-size: 13px;
+}
+
+.post-history-detail {
+  display: grid;
+  grid-template-rows: 52px minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+
+.post-history-detail > header {
+  padding: 0 14px 0 18px;
+}
+
+.post-history-detail > header span {
+  overflow: hidden;
+  color: var(--cms-text-soft);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.post-history-detail > header button {
+  min-height: 34px;
+  padding: 0 12px;
+}
+
+.post-history-detail > header button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.post-history-diff {
+  min-height: 0;
+  overflow: auto;
+  background: var(--cms-surface-raised);
+  padding: 14px 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.post-history-change {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  padding: 2px 14px;
+}
+
+.post-history-change > span {
+  color: var(--cms-muted);
+  user-select: none;
+}
+
+.post-history-change pre {
+  margin: 0;
+  overflow: visible;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.post-history-change.is-added {
+  background: color-mix(in srgb, var(--cms-success) 11%, transparent);
+}
+
+.post-history-change.is-removed {
+  background: color-mix(in srgb, var(--cms-danger) 9%, transparent);
+}
+
+.post-history-change.is-added > span {
+  color: var(--cms-success);
+}
+
+.post-history-change.is-removed > span,
+.post-history-empty.is-error {
+  color: var(--cms-danger);
+}
+
+.post-history-empty {
+  margin: 0;
+  padding: 18px;
+  color: var(--cms-muted);
+  font-size: 14px;
+}
+
+@media (max-width: 720px) {
+  .post-history-dialog {
+    width: calc(100vw - 20px);
+    height: calc(100vh - 20px);
+  }
+
+  .post-history-layout {
+    grid-template-columns: 150px minmax(0, 1fr);
+  }
 }
 
 .post-editor-textarea,

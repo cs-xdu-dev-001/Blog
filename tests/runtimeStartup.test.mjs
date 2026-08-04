@@ -18,12 +18,12 @@ test('runtime preparation migrates the database and creates upload directories',
 
   const result = await prepareRuntime({ dbPath, uploadsRoot });
 
-  assert.equal(result.schemaVersion, 2);
+  assert.equal(result.schemaVersion, 3);
   uploadKinds.forEach((kind) => {
     assert.equal(fs.statSync(path.join(uploadsRoot, kind)).isDirectory(), true);
   });
   const db = new Database(dbPath, { readonly: true });
-  assert.equal(db.pragma('user_version', { simple: true }), 2);
+  assert.equal(db.pragma('user_version', { simple: true }), 3);
   db.close();
   assert.deepEqual(await checkRuntimeReadiness({ dbPath, uploadsRoot }), { ok: true });
 });

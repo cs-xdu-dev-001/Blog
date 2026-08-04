@@ -1,5 +1,6 @@
 const root = document.querySelector('[data-milkdown-editor]');
 const fallback = document.querySelector('[data-editor-fallback]');
+const writePane = root?.closest('.post-editor-write');
 let editorModulePromise = null;
 let loadPromise = null;
 let optionalModulesPromise = null;
@@ -30,19 +31,30 @@ function setEditorState(state) {
   root.setAttribute('aria-busy', state === 'loading' ? 'true' : 'false');
 }
 
-function renderRetry() {
-  if (!root) return;
-  root.parentElement?.querySelector('[data-editor-retry]')?.remove();
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'post-editor-load-retry';
-  button.setAttribute('data-editor-retry', 'true');
-  button.textContent = '重新加载编辑器';
-  button.addEventListener('click', () => {
+function clearFallbackNotice() {
+  writePane?.classList.remove('is-editor-fallback');
+  root?.removeAttribute('hidden');
+  writePane?.querySelector('[data-editor-fallback-notice]')?.remove();
+}
+
+function activateFallback(error) {
+  if (!root || !fallback || !writePane) return;
+  writePane.classList.add('is-editor-fallback');
+  root.hidden = true;
+  fallback.hidden = false;
+  fallback.removeAttribute('aria-hidden');
+  writePane.querySelector('[data-editor-fallback-notice]')?.remove();
+  const notice = document.createElement('div');
+  notice.className = 'post-editor-fallback-notice';
+  notice.setAttribute('data-editor-fallback-notice', 'true');
+  notice.innerHTML = '<span>已切换到Markdown编辑</span><button type="button" data-editor-retry>重试富文本</button>';
+  notice.title = error instanceof Error ? error.message : '富文本编辑器加载失败';
+  notice.querySelector('[data-editor-retry]')?.addEventListener('click', () => {
     loadPromise = null;
+    clearFallbackNotice();
     void loadEditor().catch(() => {});
   }, { once: true });
-  root.parentElement?.append(button);
+  writePane.append(notice);
 }
 
 async function loadEditor() {
@@ -56,15 +68,15 @@ async function loadEditor() {
     .then(({ bootMilkdown }) => bootMilkdown())
     .then(() => {
       setEditorState('ready');
-      root.parentElement?.querySelector('[data-editor-retry]')?.remove();
+      clearFallbackNotice();
       performance.mark('post-editor-ready');
       performance.measure('post-editor-load', 'post-editor-load-start', 'post-editor-ready');
     })
     .catch((error) => {
       setEditorState('error');
       editorModulePromise = null;
-      renderRetry();
-      console.error(error);
+      activateFallback(error);
+      console.error('[post-editor] Milkdown failed; Markdown fallback enabled.', error);
       throw error;
     });
   return loadPromise;

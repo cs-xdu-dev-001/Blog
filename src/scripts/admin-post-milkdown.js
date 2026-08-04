@@ -663,7 +663,6 @@ export async function bootMilkdown() {
     return crepe;
   } catch (error) {
     root.dataset.milkdownError = 'true';
-    setStatus('EDITOR FAILED');
     throw error;
   }
 }

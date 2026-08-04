@@ -56,7 +56,7 @@ const tagOptionsJson = JSON.stringify(tagOptions).replaceAll('<', '\\u003c');
           class="post-editor-agent-toggle"
           data-admin-agent-toggle
           aria-label="打开Agent"
-          title="Agent（Ctrl+.）"
+          title="Agent（Ctrl+Shift+P）"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 3 13.8 8.2 19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"></path>
@@ -66,9 +66,21 @@ const tagOptionsJson = JSON.stringify(tagOptions).replaceAll('<', '\\u003c');
         <button
           type="button"
           class="post-editor-icon-action"
+          data-post-history-toggle
+          aria-label="版本历史"
+          title="版本历史"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path>
+            <path d="M3 3v5h5M12 7v5l3 2"></path>
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="post-editor-icon-action"
           data-preview-link
           aria-label="前台预览"
-          title="前台预览"
+          title="前台预览（Ctrl+P）"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M14 5h5v5"></path>
@@ -219,7 +231,7 @@ const tagOptionsJson = JSON.stringify(tagOptions).replaceAll('<', '\\u003c');
         <div class="post-editor-mode-options" role="group" aria-label="编辑模式">
           <button type="button" class="active" data-editor-mode="edit" aria-pressed="true" aria-controls="post-editor-write">编辑</button>
           <button type="button" data-editor-mode="preview" aria-pressed="false" aria-controls="post-editor-preview">预览</button>
-          <button type="button" data-editor-mode="split" aria-pressed="false" aria-controls="post-editor-write post-editor-preview">分屏</button>
+          <button type="button" data-editor-mode="split" aria-pressed="false" aria-controls="post-editor-write post-editor-preview" title="分屏（Ctrl+\）">分屏</button>
         </div>
         <button
           type="button"
@@ -316,6 +328,23 @@ const tagOptionsJson = JSON.stringify(tagOptions).replaceAll('<', '\\u003c');
         </div>
       </form>
     </aside>
+
+    <dialog class="post-history-dialog" data-post-history-dialog aria-labelledby="post-history-title">
+      <header>
+        <strong id="post-history-title">版本历史</strong>
+        <button type="button" data-post-history-close aria-label="关闭版本历史" title="关闭">×</button>
+      </header>
+      <div class="post-history-layout">
+        <nav data-post-history-list aria-label="历史版本"></nav>
+        <section class="post-history-detail">
+          <header>
+            <span data-post-history-selected>选择一个版本</span>
+            <button type="button" data-post-history-restore disabled>恢复此版本</button>
+          </header>
+          <div class="post-history-diff" data-post-history-diff></div>
+        </section>
+      </div>
+    </dialog>
 
     <script type="application/json" id="post-editor-data" set:html={postJson}></script>
     <script type="application/json" id="post-tag-options-data" set:html={tagOptionsJson}></script>

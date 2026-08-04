@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { diffLines } from 'diff';
 import { initializeSchema, isSharedDatabase, openRepositoryDatabase } from './db.mjs';
 import { normalizeAdminPagination, publicPagination } from './adminPagination.mjs';
 import { existingImageVariants, removeImageVariants, storedImagePaths } from './imageVariants.mjs';
@@ -400,6 +401,64 @@ export function createPostRepository({ dbPath, uploadDir } = {}) {
     return { total: assets.length, referenced: assets.filter((asset) => postImageAssetIsReferenced(asset, references)).length };
   }
 
+  function versionSource(value) {
+    return ['manual', 'autosave', 'restore'].includes(value) ? value : 'manual';
+  }
+
+  function snapshotPost(postId, source = 'manual') {
+    const row = db.prepare('SELECT * FROM blog_posts WHERE id = ?').get(postId);
+    if (!row) return null;
+    const result = db.prepare(`
+      INSERT INTO post_versions (
+        post_id, slug, title, description, category, tags, body,
+        visibility, encrypted_description, encrypted_body, date,
+        featured, published, topic_slugs, source
+      ) VALUES (
+        @postId, @slug, @title, @description, @category, @tags, @body,
+        @visibility, @encryptedDescription, @encryptedBody, @date,
+        @featured, @published, @topicSlugs, @source
+      )
+    `).run({
+      postId: row.id,
+      slug: row.slug,
+      title: row.title,
+      description: row.description,
+      category: row.category,
+      tags: row.tags,
+      body: row.body,
+      visibility: row.visibility,
+      encryptedDescription: row.encrypted_description,
+      encryptedBody: row.encrypted_body,
+      date: row.date,
+      featured: row.featured,
+      published: row.published,
+      topicSlugs: JSON.stringify(topicSlugsForPost(row.id)),
+      source: versionSource(source),
+    });
+    db.prepare(`
+      DELETE FROM post_versions
+      WHERE post_id = ?
+        AND id NOT IN (
+          SELECT id FROM post_versions
+          WHERE post_id = ?
+          ORDER BY id DESC
+          LIMIT 20
+        )
+    `).run(row.id, row.id);
+    return Number(result.lastInsertRowid);
+  }
+
+  function normalizeVersion(row, { unlockKey = '' } = {}) {
+    if (!row) return null;
+    let topicSlugs = [];
+    try {
+      topicSlugs = normalizeTopicSlugs(JSON.parse(row.topic_slugs || '[]'));
+    } catch {
+      topicSlugs = [];
+    }
+    return normalize(row, topicSlugs, { unlockKey });
+  }
+
   return {
     initialize,
 
@@ -528,6 +587,106 @@ export function createPostRepository({ dbPath, uploadDir } = {}) {
         ? db.prepare('SELECT * FROM blog_posts WHERE slug = ?').get(slug)
         : db.prepare('SELECT * FROM blog_posts WHERE slug = ? AND published = 1').get(slug);
       return normalizeWithTopics(row, { unlockKey });
+    },
+
+    listVersions(postId, { limit = 20 } = {}) {
+      initialize();
+      const safeLimit = Math.min(20, Math.max(1, Number(limit) || 20));
+      return db.prepare(`
+        SELECT id, post_id AS postId, title, source, created_at AS createdAt
+        FROM post_versions
+        WHERE post_id = ?
+        ORDER BY id DESC
+        LIMIT ?
+      `).all(Number(postId), safeLimit);
+    },
+
+    getVersion(postId, versionId, { unlockKey = '' } = {}) {
+      initialize();
+      const row = db.prepare(`
+        SELECT * FROM post_versions
+        WHERE id = ? AND post_id = ?
+      `).get(Number(versionId), Number(postId));
+      return normalizeVersion(row, { unlockKey });
+    },
+
+    diffVersion(postId, versionId, { unlockKey = '' } = {}) {
+      initialize();
+      const current = this.get(postId, { unlockKey });
+      const version = this.getVersion(postId, versionId, { unlockKey });
+      if (!current || !version) return null;
+      if ((current.locked && !current.lockedContentUnlocked) || (version.locked && !version.lockedContentUnlocked)) {
+        return { current, version, locked: true, changes: [] };
+      }
+      return {
+        current,
+        version,
+        locked: false,
+        changes: diffLines(version.body || '', current.body || '').map((change) => ({
+          value: change.value,
+          added: Boolean(change.added),
+          removed: Boolean(change.removed),
+          count: Number(change.count || 0),
+        })),
+      };
+    },
+
+    restoreVersion(postId, versionId, { unlockKey = '' } = {}) {
+      initialize();
+      const id = Number(postId);
+      const version = db.prepare(`
+        SELECT * FROM post_versions
+        WHERE id = ? AND post_id = ?
+      `).get(Number(versionId), id);
+      if (!version) return null;
+      if (normalizeVisibility(version.visibility) === 'locked') {
+        const candidate = normalizeVersion(version, { unlockKey });
+        if (!candidate?.lockedContentUnlocked) throw new Error('locked note key is required');
+      }
+      const restore = db.transaction(() => {
+        snapshotPost(id, 'restore');
+        db.prepare(`
+          UPDATE blog_posts SET
+            slug = @slug,
+            title = @title,
+            description = @description,
+            category = @category,
+            tags = @tags,
+            body = @body,
+            visibility = @visibility,
+            encrypted_description = @encryptedDescription,
+            encrypted_body = @encryptedBody,
+            date = @date,
+            featured = @featured,
+            published = @published,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = @id
+        `).run({
+          id,
+          slug: version.slug,
+          title: version.title,
+          description: version.description,
+          category: version.category,
+          tags: version.tags,
+          body: version.body,
+          visibility: version.visibility,
+          encryptedDescription: version.encrypted_description,
+          encryptedBody: version.encrypted_body,
+          date: version.date,
+          featured: version.featured,
+          published: version.published,
+        });
+        let topicSlugs = [];
+        try {
+          topicSlugs = JSON.parse(version.topic_slugs || '[]');
+        } catch {
+          topicSlugs = [];
+        }
+        setPostTopics(id, topicSlugs);
+        if (normalizeVisibility(version.visibility) !== 'locked') syncImageAssets(id, version.body || '');
+      });
+      restore();
+      return this.get(id, { unlockKey });
     },
 
     list({ query = '', filter = 'published', limit = 500, topicSlug = '', kind = 'all', page, pageSize } = {}) {
@@ -711,6 +870,7 @@ export function createPostRepository({ dbPath, uploadDir } = {}) {
       const content = preparePostContent(input, existing);
       const taxonomy = preparePostTaxonomy(input, existing);
       const save = db.transaction(() => {
+        snapshotPost(id, input.versionSource);
         db.prepare(`
           UPDATE blog_posts SET
           slug = @slug,

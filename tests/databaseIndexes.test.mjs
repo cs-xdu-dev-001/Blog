@@ -19,7 +19,7 @@ test('frequent watch and reading filters have matching composite indexes', () =>
 
   assert.ok(indexes.has('idx_watch_items_status_order'));
   assert.ok(indexes.has('idx_reading_items_public_status_order'));
-  assert.equal(db.pragma('user_version', { simple: true }), 2);
+  assert.equal(db.pragma('user_version', { simple: true }), 3);
   assert.ok(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'post_image_assets'").get());
   db.close();
 });
@@ -33,7 +33,7 @@ test('default repositories share one configured SQLite connection', () => {
     const second = openRepositoryDatabase();
     assert.equal(first, second);
     initializeSchema(first);
-    assert.equal(first.pragma('user_version', { simple: true }), 2);
+    assert.equal(first.pragma('user_version', { simple: true }), 3);
   } finally {
     closeSharedDatabase();
     if (previousPath === undefined) delete process.env.BLOG_DB_PATH;

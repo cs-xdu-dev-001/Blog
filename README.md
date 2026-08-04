@@ -147,6 +147,15 @@ WorkingDirectory=/srv/blog
 ExecStart=/usr/bin/npm start
 ```
 
+服务器更新统一使用部署脚本：
+
+```bash
+cd /srv/blog
+sudo bash deploy/deploy-blog.sh
+```
+
+脚本只在工作区干净时继续，所有Git和npm操作统一使用`blog`用户。构建失败不会重启服务；重启后`/ready`未通过时，会自动回退到部署前提交并恢复服务。脚本不会修改`.env`、`data`、SQLite、`public/uploads`、Nginx或证书。
+
 ## 内容维护
 
 文章的Markdown源文件在`src/content/posts`，管理端文章数据会写入SQLite。首次导入本地Markdown可以运行：

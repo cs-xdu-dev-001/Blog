@@ -12,6 +12,13 @@ const statusEl = document.querySelector('[data-editor-status]');
 const saveButton = document.querySelector('[data-save-post]');
 const deleteButton = document.querySelector('[data-delete-post]');
 const previewButton = document.querySelector('[data-preview-link]');
+const historyButton = document.querySelector('[data-post-history-toggle]');
+const historyDialog = document.querySelector('[data-post-history-dialog]');
+const historyCloseButton = document.querySelector('[data-post-history-close]');
+const historyList = document.querySelector('[data-post-history-list]');
+const historySelected = document.querySelector('[data-post-history-selected]');
+const historyDiff = document.querySelector('[data-post-history-diff]');
+const historyRestoreButton = document.querySelector('[data-post-history-restore]');
 const slugInput = document.querySelector('[data-slug-input]');
 const regenerateSlugButton = document.querySelector('[data-regenerate-slug]');
 const tagInput = document.querySelector('[data-tag-input]');
@@ -48,6 +55,7 @@ let tagFilter = '';
 let tableEditorState = null;
 let tableEditorDrag = null;
 let tableEditorPosition = null;
+let selectedVersionId = null;
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -103,7 +111,8 @@ try {
 }
 
 function payloadSignature(payload = collectPayload()) {
-  return JSON.stringify(payload);
+  const { versionSource: _versionSource, ...content } = payload;
+  return JSON.stringify(content);
 }
 
 function setSaveState(state, message) {
@@ -987,7 +996,7 @@ function schedulePreview() {
   previewTimer = window.setTimeout(updatePreview, PREVIEW_DELAY_MS);
 }
 
-function collectPayload() {
+function collectPayload({ automatic = false } = {}) {
   const data = new FormData(form);
   return {
     title: data.get('title'),
@@ -1002,13 +1011,14 @@ function collectPayload() {
     lockedNoteKey: data.get('lockedNoteKey'),
     tags: data.getAll('tags'),
     topicSlugs: data.getAll('topicSlugs'),
+    versionSource: automatic ? 'autosave' : 'manual',
   };
 }
 
 async function savePost({ automatic = false } = {}) {
   if (isSaving || isDeleting) return false;
   window.clearTimeout(autoSaveTimer);
-  const payload = collectPayload();
+  const payload = collectPayload({ automatic });
   const savingSignature = payloadSignature(payload);
   if (!isDirty && savingSignature === lastSavedSignature) {
     setSaveState('saved');
@@ -1126,6 +1136,121 @@ async function openFrontendPreview() {
   }
   const slug = form?.querySelector('[name="slug"]')?.value || post.slug;
   previewWindow.location.replace(`/posts/${slug}`);
+}
+
+function versionSourceLabel(source) {
+  return source === 'autosave' ? '自动保存' : source === 'restore' ? '恢复前' : '手动保存';
+}
+
+function formatVersionTime(value) {
+  const date = new Date(String(value || '').replace(' ', 'T') + 'Z');
+  if (Number.isNaN(date.valueOf())) return String(value || '');
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+}
+
+function renderVersionDiff(result) {
+  if (!historyDiff) return;
+  if (result.locked) {
+    historyDiff.innerHTML = '<p class="post-history-empty">先解锁笔记，再查看正文差异。</p>';
+    return;
+  }
+  if (!result.changes?.length) {
+    historyDiff.innerHTML = '<p class="post-history-empty">正文没有变化。</p>';
+    return;
+  }
+  historyDiff.innerHTML = result.changes.map((change) => {
+    const kind = change.added ? 'added' : change.removed ? 'removed' : 'same';
+    const marker = change.added ? '+' : change.removed ? '−' : '';
+    return `<div class="post-history-change is-${kind}"><span>${marker}</span><pre>${escapeHtml(change.value)}</pre></div>`;
+  }).join('');
+}
+
+async function selectVersion(versionId, button = null) {
+  if (!historyDiff || !historySelected || !historyRestoreButton) return;
+  selectedVersionId = Number(versionId);
+  historyList?.querySelectorAll('button').forEach((item) => item.classList.toggle('active', item === button));
+  historySelected.textContent = '正在读取';
+  historyRestoreButton.disabled = true;
+  historyDiff.innerHTML = '<p class="post-history-empty">正在比较</p>';
+  try {
+    const response = await fetch(`/api/admin/posts/${post.id}/versions/${selectedVersionId}`, {
+      credentials: 'same-origin',
+    });
+    if (!response.ok) throw new Error(`读取失败（${response.status}）`);
+    const result = await response.json();
+    historySelected.textContent = `${formatVersionTime(result.version.created_at)} · ${versionSourceLabel(result.version.source)}`;
+    historyRestoreButton.disabled = false;
+    renderVersionDiff(result);
+  } catch (error) {
+    selectedVersionId = null;
+    historySelected.textContent = '读取失败';
+    historyDiff.innerHTML = `<p class="post-history-empty is-error">${escapeHtml(error instanceof Error ? error.message : '读取失败')}</p>`;
+  }
+}
+
+async function loadVersionHistory() {
+  if (!historyList || !historyDiff || !historyRestoreButton) return;
+  historyList.innerHTML = '<p class="post-history-empty">正在读取</p>';
+  historyDiff.innerHTML = '';
+  historyRestoreButton.disabled = true;
+  selectedVersionId = null;
+  try {
+    const response = await fetch(`/api/admin/posts/${post.id}/versions`, { credentials: 'same-origin' });
+    if (!response.ok) throw new Error(`读取失败（${response.status}）`);
+    const data = await response.json();
+    if (!data.items?.length) {
+      historyList.innerHTML = '<p class="post-history-empty">保存一次后会生成历史版本。</p>';
+      return;
+    }
+    historyList.replaceChildren(...data.items.map((version) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.versionId = String(version.id);
+      button.innerHTML = `<strong>${escapeHtml(formatVersionTime(version.createdAt))}</strong><span>${escapeHtml(versionSourceLabel(version.source))}</span>`;
+      return button;
+    }));
+    const first = historyList.querySelector('button');
+    if (first) await selectVersion(first.dataset.versionId, first);
+  } catch (error) {
+    historyList.innerHTML = `<p class="post-history-empty is-error">${escapeHtml(error instanceof Error ? error.message : '读取失败')}</p>`;
+  }
+}
+
+async function openVersionHistory() {
+  if (!historyDialog) return;
+  if (isDirty && !await savePost()) return;
+  if (typeof historyDialog.showModal === 'function') historyDialog.showModal();
+  else historyDialog.setAttribute('open', '');
+  await loadVersionHistory();
+}
+
+async function restoreSelectedVersion() {
+  if (!selectedVersionId || !historyRestoreButton) return;
+  if (!window.confirm('恢复此版本？当前内容会先保留为一个历史版本。')) return;
+  historyRestoreButton.disabled = true;
+  historyRestoreButton.textContent = '正在恢复';
+  try {
+    const response = await fetch(`/api/admin/posts/${post.id}/versions/${selectedVersionId}`, {
+      method: 'POST',
+      credentials: 'same-origin',
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || `恢复失败（${response.status}）`);
+    }
+    isDirty = false;
+    window.location.reload();
+  } catch (error) {
+    historyRestoreButton.disabled = false;
+    historyRestoreButton.textContent = '恢复此版本';
+    setSaveState('error', error instanceof Error ? error.message : '恢复失败');
+  }
 }
 
 document.querySelectorAll('[data-editor-mode]').forEach((button) => {
@@ -1250,6 +1375,14 @@ saveButton?.addEventListener('click', () => void savePost());
 unlockLockedPostButton?.addEventListener('click', unlockLockedPost);
 deleteButton?.addEventListener('click', deletePost);
 previewButton?.addEventListener('click', () => void openFrontendPreview());
+historyButton?.addEventListener('click', () => void openVersionHistory());
+historyCloseButton?.addEventListener('click', () => historyDialog?.close());
+historyList?.addEventListener('click', (event) => {
+  const button = event.target instanceof Element ? event.target.closest('[data-version-id]') : null;
+  if (!(button instanceof HTMLButtonElement)) return;
+  void selectVersion(button.dataset.versionId, button);
+});
+historyRestoreButton?.addEventListener('click', () => void restoreSelectedVersion());
 preview?.addEventListener('click', (event) => {
   const target = event.target instanceof Element ? event.target : null;
   const button = target?.closest('.post-preview-table-edit');
@@ -1295,9 +1428,26 @@ document.addEventListener('click', (event) => {
   }
 });
 document.addEventListener('keydown', (event) => {
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+  const primary = event.ctrlKey || event.metaKey;
+  const key = event.key.toLowerCase();
+  if (primary && key === 's') {
     event.preventDefault();
     void savePost();
+    return;
+  }
+  if (primary && !event.shiftKey && key === 'p') {
+    event.preventDefault();
+    void openFrontendPreview();
+    return;
+  }
+  if (primary && event.shiftKey && key === 'p') {
+    event.preventDefault();
+    document.dispatchEvent(new CustomEvent('admin-agent:open'));
+    return;
+  }
+  if (primary && event.key === '\\') {
+    event.preventDefault();
+    document.querySelector('[data-editor-mode="split"]')?.click();
     return;
   }
   if (event.key === 'Escape' && tableEditorState) closeTableEditor();

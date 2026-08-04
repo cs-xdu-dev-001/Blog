@@ -22,6 +22,7 @@ export const PUT: APIRoute = async (context) => {
       lockedNoteKey: body.lockedNoteKey,
       tags: body.tags,
       topicSlugs: body.topicSlugs,
+      versionSource: body.versionSource,
     });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : 'save failed' }, { status: 400 });

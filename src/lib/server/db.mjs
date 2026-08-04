@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const initializedSchemas = new WeakSet();
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 let sharedDatabase = null;
 
 export function getDefaultDbPath() {
@@ -257,6 +257,34 @@ export function initializeSchema(db) {
 
         CREATE INDEX IF NOT EXISTS idx_post_image_assets_cleanup
           ON post_image_assets(referenced, unreferenced_at, id);
+      `);
+    }
+
+    if (currentVersion < 3) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS post_versions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          post_id INTEGER NOT NULL,
+          slug TEXT NOT NULL,
+          title TEXT NOT NULL,
+          description TEXT NOT NULL DEFAULT '',
+          category TEXT NOT NULL DEFAULT '',
+          tags TEXT NOT NULL DEFAULT '[]',
+          body TEXT NOT NULL DEFAULT '',
+          visibility TEXT NOT NULL DEFAULT 'public',
+          encrypted_description TEXT NOT NULL DEFAULT '',
+          encrypted_body TEXT NOT NULL DEFAULT '',
+          date TEXT NOT NULL,
+          featured INTEGER NOT NULL DEFAULT 0,
+          published INTEGER NOT NULL DEFAULT 1,
+          topic_slugs TEXT NOT NULL DEFAULT '[]',
+          source TEXT NOT NULL DEFAULT 'manual',
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY(post_id) REFERENCES blog_posts(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_post_versions_post_created
+          ON post_versions(post_id, id DESC);
       `);
     }
 

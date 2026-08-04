@@ -135,6 +135,9 @@ test('admin post editor previews through the frontend markdown renderer', () => 
   assert.match(milkdownLoader, /addEventListener\('pointerdown'/);
   assert.match(milkdownLoader, /fallback\?\.addEventListener\('focusin'/);
   assert.match(milkdownLoader, /data-editor-retry/);
+  assert.match(milkdownLoader, /activateFallback/);
+  assert.match(milkdownLoader, /fallback\.hidden = false/);
+  assert.match(milkdownLoader, /Milkdown failed; Markdown fallback enabled/);
   assert.match(milkdownClient, /document\.activeElement === fallback/);
   assert.match(milkdownClient, /ctx\.get\(editorViewCtx\)\.focus\(\)/);
   assert.match(page, /class="post-editor-modebar" role="group"/);

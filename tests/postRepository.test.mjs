@@ -240,6 +240,45 @@ test('post updates roll back content when topic persistence fails', () => {
   repo.close();
 });
 
+test('post repository keeps version history, computes diffs, and restores safely', () => {
+  const repo = createPostRepository({ dbPath: tempDbPath() });
+  const post = repo.create({
+    title: '版本原文',
+    body: '第一行\n第二行',
+    topicSlugs: ['agent-system'],
+    published: true,
+  });
+
+  repo.update(post.id, {
+    title: '第一次修改',
+    body: '第一行\n第二行已修改',
+    topicSlugs: ['rag-knowledge'],
+    published: true,
+    versionSource: 'manual',
+  });
+  repo.update(post.id, {
+    title: '第二次修改',
+    body: '第一行\n第二行已修改\n第三行',
+    topicSlugs: ['rag-knowledge'],
+    published: true,
+    versionSource: 'autosave',
+  });
+
+  const versions = repo.listVersions(post.id);
+  assert.equal(versions.length, 2);
+  assert.deepEqual(versions.map((version) => version.source), ['autosave', 'manual']);
+  const diff = repo.diffVersion(post.id, versions[0].id);
+  assert.equal(diff.locked, false);
+  assert.equal(diff.changes.some((change) => change.added && change.value.includes('第三行')), true);
+
+  const restored = repo.restoreVersion(post.id, versions[1].id);
+  assert.equal(restored.title, '版本原文');
+  assert.equal(restored.body, '第一行\n第二行');
+  assert.deepEqual(restored.topicSlugs, ['agent-system']);
+  assert.equal(repo.listVersions(post.id)[0].source, 'restore');
+  repo.close();
+});
+
 test('markdown renderer supports common writing syntax and extracts headings', () => {
   const rendered = markdownToHtml(`# 标题
 

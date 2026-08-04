@@ -107,3 +107,33 @@ test('编辑器属性可折叠且图标、模式和Agent布局保持稳定', asy
   const narrowOverflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(narrowOverflow).toBeLessThanOrEqual(0);
 });
+
+test('编辑器快捷键和版本历史沿用现有操作入口', async ({ page }) => {
+  await openFreshEditor(page);
+
+  await expect(page.locator('[data-preview-link]')).toHaveAttribute('title', '前台预览（Ctrl+P）');
+  await expect(page.locator('[data-editor-mode="split"]')).toHaveAttribute('title', '分屏（Ctrl+\\）');
+  await expect(page.locator('[data-admin-agent-toggle]')).toHaveAttribute('title', 'Agent（Ctrl+Shift+P）');
+
+  await page.locator('input[name="title"]').fill('版本历史测试');
+  await page.locator('[data-markdown-input]').fill('第一版正文');
+  await page.locator('[data-save-post]').click();
+  await expect(page.locator('[data-editor-status]')).toHaveAttribute('data-state', 'saved');
+
+  await page.locator('[data-post-history-toggle]').click();
+  await expect(page.locator('[data-post-history-dialog]')).toBeVisible();
+  await expect(page.locator('[data-post-history-list] button')).toHaveCount(1);
+  await page.locator('[data-post-history-close]').click();
+
+  await page.keyboard.press('Control+\\');
+  await expect(page.locator('[data-editor-shell]')).toHaveClass(/is-split/);
+  await page.keyboard.press('Control+Shift+P');
+  await expect(page.locator('[data-admin-agent-panel]')).toBeVisible();
+  await page.locator('[data-admin-agent-close]').click();
+
+  const popupPromise = page.waitForEvent('popup');
+  await page.keyboard.press('Control+P');
+  const popup = await popupPromise;
+  await popup.waitForLoadState('domcontentloaded');
+  await popup.close();
+});

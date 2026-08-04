@@ -25,7 +25,11 @@ test('post editor exposes reliable save states and never leaves a failed request
 test('post editor autosaves real fields, supports Ctrl+S, and warns before leaving dirty content', () => {
   assert.match(source, /if \(!target\?\.name\) return/);
   assert.match(source, /savePost\(\{ automatic: true \}\)/);
-  assert.match(source, /event\.key\.toLowerCase\(\) === 's'/);
+  assert.match(source, /const key = event\.key\.toLowerCase\(\)/);
+  assert.match(source, /key === 's'/);
+  assert.match(source, /key === 'p'/);
+  assert.match(source, /event\.shiftKey && key === 'p'/);
+  assert.match(source, /event\.key === '\\\\'/);
   assert.match(source, /beforeunload/);
   assert.match(source, /event\.returnValue = ''/);
   assert.match(source, /agentEditorLocked === 'true'/);
