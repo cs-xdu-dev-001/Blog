@@ -23,11 +23,42 @@ test('编辑器属性可折叠且图标、模式和Agent布局保持稳定', asy
   await expect(meta).toBeVisible();
   await expect(metaToggle).toHaveAttribute('aria-expanded', 'true');
 
+  const topbar = page.locator('.post-editor-topbar');
+  await expect(topbar).toHaveCSS('height', '44px');
+  await expect(page.locator('[data-preview-link]')).toHaveAttribute('aria-label', '前台预览');
+  await expect(page.locator('[data-delete-post]')).toHaveAttribute('aria-label', '删除笔记');
+  await expect(page.locator('[data-save-post]')).toHaveAttribute('aria-label', '保存笔记');
+
+  const expandedLayout = await page.evaluate(() => {
+    const meta = document.querySelector('.post-editor-meta-grid').getBoundingClientRect();
+    const modebar = document.querySelector('.post-editor-modebar').getBoundingClientRect();
+    return {
+      metaHeight: Math.round(meta.height),
+      gap: Math.round(modebar.top - meta.bottom),
+    };
+  });
+  expect(expandedLayout.metaHeight).toBeLessThan(310);
+  expect(expandedLayout.gap).toBeLessThanOrEqual(12);
+
   await metaToggle.click();
   await expect(shell).toHaveClass(/is-meta-collapsed/);
   await expect(meta).toBeHidden();
   await expect(metaToggle).toHaveAttribute('aria-expanded', 'false');
   await expect(metaToggle).toHaveAttribute('aria-label', '显示笔记属性');
+
+  const compactLayout = await page.evaluate(() => {
+    const shell = document.querySelector('[data-editor-shell]').getBoundingClientRect();
+    const modebar = document.querySelector('.post-editor-modebar').getBoundingClientRect();
+    const main = document.querySelector('.post-editor-main').getBoundingClientRect();
+    return {
+      controlsWidth: Math.round(modebar.width),
+      topInset: Math.round(modebar.top - shell.top),
+      contentGap: Math.round(main.top - modebar.bottom),
+    };
+  });
+  expect(compactLayout.controlsWidth).toBeLessThan(280);
+  expect(compactLayout.topInset).toBeLessThanOrEqual(8);
+  expect(compactLayout.contentGap).toBeLessThanOrEqual(10);
 
   await page.reload();
   await expect(meta).toBeHidden();

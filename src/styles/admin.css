@@ -298,10 +298,10 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
   grid-template-columns: minmax(180px, 1fr) auto minmax(320px, 1fr);
   gap: 18px;
   align-items: center;
-  height: 56px;
+  height: 44px;
   border-bottom: 1px solid var(--cms-line);
   background: var(--cms-topbar);
-  padding: 0 20px;
+  padding: 0 16px;
   backdrop-filter: blur(18px);
   transition: margin-right 180ms ease;
 }
@@ -321,7 +321,7 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
 
 .post-editor-back {
   justify-self: start;
-  padding: 9px 13px;
+  padding: 6px 11px;
 }
 
 .post-editor-back:hover,
@@ -336,7 +336,7 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
   border: 1px solid rgba(34, 211, 238, 0.26);
   border-radius: 999px;
   background: rgba(34, 211, 238, 0.08);
-  padding: 7px 11px;
+  padding: 4px 8px;
   color: var(--cms-accent);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
@@ -347,12 +347,12 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
 .post-editor-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 6px;
 }
 
 .post-editor-actions button {
-  min-height: 34px;
-  padding: 0 13px;
+  min-height: 30px;
+  padding: 0 10px;
   cursor: pointer;
 }
 
@@ -369,16 +369,16 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
 
 .post-editor-actions .post-editor-theme-toggle {
   display: inline-grid;
-  width: 34px;
-  min-width: 34px;
+  width: 30px;
+  min-width: 30px;
   place-items: center;
   padding: 0;
 }
 
 .post-editor-actions .post-editor-agent-toggle {
   display: inline-grid;
-  width: 34px;
-  min-width: 34px;
+  width: 30px;
+  min-width: 30px;
   place-items: center;
   padding: 0;
 }
@@ -390,15 +390,34 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
   fill: currentColor;
 }
 
+.post-editor-actions .post-editor-icon-action {
+  display: inline-grid;
+  width: 30px;
+  min-width: 30px;
+  padding: 0;
+  place-items: center;
+}
+
+.post-editor-icon-action svg {
+  display: block;
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
 .post-editor-shell {
   container-name: post-editor-shell;
   container-type: inline-size;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
-  height: calc(100vh - 56px);
+  grid-template-rows: max-content max-content minmax(0, 1fr);
+  height: calc(100vh - 44px);
   min-height: 0;
   overflow: hidden;
-  padding: 16px 24px 24px;
+  padding: 10px 24px 20px;
   transition: margin-right 180ms ease;
 }
 
@@ -419,7 +438,7 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
   display: grid;
   width: var(--post-agent-width);
   min-width: 320px;
-  grid-template-rows: 56px minmax(0, 1fr) auto;
+  grid-template-rows: 44px minmax(0, 1fr) auto;
   border-left: 1px solid var(--cms-line);
   background: var(--cms-canvas);
   color: var(--cms-text);
@@ -767,8 +786,8 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
 
 .post-editor-meta-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 12px;
   align-items: start;
 }
 
@@ -781,14 +800,14 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
 
 .post-editor-content-meta {
   display: grid;
-  gap: 12px;
-  border-radius: 18px;
-  padding: 18px;
+  gap: 9px;
+  border-radius: 14px;
+  padding: 14px 16px;
 }
 
 .post-editor-properties {
-  border-radius: 16px;
-  padding: 10px;
+  border-radius: 14px;
+  padding: 7px;
 }
 
 .post-title-input,
@@ -806,7 +825,7 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
 
 .post-title-input {
   min-width: 0;
-  font-size: clamp(25px, 2vw, 34px);
+  font-size: clamp(24px, 1.8vw, 30px);
   font-weight: 850;
   line-height: 1.12;
   letter-spacing: 0;
@@ -820,7 +839,7 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
 
 .post-meta-property-list {
   display: grid;
-  gap: 6px;
+  gap: 3px;
 }
 
 .post-property,
@@ -828,10 +847,10 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
   display: grid;
   grid-template-columns: 76px minmax(0, 1fr);
   align-items: center;
-  min-height: 38px;
-  gap: 12px;
-  border-radius: 10px;
-  padding: 0 9px;
+  min-height: 34px;
+  gap: 10px;
+  border-radius: 8px;
+  padding: 0 8px;
   color: var(--cms-muted);
   font-size: 13px;
   font-weight: 780;
@@ -899,9 +918,12 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
 
 .post-lock-property {
   display: grid;
-  gap: 8px;
-  border-radius: 12px;
-  padding: 10px 9px;
+  grid-template-columns: 76px auto auto;
+  min-height: 34px;
+  align-items: center;
+  gap: 6px 10px;
+  border-radius: 8px;
+  padding: 0 8px;
   color: var(--cms-muted);
   font-size: 13px;
   font-weight: 780;
@@ -918,7 +940,7 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
 
 .post-lock-property label {
   display: flex;
-  min-height: 28px;
+  min-height: 30px;
   align-items: center;
   gap: 8px;
   color: var(--cms-text-soft);
@@ -938,6 +960,8 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
 }
 
 .post-lock-property input[type="password"] {
+  display: none;
+  grid-column: 1 / -1;
   min-height: 34px;
   border: 1px solid var(--cms-line);
   border-radius: 10px;
@@ -945,6 +969,15 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
   padding: 0 10px;
   color: var(--cms-text);
   font-size: 13px;
+}
+
+.post-lock-property:has(input[value="locked"]:checked) {
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+.post-lock-property:has(input[value="locked"]:checked) input[type="password"] {
+  display: block;
 }
 
 .post-editor-agent-context.has-selection span {
@@ -959,6 +992,7 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
 }
 
 .post-lock-property button {
+  grid-column: 1 / -1;
   min-height: 32px;
   border: 1px solid rgba(34, 211, 238, 0.24);
   border-radius: 10px;
@@ -966,6 +1000,10 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
   color: var(--cms-accent);
   font: inherit;
   cursor: pointer;
+}
+
+.post-lock-property em {
+  grid-column: 1 / -1;
 }
 
 .post-tag-picker {
@@ -1221,7 +1259,7 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   color: var(--cms-muted);
   font-size: 13px;
   font-weight: 780;
@@ -1233,7 +1271,7 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
   border: 1px solid rgba(34, 211, 238, 0.32);
   border-radius: 999px;
   background: rgba(34, 211, 238, 0.1);
-  padding: 6px 10px;
+  padding: 4px 9px;
   color: var(--cms-accent);
   text-decoration: none;
 }
@@ -1241,18 +1279,18 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
 .post-topic-picker > div {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .post-topic-picker label {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  min-height: 30px;
+  min-height: 28px;
   border: 1px solid var(--cms-line);
   border-radius: 999px;
   background: var(--cms-surface-raised);
-  padding: 0 11px;
+  padding: 0 9px;
   color: var(--cms-text-soft);
   font-size: 13px;
   font-weight: 800;
@@ -1286,7 +1324,7 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
   border: 1px solid var(--cms-line);
   border-radius: 12px;
   background: var(--cms-surface-raised);
-  padding: 9px 12px;
+  padding: 6px 10px;
   transition: border-color 160ms ease, background 160ms ease;
 }
 
@@ -1311,7 +1349,7 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
   max-height: 86px;
   color: var(--cms-text-soft);
   font-size: 14px;
-  line-height: 1.65;
+  line-height: 1.5;
   overflow: auto;
 }
 
@@ -1326,22 +1364,23 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
 }
 
 .post-editor-modebar {
-  display: grid;
-  grid-template-columns: minmax(34px, 1fr) auto minmax(34px, 1fr);
+  display: flex;
   align-items: center;
-  width: 100%;
-  margin: 12px auto 14px;
+  justify-content: center;
+  width: max-content;
+  max-width: 100%;
+  gap: 6px;
+  margin: 8px auto 10px;
 }
 
 .post-editor-mode-options {
   display: flex;
-  grid-column: 2;
-  gap: 8px;
+  gap: 5px;
 }
 
 .post-editor-mode-options button {
-  min-width: 76px;
-  min-height: 32px;
+  min-width: 68px;
+  min-height: 30px;
   border: 1px solid var(--cms-line);
   border-radius: 999px;
   background: var(--cms-surface-raised);
@@ -1354,10 +1393,8 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
 
 .post-editor-meta-toggle {
   display: inline-grid;
-  grid-column: 3;
-  justify-self: end;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   border: 1px solid var(--cms-line);
   border-radius: 10px;
   background: var(--cms-surface-raised);
@@ -2110,11 +2147,16 @@ html[data-admin-theme="light"] .post-reference-picker-item em {
 }
 
 .post-editor-shell.is-meta-collapsed {
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: max-content minmax(0, 1fr);
+  padding-top: 6px;
 }
 
 .post-editor-shell.is-meta-collapsed .post-editor-meta {
   display: none;
+}
+
+.post-editor-shell.is-meta-collapsed .post-editor-modebar {
+  margin: 0 auto 8px;
 }
 
 .post-editor-shell.is-split .post-editor-main {
@@ -2123,8 +2165,8 @@ html[data-admin-theme="light"] .post-reference-picker-item em {
 }
 
 .post-editor-shell.is-split {
-  grid-template-rows: auto minmax(0, 1fr);
-  padding: 14px 24px 24px;
+  grid-template-rows: max-content minmax(0, 1fr);
+  padding: 6px 24px 20px;
 }
 
 .post-editor-shell.is-split .post-editor-meta {
@@ -2132,8 +2174,8 @@ html[data-admin-theme="light"] .post-reference-picker-item em {
 }
 
 .post-editor-shell.is-split .post-editor-modebar {
-  width: 100%;
-  margin: 0 0 14px;
+  width: max-content;
+  margin: 0 auto 8px;
 }
 
 .post-editor-shell.is-split .post-editor-main {

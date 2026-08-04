@@ -63,9 +63,46 @@ const tagOptionsJson = JSON.stringify(tagOptions).replaceAll('<', '\\u003c');
             <path d="m18.5 16 .7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7.7-2.1Z"></path>
           </svg>
         </button>
-        <button type="button" data-preview-link>前台预览</button>
-        <button type="button" class="danger" data-delete-post>删除</button>
-        <button type="button" class="primary" data-save-post>保存</button>
+        <button
+          type="button"
+          class="post-editor-icon-action"
+          data-preview-link
+          aria-label="前台预览"
+          title="前台预览"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M14 5h5v5"></path>
+            <path d="m13 11 6-6"></path>
+            <path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"></path>
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="danger post-editor-icon-action"
+          data-delete-post
+          aria-label="删除笔记"
+          title="删除笔记"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h16"></path>
+            <path d="M9 7V4h6v3"></path>
+            <path d="m6 7 1 13h10l1-13"></path>
+            <path d="M10 11v5M14 11v5"></path>
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="primary post-editor-icon-action"
+          data-save-post
+          aria-label="保存笔记"
+          title="保存笔记（Ctrl+S）"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 4h12l2 2v14H5z"></path>
+            <path d="M8 4v6h8V4"></path>
+            <path d="M8 20v-6h8v6"></path>
+          </svg>
+        </button>
         <button
           class="cms-theme-toggle post-editor-theme-toggle"
           type="button"

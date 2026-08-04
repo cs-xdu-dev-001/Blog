@@ -178,7 +178,7 @@ test('admin post editor previews through the frontend markdown renderer', () => 
   assert.match(styles, /\.post-editor-mode-options button\.active/);
   assert.doesNotMatch(globalStyles, /\.post-editor-milkdown \.ProseMirror/);
   assert.doesNotMatch(globalStyles, /\.post-editor-modebar button\.active/);
-  assert.match(styles, /\.post-editor-meta-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+360px/s);
+  assert.match(styles, /\.post-editor-meta-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+320px/s);
   assert.match(styles, /\.post-editor-shell\.is-meta-collapsed \.post-editor-meta\s*\{[^}]*display:\s*none/s);
   assert.match(client, /META_COLLAPSED_STORAGE_KEY/);
   assert.match(styles, /\.post-editor-properties/);
