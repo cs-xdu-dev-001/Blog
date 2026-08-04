@@ -133,6 +133,13 @@ const tagOptionsJson = JSON.stringify(tagOptions).replaceAll('<', '\\u003c');
       </div>
     </header>
 
+    <div class="post-local-draft" data-local-draft-notice hidden>
+      <span>发现未保存草稿</span>
+      <time data-local-draft-time></time>
+      <button type="button" data-local-draft-restore>恢复</button>
+      <button type="button" data-local-draft-discard>丢弃</button>
+    </div>
+
     <section class="post-editor-shell is-edit" data-editor-shell>
       <form id="post-editor-meta" class="post-editor-meta" data-post-form>
         <div class="post-editor-meta-grid">

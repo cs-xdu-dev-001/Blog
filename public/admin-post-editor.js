@@ -19,6 +19,10 @@ const historyList = document.querySelector('[data-post-history-list]');
 const historySelected = document.querySelector('[data-post-history-selected]');
 const historyDiff = document.querySelector('[data-post-history-diff]');
 const historyRestoreButton = document.querySelector('[data-post-history-restore]');
+const localDraftNotice = document.querySelector('[data-local-draft-notice]');
+const localDraftTime = document.querySelector('[data-local-draft-time]');
+const localDraftRestoreButton = document.querySelector('[data-local-draft-restore]');
+const localDraftDiscardButton = document.querySelector('[data-local-draft-discard]');
 const slugInput = document.querySelector('[data-slug-input]');
 const regenerateSlugButton = document.querySelector('[data-regenerate-slug]');
 const tagInput = document.querySelector('[data-tag-input]');
@@ -34,6 +38,9 @@ const PREVIEW_DELAY_MS = 400;
 const PREVIEW_RETRY_DELAY_MS = 350;
 const AUTO_SAVE_DELAY_MS = 2500;
 const META_COLLAPSED_STORAGE_KEY = 'dev-notes-post-editor-meta-collapsed';
+const LOCAL_DRAFT_STORAGE_PREFIX = 'dev-notes-post-draft-v1';
+const LOCAL_DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const LOCAL_DRAFT_DELAY_MS = 300;
 
 let previewTimer = null;
 let isSaving = false;
@@ -56,6 +63,8 @@ let tableEditorState = null;
 let tableEditorDrag = null;
 let tableEditorPosition = null;
 let selectedVersionId = null;
+let localDraftTimer = null;
+let pendingLocalDraft = null;
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -115,6 +124,125 @@ function payloadSignature(payload = collectPayload()) {
   return JSON.stringify(content);
 }
 
+function localDraftStorageKey() {
+  return `${LOCAL_DRAFT_STORAGE_PREFIX}:${post.id}`;
+}
+
+function clearLocalDraft() {
+  window.clearTimeout(localDraftTimer);
+  pendingLocalDraft = null;
+  localDraftNotice?.setAttribute('hidden', '');
+  try {
+    window.localStorage.removeItem(localDraftStorageKey());
+  } catch {
+    // Local recovery is optional when browser storage is unavailable.
+  }
+}
+
+function localDraftPayload() {
+  const payload = collectPayload();
+  if (payload.visibility === 'locked') return null;
+  const { lockedNoteKey: _lockedNoteKey, versionSource: _versionSource, ...content } = payload;
+  return content;
+}
+
+function persistLocalDraft() {
+  window.clearTimeout(localDraftTimer);
+  if (!isDirty) {
+    clearLocalDraft();
+    return;
+  }
+  const payload = localDraftPayload();
+  if (!payload) {
+    clearLocalDraft();
+    return;
+  }
+  try {
+    window.localStorage.setItem(localDraftStorageKey(), JSON.stringify({
+      postId: Number(post.id),
+      updatedAt: Date.now(),
+      baseSignature: lastSavedSignature,
+      payload,
+    }));
+  } catch {
+    // Server saves remain available when browser storage is full or disabled.
+  }
+}
+
+function scheduleLocalDraft() {
+  window.clearTimeout(localDraftTimer);
+  if (!isDirty) {
+    clearLocalDraft();
+    return;
+  }
+  localDraftTimer = window.setTimeout(persistLocalDraft, LOCAL_DRAFT_DELAY_MS);
+}
+
+function readLocalDraft() {
+  try {
+    const raw = window.localStorage.getItem(localDraftStorageKey());
+    if (!raw) return null;
+    const draft = JSON.parse(raw);
+    const expired = !Number.isFinite(draft?.updatedAt) || Date.now() - draft.updatedAt > LOCAL_DRAFT_TTL_MS;
+    if (Number(draft?.postId) !== Number(post.id) || expired || draft?.payload?.visibility === 'locked') {
+      clearLocalDraft();
+      return null;
+    }
+    if (payloadSignature({ ...draft.payload, lockedNoteKey: '' }) === lastSavedSignature) {
+      clearLocalDraft();
+      return null;
+    }
+    return draft;
+  } catch {
+    clearLocalDraft();
+    return null;
+  }
+}
+
+function setNamedField(name, value) {
+  const field = form?.elements?.namedItem(name);
+  if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement || field instanceof HTMLSelectElement) {
+    field.value = String(value ?? '');
+  }
+}
+
+function applyLocalDraft(draft) {
+  const payload = draft?.payload;
+  if (!payload || payload.visibility === 'locked') return;
+  ['title', 'slug', 'kind', 'description', 'date'].forEach((name) => setNamedField(name, payload[name]));
+  form?.querySelectorAll('[name="published"], [name="featured"]').forEach((field) => {
+    if (field instanceof HTMLInputElement) field.checked = Boolean(payload[field.name]);
+  });
+  form?.querySelectorAll('[name="visibility"]').forEach((field) => {
+    if (field instanceof HTMLInputElement) field.checked = field.value === payload.visibility;
+  });
+  form?.querySelectorAll('[name="topicSlugs"]').forEach((field) => {
+    if (field instanceof HTMLInputElement) field.checked = (payload.topicSlugs || []).includes(field.value);
+  });
+  selectedTags = new Set(normalizeTags(payload.tags || []));
+  renderTags();
+  if (input) {
+    input.value = String(payload.body || '');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  autoSavePaused = true;
+  window.clearTimeout(autoSaveTimer);
+  pendingLocalDraft = null;
+  localDraftNotice?.setAttribute('hidden', '');
+  setSaveState('dirty', '已恢复本地草稿');
+}
+
+function offerLocalDraftRecovery() {
+  pendingLocalDraft = readLocalDraft();
+  if (!pendingLocalDraft || !localDraftNotice) return;
+  if (localDraftTime) {
+    localDraftTime.textContent = new Intl.DateTimeFormat('zh-CN', {
+      month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
+    }).format(new Date(pendingLocalDraft.updatedAt));
+  }
+  localDraftNotice.hidden = false;
+}
+
 function setSaveState(state, message) {
   const labels = {
     saved: '已保存',
@@ -138,6 +266,7 @@ function markDirty() {
   autoSavePaused = false;
   isDirty = payloadSignature() !== lastSavedSignature;
   setSaveState(isDirty ? 'dirty' : 'saved');
+  scheduleLocalDraft();
   scheduleAutoSave();
 }
 
@@ -1053,11 +1182,14 @@ async function savePost({ automatic = false } = {}) {
     if (currentSignature === savingSignature) lastSavedSignature = payloadSignature();
     isDirty = payloadSignature() !== lastSavedSignature;
     setSaveState(isDirty ? 'dirty' : 'saved');
+    if (isDirty) scheduleLocalDraft();
+    else clearLocalDraft();
     succeeded = !isDirty;
   } catch (error) {
     isDirty = true;
     autoSavePaused = true;
     setSaveState('error', error instanceof Error ? error.message : '保存失败');
+    persistLocalDraft();
   } finally {
     isSaving = false;
     if (saveButton) saveButton.disabled = false;
@@ -1108,6 +1240,7 @@ async function deletePost() {
     });
     if (!res.ok) throw new Error(`删除失败（${res.status}）`);
     isDirty = false;
+    clearLocalDraft();
     window.location.href = '/admin/posts';
   } catch (error) {
     autoSavePaused = false;
@@ -1160,15 +1293,38 @@ function renderVersionDiff(result) {
     historyDiff.innerHTML = '<p class="post-history-empty">先解锁笔记，再查看正文差异。</p>';
     return;
   }
-  if (!result.changes?.length) {
-    historyDiff.innerHTML = '<p class="post-history-empty">正文没有变化。</p>';
-    return;
-  }
-  historyDiff.innerHTML = result.changes.map((change) => {
+  const metadataFields = [
+    ['标题', 'title'], ['摘要', 'description'], ['日期', 'date'], ['类型', 'kindLabel'],
+    ['发布', 'published'], ['重点', 'featured'], ['权限', 'visibility'],
+  ];
+  const formatMetadataValue = (key, value) => {
+    if (key === 'published' || key === 'featured') return Number(value) ? '是' : '否';
+    if (key === 'visibility') return value === 'locked' ? '加密' : '公开';
+    return String(value ?? '') || '空';
+  };
+  const metadataChanges = metadataFields.flatMap(([label, key]) => {
+    const before = formatMetadataValue(key, result.version?.[key]);
+    const after = formatMetadataValue(key, result.current?.[key]);
+    return before === after ? [] : [{ label, before, after }];
+  });
+  [['标签', 'tags'], ['主线', 'topicSlugs']].forEach(([label, key]) => {
+    const before = [...(result.version?.[key] || [])].sort().join('、') || '无';
+    const after = [...(result.current?.[key] || [])].sort().join('、') || '无';
+    if (before !== after) metadataChanges.push({ label, before, after });
+  });
+  const metadataHtml = metadataChanges.length
+    ? `<div class="post-history-metadata">${metadataChanges.map((item) => `<div><strong>${escapeHtml(item.label)}</strong><del>${escapeHtml(item.before)}</del><ins>${escapeHtml(item.after)}</ins></div>`).join('')}</div>`
+    : '';
+  const meaningfulChanges = (result.changes || []).filter((change) => change.added || change.removed);
+  const bodyHtml = meaningfulChanges.length ? (result.changes || []).map((change) => {
     const kind = change.added ? 'added' : change.removed ? 'removed' : 'same';
     const marker = change.added ? '+' : change.removed ? '−' : '';
+    if (kind === 'same') {
+      return `<div class="post-history-change is-omitted"><span>···</span><pre>未修改 ${Number(change.count || 0)} 行</pre></div>`;
+    }
     return `<div class="post-history-change is-${kind}"><span>${marker}</span><pre>${escapeHtml(change.value)}</pre></div>`;
-  }).join('');
+  }).join('') : '<p class="post-history-empty">正文没有变化</p>';
+  historyDiff.innerHTML = `${metadataHtml}${bodyHtml}`;
 }
 
 async function selectVersion(versionId, button = null) {
@@ -1383,6 +1539,8 @@ historyList?.addEventListener('click', (event) => {
   void selectVersion(button.dataset.versionId, button);
 });
 historyRestoreButton?.addEventListener('click', () => void restoreSelectedVersion());
+localDraftRestoreButton?.addEventListener('click', () => applyLocalDraft(pendingLocalDraft));
+localDraftDiscardButton?.addEventListener('click', clearLocalDraft);
 preview?.addEventListener('click', (event) => {
   const target = event.target instanceof Element ? event.target : null;
   const button = target?.closest('.post-preview-table-edit');
@@ -1453,9 +1611,13 @@ document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && tableEditorState) closeTableEditor();
 });
 window.addEventListener('beforeunload', (event) => {
+  if (isDirty) persistLocalDraft();
   if (!isDirty && !isSaving && !isDeleting && Number(window.__postImageUploads || 0) === 0) return;
   event.preventDefault();
   event.returnValue = '';
+});
+window.addEventListener('pagehide', () => {
+  if (isDirty) persistLocalDraft();
 });
 window.addEventListener('resize', () => {
   if (!tableEditorPosition) return;
@@ -1466,3 +1628,4 @@ window.addEventListener('resize', () => {
 renderTags();
 lastSavedSignature = payloadSignature();
 setSaveState('saved');
+offerLocalDraftRecovery();

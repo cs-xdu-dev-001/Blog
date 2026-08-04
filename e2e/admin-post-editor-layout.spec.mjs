@@ -137,3 +137,27 @@ test('编辑器快捷键和版本历史沿用现有操作入口', async ({ page 
   await popup.waitForLoadState('domcontentloaded');
   await popup.close();
 });
+
+test('公开笔记刷新后可以恢复本地草稿并在保存后清理', async ({ page }) => {
+  await openFreshEditor(page);
+  await page.locator('input[name="title"]').fill('尚未保存的本地草稿');
+  await page.locator('[data-markdown-input]').fill('刷新后仍然可以恢复');
+  await page.waitForTimeout(450);
+
+  const storedDraft = await page.evaluate(() => Object.keys(localStorage)
+    .find((key) => key.startsWith('dev-notes-post-draft-v1:')));
+  expect(storedDraft).toBeTruthy();
+
+  await page.reload();
+  await expect(page.locator('[data-local-draft-notice]')).toBeVisible();
+  await page.locator('[data-local-draft-restore]').click();
+  await expect(page.locator('input[name="title"]')).toHaveValue('尚未保存的本地草稿');
+  await expect(page.locator('[data-markdown-input]')).toHaveValue('刷新后仍然可以恢复');
+  await expect(page.locator('[data-editor-status]')).toContainText('已恢复本地草稿');
+
+  await page.locator('[data-save-post]').click();
+  await expect(page.locator('[data-editor-status]')).toHaveAttribute('data-state', 'saved');
+  const draftAfterSave = await page.evaluate(() => Object.keys(localStorage)
+    .some((key) => key.startsWith('dev-notes-post-draft-v1:')));
+  expect(draftAfterSave).toBe(false);
+});

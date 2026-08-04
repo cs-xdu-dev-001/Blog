@@ -37,6 +37,26 @@ test('post editor autosaves real fields, supports Ctrl+S, and warns before leavi
   assert.match(source, /isDirty && !autoSavePaused/);
 });
 
+test('post editor keeps a short-lived local recovery draft without persisting locked note content', () => {
+  assert.match(source, /LOCAL_DRAFT_STORAGE_PREFIX\s*=\s*'dev-notes-post-draft-v1'/);
+  assert.match(source, /LOCAL_DRAFT_TTL_MS\s*=\s*7 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(source, /payload\.visibility === 'locked'\) return null/);
+  assert.match(source, /lockedNoteKey: _lockedNoteKey/);
+  assert.match(source, /function offerLocalDraftRecovery\(\)/);
+  assert.match(source, /function applyLocalDraft\(draft\)/);
+  assert.match(source, /window\.addEventListener\('pagehide'/);
+  assert.match(source, /clearLocalDraft\(\)/);
+});
+
+test('version history shows metadata changes and collapses unchanged body blocks', () => {
+  assert.match(source, /post-history-metadata/);
+  assert.match(source, /\['标题', 'title'\]/);
+  assert.match(source, /\['标签', 'tags'\]/);
+  assert.match(source, /未修改 \$\{Number\(change\.count \|\| 0\)\} 行/);
+  assert.match(styles, /\.post-history-metadata/);
+  assert.match(styles, /\.post-history-change\.is-omitted/);
+});
+
 test('Milkdown and the fallback editor share the same Chinese save state vocabulary', () => {
   const milkdown = fs.readFileSync(new URL('../src/scripts/admin-post-milkdown.js', import.meta.url), 'utf8');
   assert.match(milkdown, /UNSAVED:\s*\['有未保存修改', 'dirty'\]/);

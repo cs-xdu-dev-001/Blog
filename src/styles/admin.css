@@ -2132,6 +2132,45 @@ html[data-admin-theme="light"] .post-reference-picker-item em {
   cursor: pointer;
 }
 
+.post-local-draft {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  gap: 8px;
+  min-height: 34px;
+  margin: 6px 16px 0;
+  padding: 4px 5px 4px 12px;
+  border: 1px solid color-mix(in srgb, var(--cms-warning) 42%, var(--cms-line));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--cms-warning) 7%, var(--cms-surface));
+  color: var(--cms-text);
+}
+
+.post-local-draft[hidden] {
+  display: none;
+}
+
+.post-local-draft span {
+  font-weight: 750;
+}
+
+.post-local-draft time {
+  margin-right: auto;
+  color: var(--cms-text-soft);
+}
+
+.post-local-draft button {
+  min-height: 26px;
+  border: 1px solid var(--cms-line);
+  border-radius: 6px;
+  background: var(--cms-surface-raised);
+  color: var(--cms-text);
+  padding: 0 9px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .post-history-dialog {
   width: min(980px, calc(100vw - 48px));
   height: min(680px, calc(100vh - 72px));
@@ -2267,6 +2306,43 @@ html[data-admin-theme="light"] .post-reference-picker-item em {
   line-height: 1.65;
 }
 
+.post-history-metadata {
+  display: grid;
+  gap: 1px;
+  margin: 0 14px 14px;
+  overflow: hidden;
+  border: 1px solid var(--cms-line);
+  border-radius: 7px;
+  background: var(--cms-line);
+  font-family: var(--cms-font, inherit);
+}
+
+.post-history-metadata > div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  background: var(--cms-surface);
+  padding: 8px 10px;
+}
+
+.post-history-metadata strong {
+  color: var(--cms-text-soft);
+}
+
+.post-history-metadata del,
+.post-history-metadata ins {
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.post-history-metadata del {
+  color: var(--cms-danger);
+}
+
+.post-history-metadata ins {
+  color: var(--cms-success);
+}
+
 .post-history-change {
   display: grid;
   grid-template-columns: 30px minmax(0, 1fr);
@@ -2291,6 +2367,11 @@ html[data-admin-theme="light"] .post-reference-picker-item em {
 
 .post-history-change.is-removed {
   background: color-mix(in srgb, var(--cms-danger) 9%, transparent);
+}
+
+.post-history-change.is-omitted {
+  color: var(--cms-muted);
+  font-family: var(--cms-font, inherit);
 }
 
 .post-history-change.is-added > span {
