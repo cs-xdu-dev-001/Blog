@@ -4,6 +4,7 @@ const tagOptionsEl = document.getElementById('post-tag-options-data');
 const initialTagOptions = tagOptionsEl ? JSON.parse(tagOptionsEl.textContent || '[]') : [];
 const shell = document.querySelector('[data-editor-shell]');
 const form = document.querySelector('[data-post-form]');
+const metaToggle = document.querySelector('[data-editor-meta-toggle]');
 const input = document.querySelector('[data-markdown-input]');
 const preview = document.querySelector('[data-markdown-preview]');
 const writePane = document.querySelector('.post-editor-write');
@@ -25,6 +26,7 @@ const lockedNoteStatus = document.querySelector('[data-locked-note-status]');
 const PREVIEW_DELAY_MS = 400;
 const PREVIEW_RETRY_DELAY_MS = 350;
 const AUTO_SAVE_DELAY_MS = 2500;
+const META_COLLAPSED_STORAGE_KEY = 'dev-notes-post-editor-meta-collapsed';
 
 let previewTimer = null;
 let isSaving = false;
@@ -38,6 +40,7 @@ let previewAbortController = null;
 let previewPendingMarkdown = '';
 let lastPreviewMarkdown = '';
 let editorMode = 'edit';
+let metaCollapsed = false;
 let hasSuccessfulPreview = false;
 let allTags = normalizeTags([...initialTagOptions, ...(post.tags || [])]);
 let selectedTags = new Set(normalizeTags(post.tags || []));
@@ -73,6 +76,30 @@ function setStatus(text, state = '') {
   statusEl.textContent = text;
   if (state) statusEl.dataset.state = state;
   else statusEl.removeAttribute('data-state');
+}
+
+function setMetaCollapsed(collapsed, { persist = true } = {}) {
+  metaCollapsed = Boolean(collapsed);
+  shell?.classList.toggle('is-meta-collapsed', metaCollapsed);
+  if (metaToggle) {
+    metaToggle.classList.toggle('is-collapsed', metaCollapsed);
+    metaToggle.setAttribute('aria-expanded', String(!metaCollapsed));
+    const label = metaCollapsed ? '显示笔记属性' : '隐藏笔记属性';
+    metaToggle.setAttribute('aria-label', label);
+    metaToggle.title = label;
+  }
+  if (!persist) return;
+  try {
+    window.localStorage.setItem(META_COLLAPSED_STORAGE_KEY, String(metaCollapsed));
+  } catch {
+    // Storage may be unavailable in private browsing; the current view still works.
+  }
+}
+
+try {
+  setMetaCollapsed(window.localStorage.getItem(META_COLLAPSED_STORAGE_KEY) === 'true', { persist: false });
+} catch {
+  setMetaCollapsed(false, { persist: false });
 }
 
 function payloadSignature(payload = collectPayload()) {
@@ -1119,6 +1146,10 @@ document.querySelectorAll('[data-editor-mode]').forEach((button) => {
     if (previewIsVisible()) updatePreview();
     else previewAbortController?.abort();
   });
+});
+
+metaToggle?.addEventListener('click', () => {
+  setMetaCollapsed(!metaCollapsed);
 });
 
 input?.addEventListener('input', schedulePreview);

@@ -85,7 +85,7 @@ const tagOptionsJson = JSON.stringify(tagOptions).replaceAll('<', '\\u003c');
     </header>
 
     <section class="post-editor-shell is-edit" data-editor-shell>
-      <form class="post-editor-meta" data-post-form>
+      <form id="post-editor-meta" class="post-editor-meta" data-post-form>
         <div class="post-editor-meta-grid">
           <section class="post-editor-content-meta">
             <input class="post-title-input" name="title" value={post.title} required aria-label="标题" />
@@ -178,10 +178,27 @@ const tagOptionsJson = JSON.stringify(tagOptions).replaceAll('<', '\\u003c');
         </div>
       </form>
 
-      <div class="post-editor-modebar" role="group" aria-label="编辑模式">
-        <button type="button" class="active" data-editor-mode="edit" aria-pressed="true" aria-controls="post-editor-write">编辑</button>
-        <button type="button" data-editor-mode="preview" aria-pressed="false" aria-controls="post-editor-preview">预览</button>
-        <button type="button" data-editor-mode="split" aria-pressed="false" aria-controls="post-editor-write post-editor-preview">分屏</button>
+      <div class="post-editor-modebar" role="group" aria-label="编辑视图">
+        <div class="post-editor-mode-options" role="group" aria-label="编辑模式">
+          <button type="button" class="active" data-editor-mode="edit" aria-pressed="true" aria-controls="post-editor-write">编辑</button>
+          <button type="button" data-editor-mode="preview" aria-pressed="false" aria-controls="post-editor-preview">预览</button>
+          <button type="button" data-editor-mode="split" aria-pressed="false" aria-controls="post-editor-write post-editor-preview">分屏</button>
+        </div>
+        <button
+          type="button"
+          class="post-editor-meta-toggle"
+          data-editor-meta-toggle
+          aria-expanded="true"
+          aria-controls="post-editor-meta"
+          aria-label="隐藏笔记属性"
+          title="隐藏笔记属性"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 5h16v14H4z"></path>
+            <path d="M4 10h16"></path>
+            <path d="m9 15 3-3 3 3"></path>
+          </svg>
+        </button>
       </div>
 
       <section class="post-editor-main">

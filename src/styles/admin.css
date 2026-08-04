@@ -368,8 +368,10 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
 }
 
 .post-editor-actions .post-editor-theme-toggle {
+  display: inline-grid;
   width: 34px;
   min-width: 34px;
+  place-items: center;
   padding: 0;
 }
 
@@ -382,12 +384,15 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
 }
 
 .post-editor-agent-toggle svg {
+  display: block;
   width: 17px;
   height: 17px;
   fill: currentColor;
 }
 
 .post-editor-shell {
+  container-name: post-editor-shell;
+  container-type: inline-size;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   height: calc(100vh - 56px);
@@ -1321,14 +1326,20 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
 }
 
 .post-editor-modebar {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: minmax(34px, 1fr) auto minmax(34px, 1fr);
+  align-items: center;
   width: 100%;
   margin: 12px auto 14px;
 }
 
-.post-editor-modebar button {
+.post-editor-mode-options {
+  display: flex;
+  grid-column: 2;
+  gap: 8px;
+}
+
+.post-editor-mode-options button {
   min-width: 76px;
   min-height: 32px;
   border: 1px solid var(--cms-line);
@@ -1339,6 +1350,220 @@ a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-o
   font-size: 13px;
   font-weight: 850;
   cursor: pointer;
+}
+
+.post-editor-meta-toggle {
+  display: inline-grid;
+  grid-column: 3;
+  justify-self: end;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--cms-line);
+  border-radius: 10px;
+  background: var(--cms-surface-raised);
+  color: var(--cms-muted);
+  place-items: center;
+  cursor: pointer;
+}
+
+.post-editor-meta-toggle:hover,
+.post-editor-meta-toggle:focus-visible {
+  border-color: var(--cms-line-strong);
+  background: var(--cms-active-bg);
+  color: var(--cms-text);
+}
+
+.post-editor-meta-toggle svg {
+  display: block;
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+  transition: transform 160ms ease;
+}
+
+.post-editor-meta-toggle.is-collapsed svg {
+  transform: rotate(180deg);
+}
+
+.post-editor-agent-toggle.active {
+  border-color: var(--cms-accent);
+  background: var(--cms-active-bg);
+  color: var(--cms-accent);
+}
+
+.post-tag-summary:hover,
+.post-tag-summary.active {
+  border-color: rgba(34, 211, 238, 0.42);
+  background: var(--cms-active-bg);
+  color: var(--cms-text);
+}
+
+.post-tag-option:hover,
+.post-tag-option:focus-within,
+.post-tag-option.active {
+  background: var(--cms-active-bg);
+}
+
+.post-tag-option.active [data-tag-toggle] {
+  color: var(--cms-accent);
+}
+
+.post-editor-mode-options button.active,
+.post-editor-mode-options button:hover {
+  border-color: rgba(34, 211, 238, 0.42);
+  background: var(--cms-active-bg);
+  color: var(--cms-text);
+}
+
+.post-editor-milkdown .ProseMirror {
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  padding: 30px 46px;
+  color: var(--cms-text-strong);
+  font-size: 16px;
+  line-height: 1.78;
+}
+
+.post-editor-milkdown .ProseMirror:focus {
+  outline: none;
+}
+
+.post-editor-milkdown .ProseMirror h1,
+.post-editor-milkdown .ProseMirror h2,
+.post-editor-milkdown .ProseMirror h3,
+.post-editor-milkdown .ProseMirror h4,
+.post-editor-milkdown .ProseMirror h5,
+.post-editor-milkdown .ProseMirror h6 {
+  margin: 20px 0 8px;
+  color: var(--cms-text-strong);
+  font-family: inherit;
+  font-weight: 820;
+  letter-spacing: 0;
+}
+
+.post-editor-milkdown .ProseMirror h1 {
+  font-size: 28px;
+  line-height: 1.22;
+}
+
+.post-editor-milkdown .ProseMirror h2 {
+  font-size: 23px;
+  line-height: 1.28;
+}
+
+.post-editor-milkdown .ProseMirror h3 {
+  font-size: 19px;
+  line-height: 1.36;
+}
+
+.post-editor-milkdown .ProseMirror h4,
+.post-editor-milkdown .ProseMirror h5,
+.post-editor-milkdown .ProseMirror h6 {
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.post-editor-milkdown .ProseMirror p {
+  padding: 4px 0;
+  color: var(--cms-text-soft);
+  font-size: 16px;
+  line-height: 1.78;
+}
+
+.post-editor-milkdown .ProseMirror ul,
+.post-editor-milkdown .ProseMirror ol {
+  margin: 8px 0;
+  padding-left: 1.35em;
+}
+
+.post-editor-milkdown .ProseMirror li {
+  margin: 5px 0;
+  padding-left: 0.12em;
+}
+
+.post-editor-milkdown .ProseMirror blockquote {
+  margin: 14px 0;
+  padding: 4px 0 4px 18px;
+  border-left: 3px solid var(--cms-line-strong);
+  color: var(--cms-muted);
+}
+
+.post-editor-milkdown .ProseMirror blockquote::before {
+  display: none;
+}
+
+.post-editor-milkdown .ProseMirror a {
+  color: var(--cms-accent);
+  text-underline-offset: 3px;
+}
+
+.post-editor-milkdown .ProseMirror code {
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: var(--cms-surface-raised);
+  color: var(--crepe-color-inline-code);
+  padding: 1px 5px;
+}
+
+.post-editor-milkdown .ProseMirror pre,
+.post-editor-milkdown .milkdown-code-block {
+  border: 1px solid var(--cms-line);
+  border-radius: 12px;
+  background: var(--cms-surface-raised);
+}
+
+.post-editor-milkdown .ProseMirror table,
+.post-editor-milkdown .milkdown-table-block table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.post-editor-milkdown .ProseMirror th,
+.post-editor-milkdown .ProseMirror td,
+.post-editor-milkdown .milkdown-table-block th,
+.post-editor-milkdown .milkdown-table-block td {
+  border: 1px solid var(--cms-line);
+  padding: 9px 11px;
+}
+
+.post-editor-milkdown .ProseMirror th,
+.post-editor-milkdown .milkdown-table-block th {
+  background: var(--cms-surface-raised);
+  color: var(--cms-text);
+  font-weight: 820;
+}
+
+.post-editor-milkdown .milkdown-slash-menu,
+.post-editor-milkdown .milkdown-toolbar,
+.post-editor-milkdown .milkdown-ai-instruction > .ai-instruction,
+.post-editor-milkdown .milkdown-link-preview > .link-preview,
+.post-editor-milkdown .milkdown-link-edit > .link-edit {
+  border: 1px solid var(--cms-line);
+  border-radius: 12px;
+  background: var(--cms-surface);
+  color: var(--cms-text);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.22);
+}
+
+.post-editor-milkdown .milkdown-slash-menu .menu-groups .menu-group h6 {
+  color: var(--cms-muted);
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
+.post-editor-milkdown .milkdown-image-block img.is-image-error {
+  opacity: 0.42;
+}
+
+@keyframes post-agent-pulse {
+  50% {
+    transform: scale(1.55);
+    background: var(--cms-accent);
+  }
 }
 
 .post-editor-main {
@@ -1884,6 +2109,14 @@ html[data-admin-theme="light"] .post-reference-picker-item em {
   display: none;
 }
 
+.post-editor-shell.is-meta-collapsed {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.post-editor-shell.is-meta-collapsed .post-editor-meta {
+  display: none;
+}
+
 .post-editor-shell.is-split .post-editor-main {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
@@ -1919,7 +2152,20 @@ html[data-admin-theme="light"] .post-reference-picker-item em {
   padding: 42px 54px;
 }
 
-@media (max-width: 900px) {
+@container post-editor-shell (max-width: 860px) {
+  .post-editor-shell.is-split .post-editor-main {
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .post-editor-shell.is-split .post-editor-textarea,
+  .post-editor-shell.is-split .post-editor-preview {
+    padding: 24px 28px;
+  }
+}
+
+@media (max-width: 1200px) {
   .post-editor-page.is-agent-open .post-editor-shell,
   .post-editor-page.is-agent-open .post-editor-topbar {
     margin-right: 0;
@@ -1932,6 +2178,37 @@ html[data-admin-theme="light"] .post-reference-picker-item em {
 
   .post-editor-agent-resize {
     display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .post-editor-topbar {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
+    padding: 0 12px;
+  }
+
+  .post-editor-status {
+    display: none;
+  }
+
+  .post-editor-actions {
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .post-editor-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .post-editor-shell {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .post-editor-mode-options button {
+    min-width: 64px;
   }
 }
 
@@ -2633,6 +2910,7 @@ html[data-admin-theme="light"] .post-reference-picker-item em {
 }
 
 .cms-theme-icon {
+  display: block;
   width: 18px;
   height: 18px;
   fill: none;

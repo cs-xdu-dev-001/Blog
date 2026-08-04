@@ -25,6 +25,7 @@ test('admin post editor previews through the frontend markdown renderer', () => 
   const api = fs.existsSync(apiUrl) ? fs.readFileSync(apiUrl, 'utf8') : '';
   const imageApi = fs.existsSync(imageApiUrl) ? fs.readFileSync(imageApiUrl, 'utf8') : '';
   const styles = adminStyles;
+  const globalStyles = read('src/styles/global.css');
 
   assert.match(page, /post-editor-preview article-prose/);
   assert.match(page, /post-editor-meta-grid/);
@@ -138,6 +139,8 @@ test('admin post editor previews through the frontend markdown renderer', () => 
   assert.match(milkdownClient, /ctx\.get\(editorViewCtx\)\.focus\(\)/);
   assert.match(page, /class="post-editor-modebar" role="group"/);
   assert.match(page, /data-editor-mode="edit" aria-pressed="true"/);
+  assert.match(page, /data-editor-meta-toggle/);
+  assert.match(page, /aria-controls="post-editor-meta"/);
   assert.match(client, /setAttribute\('aria-pressed'/);
   assert.match(client, /data-preview-retry/);
   assert.match(client, /正在生成预览/);
@@ -171,7 +174,13 @@ test('admin post editor previews through the frontend markdown renderer', () => 
   assert.match(styles, /\.post-table-editor-grid\s+table\s*\{[^}]*display:\s*table/s);
   assert.match(styles, /\.post-editor-wysiwyg/);
   assert.match(styles, /\.post-editor-milkdown/);
+  assert.match(styles, /\.post-editor-milkdown \.ProseMirror/);
+  assert.match(styles, /\.post-editor-mode-options button\.active/);
+  assert.doesNotMatch(globalStyles, /\.post-editor-milkdown \.ProseMirror/);
+  assert.doesNotMatch(globalStyles, /\.post-editor-modebar button\.active/);
   assert.match(styles, /\.post-editor-meta-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+360px/s);
+  assert.match(styles, /\.post-editor-shell\.is-meta-collapsed \.post-editor-meta\s*\{[^}]*display:\s*none/s);
+  assert.match(client, /META_COLLAPSED_STORAGE_KEY/);
   assert.match(styles, /\.post-editor-properties/);
   assert.match(styles, /\.post-meta-property-list/);
   assert.match(styles, /\.post-description-field/);
