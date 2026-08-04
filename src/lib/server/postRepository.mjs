@@ -14,6 +14,7 @@ import {
   normalizeLockedNoteKey,
   resolveLockedNoteKey,
 } from './lockedNoteCrypto.mjs';
+import { getUploadDir } from './runtimePaths.mjs';
 
 const allowedFilters = new Set(['all', 'published', 'draft', 'featured']);
 
@@ -238,7 +239,7 @@ function parseFrontmatter(raw) {
 
 export function createPostRepository({ dbPath, uploadDir } = {}) {
   const db = openRepositoryDatabase(dbPath);
-  const postUploadDir = path.resolve(uploadDir || path.join(process.cwd(), 'public', 'uploads', 'posts'));
+  const postUploadDir = path.resolve(uploadDir || getUploadDir('posts'));
   const postPublicBase = '/uploads/posts';
   let initialized = false;
 

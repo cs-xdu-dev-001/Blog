@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { test } from 'node:test';
+import { allStyles as styles } from './helpers/styleSources.mjs';
 
 const writingPage = fs.readFileSync(new URL('../src/pages/writing.astro', import.meta.url), 'utf8');
 const editorPage = fs.readFileSync(new URL('../src/pages/admin/posts/[id]/edit.astro', import.meta.url), 'utf8');
 const adminPage = fs.readFileSync(new URL('../src/pages/admin/posts.astro', import.meta.url), 'utf8');
 const adminClient = fs.readFileSync(new URL('../public/admin-posts.js', import.meta.url), 'utf8');
-const styles = fs.readFileSync(new URL('../src/styles/global.css', import.meta.url), 'utf8');
 
 test('writing index filters technical notes and reflections in place', () => {
   assert.match(writingPage, /data-writing-filter="all"/);

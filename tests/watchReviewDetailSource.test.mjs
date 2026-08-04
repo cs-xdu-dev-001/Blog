@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { test } from 'node:test';
+import { publicStyles } from './helpers/styleSources.mjs';
 
 test('watch detail page renders a markdown review from an existing archive item', () => {
   const pageUrl = new URL('../src/pages/watch/[id].astro', import.meta.url);
   assert.equal(fs.existsSync(pageUrl), true);
 
   const page = fs.readFileSync(pageUrl, 'utf8');
-  const styles = fs.readFileSync(new URL('../src/styles/global.css', import.meta.url), 'utf8');
+  const styles = publicStyles;
 
   assert.match(page, /watchRepository\.get\(id\)/);
   assert.match(page, /status:\s*404/);

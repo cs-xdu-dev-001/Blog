@@ -18,6 +18,9 @@
     "images:cleanup-posts": "node scripts/cleanup-post-images.mjs",
     "posts:import": "node scripts/import-posts.mjs",
     "test:posts": "node --test tests/postRepository.test.mjs",
+    "test:unit": "node --test tests/*.test.mjs",
+    "test:e2e": "playwright test",
+    "test:performance": "node scripts/check-performance-budget.mjs",
     "astro": "astro"
   },
   "keywords": [],
@@ -47,6 +50,7 @@
     "unist-util-visit": "^5.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "autoprefixer": "^10.5.4",
     "postcss": "^8.5.25",
     "puppeteer-core": "^25.3.0"

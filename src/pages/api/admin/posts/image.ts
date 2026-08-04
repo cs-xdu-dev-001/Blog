@@ -8,6 +8,7 @@ import {
   storedImagePaths,
 } from '../../../../lib/server/imageVariants.mjs';
 import { postRepository } from '../../../../lib/server/postRepository.mjs';
+import { getUploadDir } from '../../../../lib/server/runtimePaths.mjs';
 
 const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
 const extensions = new Map([
@@ -72,7 +73,7 @@ export const POST: APIRoute = async (context) => {
   const extension = path.extname(originalName) || extensions.get(imageType) || '';
   const normalizedName = originalName || `post-image${extension}`;
   const stem = safeImageBaseName(path.basename(normalizedName, path.extname(normalizedName)), 'post-image');
-  const uploadDir = path.resolve(process.cwd(), 'public', 'uploads', 'posts');
+  const uploadDir = getUploadDir('posts');
   const publicBase = '/uploads/posts';
   const image = await saveImageVariants({
     baseName: `${Date.now()}-${stem}`,

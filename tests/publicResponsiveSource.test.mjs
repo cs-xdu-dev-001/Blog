@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { test } from 'node:test';
+import { homeStyles as styles } from './helpers/styleSources.mjs';
 
-const styles = fs.readFileSync(new URL('../src/styles/global.css', import.meta.url), 'utf8');
 const header = fs.readFileSync(new URL('../src/components/Header.astro', import.meta.url), 'utf8');
 const writingPage = fs.readFileSync(new URL('../src/pages/writing.astro', import.meta.url), 'utf8');
 const articleLayout = fs.readFileSync(new URL('../src/layouts/ArticleLayout.astro', import.meta.url), 'utf8');

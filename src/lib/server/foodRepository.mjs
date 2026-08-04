@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import path from 'node:path';
+import { getUploadDir } from './runtimePaths.mjs';
 import { initializeSchema, openRepositoryDatabase } from './db.mjs';
 import { normalizeAdminPagination, publicPagination } from './adminPagination.mjs';
 import {
@@ -19,7 +19,7 @@ export function safeFoodImageBaseName(title) {
 
 export function createFoodRepository({ dbPath, uploadDir } = {}) {
   const db = openRepositoryDatabase(dbPath);
-  const finalUploadDir = uploadDir || path.resolve(process.cwd(), 'public', 'uploads', 'food');
+  const finalUploadDir = uploadDir || getUploadDir('food');
   let initialized = false;
 
   function initialize() {

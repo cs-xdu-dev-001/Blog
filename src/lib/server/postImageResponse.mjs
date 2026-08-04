@@ -2,8 +2,8 @@ import { createReadStream } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { Readable } from 'node:stream';
+import { getUploadsRoot } from './runtimePaths.mjs';
 
-const defaultUploadsRoot = path.resolve(process.cwd(), 'public', 'uploads');
 const allowedUploadKinds = new Set(['posts', 'reading', 'watch', 'food']);
 const contentTypes = new Map([
   ['.avif', 'image/avif'],
@@ -25,7 +25,7 @@ function decodeRelativePath(value) {
   }
 }
 
-export async function servePostImage(relativePath, { root = path.join(defaultUploadsRoot, 'posts') } = {}) {
+export async function servePostImage(relativePath, { root = path.join(getUploadsRoot(), 'posts') } = {}) {
   return serveImageFile(relativePath, root);
 }
 
@@ -67,7 +67,7 @@ async function serveImageFile(relativePath, root) {
   }
 }
 
-export async function serveUploadedImage(kind, relativePath, { root = defaultUploadsRoot } = {}) {
+export async function serveUploadedImage(kind, relativePath, { root = getUploadsRoot() } = {}) {
   const normalizedKind = String(kind || '').trim().toLowerCase();
   if (!allowedUploadKinds.has(normalizedKind)) return notFound();
   return serveImageFile(relativePath, path.join(root, normalizedKind));

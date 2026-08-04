@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { test } from 'node:test';
+import { adminStyles as styles } from './helpers/styleSources.mjs';
 
 const page = fs.readFileSync(new URL('../src/pages/admin/reading.astro', import.meta.url), 'utf8');
 const newPage = fs.readFileSync(new URL('../src/pages/admin/reading/new.astro', import.meta.url), 'utf8');
@@ -8,7 +9,6 @@ const editPage = fs.readFileSync(new URL('../src/pages/admin/reading/[id]/edit.a
 const client = fs.readFileSync(new URL('../public/admin-reading.js', import.meta.url), 'utf8');
 const editorClient = fs.readFileSync(new URL('../public/admin-reading-editor.js', import.meta.url), 'utf8');
 const editApi = fs.readFileSync(new URL('../src/pages/api/admin/reading/[id].ts', import.meta.url), 'utf8');
-const styles = fs.readFileSync(new URL('../src/styles/global.css', import.meta.url), 'utf8');
 const repository = fs.readFileSync(new URL('../src/lib/server/readingRepository.mjs', import.meta.url), 'utf8');
 
 test('reading admin uses a compact index and dedicated editors', () => {

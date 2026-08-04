@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 import { editAssistantMarkdown } from '../src/lib/server/assistantService.mjs';
+import { adminStyles } from './helpers/styleSources.mjs';
 
 function read(relativePath) {
   const url = new URL(`../${relativePath}`, import.meta.url);
@@ -105,7 +106,7 @@ test('admin writing assistant uses streaming for responses-only gateways', async
 test('admin writing assistant keeps the original document unchanged until the result is accepted', () => {
   const endpoint = read('src/pages/api/admin/assistant/write.ts');
   const editor = read('src/scripts/admin-post-milkdown.js');
-  const styles = read('src/styles/global.css');
+  const styles = adminStyles;
 
   assert.match(endpoint, /requireAdmin\(context\)/);
   assert.match(endpoint, /editAssistantMarkdown/);

@@ -3,13 +3,12 @@ import path from 'node:path';
 import { constants } from 'node:fs';
 import { getDefaultDbPath, initializeSchema, openDatabase } from './db.mjs';
 import { cleanupImageStaging } from './imageVariants.mjs';
+import { getUploadsRoot } from './runtimePaths.mjs';
 
 const REQUIRED_SCHEMA_VERSION = 2;
 const uploadKinds = ['posts', 'reading', 'watch', 'food'];
 
-export function getUploadsRoot() {
-  return path.resolve(process.cwd(), 'public', 'uploads');
-}
+export { getUploadsRoot } from './runtimePaths.mjs';
 
 async function ensureUploadDirectories(uploadsRoot) {
   await fs.mkdir(uploadsRoot, { recursive: true });

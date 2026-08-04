@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import path from 'node:path';
+import { getUploadDir } from './runtimePaths.mjs';
 import { initializeSchema, openRepositoryDatabase } from './db.mjs';
 import { normalizeAdminPagination, publicPagination } from './adminPagination.mjs';
 import {
@@ -28,7 +28,7 @@ export function safeImageBaseName(title) {
 
 export function createWatchRepository({ dbPath, uploadDir } = {}) {
   const db = openRepositoryDatabase(dbPath);
-  const finalUploadDir = uploadDir || path.resolve(process.cwd(), 'public', 'uploads', 'watch');
+  const finalUploadDir = uploadDir || getUploadDir('watch');
   let initialized = false;
 
   function initialize() {

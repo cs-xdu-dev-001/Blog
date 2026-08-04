@@ -1,5 +1,8 @@
 ---
-import '../styles/global.css';
+import adminStylesheetUrl from '../styles/admin.css?url';
+import articleStylesheetUrl from '../styles/article.css?url';
+import globalStylesheetUrl from '../styles/global.css?url';
+import homeStylesheetUrl from '../styles/home.css?url';
 import GlobalSearch from '../components/GlobalSearch.astro';
 import Header from '../components/Header.astro';
 import MinimalFooter from '../components/MinimalFooter.astro';
@@ -23,6 +26,10 @@ const {
 } = Astro.props;
 
 const isAdminRoute = Astro.url.pathname.startsWith('/admin');
+const isHomeRoute = Astro.url.pathname === '/';
+const usesArticleStyles = /^\/(?:posts|watch|food)\/[^/]+\/?$/.test(Astro.url.pathname)
+  || /^\/admin\/posts\/[^/]+\/edit\/?$/.test(Astro.url.pathname);
+const routeStylesheetUrl = isAdminRoute ? adminStylesheetUrl : globalStylesheetUrl;
 const canonicalUrl = absoluteSiteUrl(Astro.url.pathname);
 const socialImageUrl = absoluteSiteUrl(image || DEFAULT_OG_IMAGE_PATH);
 const usesDefaultSocialImage = !image || image === DEFAULT_OG_IMAGE_PATH;
@@ -47,6 +54,9 @@ if (assistant) {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
+    <link rel="stylesheet" href={routeStylesheetUrl} />
+    {usesArticleStyles && <link rel="stylesheet" href={articleStylesheetUrl} />}
+    {isHomeRoute && <link rel="stylesheet" href={homeStylesheetUrl} />}
     {preconnectGiscus && (
       <>
         <link rel="dns-prefetch" href="//giscus.app" />

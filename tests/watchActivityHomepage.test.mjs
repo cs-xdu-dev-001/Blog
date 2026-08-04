@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { test } from 'node:test';
+import { homeStyles } from './helpers/styleSources.mjs';
 
 test('homepage renders symmetric activity cards before the lightweight watch marquee', () => {
   const homepage = fs.readFileSync(new URL('../src/pages/index.astro', import.meta.url), 'utf8');
-  const styles = fs.readFileSync(new URL('../src/styles/global.css', import.meta.url), 'utf8');
+  const styles = homeStyles;
 
   const activityIndex = homepage.indexOf('data-watch-activity');
   const marqueeIndex = homepage.search(/class="qzq-watch-marquee[^"']*"/);

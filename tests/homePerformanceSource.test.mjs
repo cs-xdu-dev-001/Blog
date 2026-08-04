@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
+import { homeStyles as styles } from './helpers/styleSources.mjs';
 
 const indexPage = fs.readFileSync(new URL('../src/pages/index.astro', import.meta.url), 'utf8');
-const styles = fs.readFileSync(new URL('../src/styles/global.css', import.meta.url), 'utf8');
 
 test('homepage SSR output is deterministic for the same archive data', () => {
   const frontmatterEnd = indexPage.indexOf('\n---', 4);

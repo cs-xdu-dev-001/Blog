@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
+import { publicStyles } from './helpers/styleSources.mjs';
 import {
   consumeAssistantSse,
   createAssistantSession,
@@ -53,7 +54,7 @@ test('assistant client isolates compact viewport behavior from desktop window st
 
 test('assistant client consumes streamed events and retries a failed turn in place', () => {
   const client = fs.readFileSync(new URL('../public/assistant.js', import.meta.url), 'utf8');
-  const styles = fs.readFileSync(new URL('../src/styles/global.css', import.meta.url), 'utf8');
+  const styles = publicStyles;
 
   assert.match(client, /consumeAssistantSse/);
   assert.match(client, /response\.body\.getReader\(\)/);
@@ -74,7 +75,7 @@ test('assistant client consumes streamed events and retries a failed turn in pla
 
 test('assistant shell exposes a live status and a restrained waiting animation', () => {
   const layout = fs.readFileSync(new URL('../src/layouts/BaseLayout.astro', import.meta.url), 'utf8');
-  const styles = fs.readFileSync(new URL('../src/styles/global.css', import.meta.url), 'utf8');
+  const styles = publicStyles;
 
   assert.match(layout, /role="dialog"/);
   assert.match(layout, /aria-labelledby="dn-assistant-title"/);

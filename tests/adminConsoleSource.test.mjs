@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { test } from 'node:test';
+import { adminStyles as styles } from './helpers/styleSources.mjs';
 
 function read(relativePath) {
   const url = new URL(`../${relativePath}`, import.meta.url);
@@ -9,7 +10,6 @@ function read(relativePath) {
 
 const layout = read('src/layouts/AdminLayout.astro');
 const baseLayout = read('src/layouts/BaseLayout.astro');
-const styles = read('src/styles/global.css');
 const posts = read('src/pages/admin/posts.astro');
 const topics = read('src/pages/admin/topics.astro');
 const watch = read('src/pages/admin/watch.astro');

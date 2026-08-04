@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { test } from 'node:test';
+import { adminStyles } from './helpers/styleSources.mjs';
 
 function read(relativePath) {
   return fs.readFileSync(new URL(`../${relativePath}`, import.meta.url), 'utf8');
@@ -23,7 +24,7 @@ test('admin post editor previews through the frontend markdown renderer', () => 
   const imageApiUrl = new URL('../src/pages/api/admin/posts/image.ts', import.meta.url);
   const api = fs.existsSync(apiUrl) ? fs.readFileSync(apiUrl, 'utf8') : '';
   const imageApi = fs.existsSync(imageApiUrl) ? fs.readFileSync(imageApiUrl, 'utf8') : '';
-  const styles = read('src/styles/global.css');
+  const styles = adminStyles;
 
   assert.match(page, /post-editor-preview article-prose/);
   assert.match(page, /post-editor-meta-grid/);

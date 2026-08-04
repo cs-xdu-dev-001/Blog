@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
+import { adminStyles as styles } from './helpers/styleSources.mjs';
 
 const source = fs.readFileSync(new URL('../public/admin-post-editor.js', import.meta.url), 'utf8');
 const milkdownSource = fs.readFileSync(new URL('../src/scripts/admin-post-milkdown.js', import.meta.url), 'utf8');
-const styles = fs.readFileSync(new URL('../src/styles/global.css', import.meta.url), 'utf8');
 
 test('post editor exposes reliable save states and never leaves a failed request locked', () => {
   assert.match(source, /AUTO_SAVE_DELAY_MS\s*=\s*2500/);

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { test } from 'node:test';
+import { publicStyles } from './helpers/styleSources.mjs';
 
 test('global search shell provides a two-column dialog and complete keyboard interaction', () => {
   const componentUrl = new URL('../src/components/GlobalSearch.astro', import.meta.url);
@@ -10,7 +11,7 @@ test('global search shell provides a two-column dialog and complete keyboard int
 
   const component = fs.readFileSync(componentUrl, 'utf8');
   const client = fs.readFileSync(clientUrl, 'utf8');
-  const styles = fs.readFileSync(new URL('../src/styles/global.css', import.meta.url), 'utf8');
+  const styles = publicStyles;
 
   assert.match(component, /role="dialog"/);
   assert.match(component, /data-global-search-input/);

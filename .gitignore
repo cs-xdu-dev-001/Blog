@@ -5,6 +5,9 @@ dist/
 astro-dev*.log
 *.log
 .tmp-*.png
+.tmp/
+test-results/
+playwright-report/
 screens-*.png
 reference-*.json
 reference-*.png

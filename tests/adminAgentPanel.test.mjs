@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
+import { adminStyles } from './helpers/styleSources.mjs';
 
 function read(relativePath) {
   const url = new URL(`../${relativePath}`, import.meta.url);
@@ -84,7 +85,7 @@ test('locked notes must be unlocked before the agent reads or edits their body',
 });
 
 test('admin agent uses a docked responsive layout without blocking editor scrolling', () => {
-  const styles = read('src/styles/global.css');
+  const styles = adminStyles;
 
   assert.match(styles, /--post-agent-width:\s*380px/);
   assert.match(styles, /\.post-editor-agent-panel/);

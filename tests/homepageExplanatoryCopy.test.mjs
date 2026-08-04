@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { test } from 'node:test';
+import { homeStyles } from './helpers/styleSources.mjs';
 
 test('homepage omits decorative eyebrows and explanatory copy', () => {
   const homepage = fs.readFileSync(new URL('../src/pages/index.astro', import.meta.url), 'utf8');
   const admin = fs.readFileSync(new URL('../public/admin-site.js', import.meta.url), 'utf8');
-  const styles = fs.readFileSync(new URL('../src/styles/global.css', import.meta.url), 'utf8');
+  const styles = homeStyles;
 
   assert.doesNotMatch(homepage, /section\('[^']+', \{ eyebrow:/);
   assert.doesNotMatch(homepage, /书架里放的是正在读/);
@@ -42,7 +43,7 @@ test('homepage moves the about entry from text navigation into the icon tools', 
 
 test('homepage hero keeps the original orange dev notes plate', () => {
   const homepage = fs.readFileSync(new URL('../src/pages/index.astro', import.meta.url), 'utf8');
-  const styles = fs.readFileSync(new URL('../src/styles/global.css', import.meta.url), 'utf8');
+  const styles = homeStyles;
 
   assert.match(homepage, /aria-label="Dev Notes"/);
   assert.match(homepage, /data-text="Dev"/);

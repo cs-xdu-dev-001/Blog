@@ -2,6 +2,22 @@ const root = document.querySelector('[data-milkdown-editor]');
 const fallback = document.querySelector('[data-editor-fallback]');
 let editorModulePromise = null;
 let loadPromise = null;
+let optionalModulesPromise = null;
+
+function preloadOptionalModules() {
+  if (optionalModulesPromise || !fallback) return optionalModulesPromise;
+  const markdown = fallback.value || '';
+  const requests = [];
+  if (/^```/m.test(markdown)) requests.push(import('./admin-post-milkdown-code.js'));
+  if (/^\s*\|.+\|\s*$[\s\S]*^\s*\|\s*:?-{3,}/m.test(markdown)) {
+    requests.push(import('./admin-post-milkdown-table.js'));
+  }
+  if (/\$\$[\s\S]+?\$\$|(^|[^\\])\$(?!\s)[^\n$]+?\$/m.test(markdown)) {
+    requests.push(import('./admin-post-milkdown-latex.js'));
+  }
+  optionalModulesPromise = Promise.all(requests).catch(() => []);
+  return optionalModulesPromise;
+}
 
 function getEditorModule() {
   editorModulePromise ??= import('./admin-post-milkdown.js');
@@ -35,6 +51,7 @@ async function loadEditor() {
 
   setEditorState('loading');
   performance.mark('post-editor-load-start');
+  preloadOptionalModules();
   loadPromise = getEditorModule()
     .then(({ bootMilkdown }) => bootMilkdown())
     .then(() => {

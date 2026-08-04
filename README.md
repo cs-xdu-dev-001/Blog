@@ -15,7 +15,7 @@ Dev Notes是一个个人博客和内容管理项目，重点不是模板化展�
 
 ## 技术栈
 
-- Astro 5
+- Astro 7
 - TailwindCSS
 - TypeScript
 - better-sqlite3
@@ -91,6 +91,7 @@ cp .env.example .env
 常用变量：
 
 - `BLOG_DB_PATH`：SQLite数据库路径，默认是`data/blog.sqlite`。
+- `BLOG_UPLOADS_ROOT`：上传文件根目录，默认是`public/uploads`；测试环境可指向隔离目录。
 - `ADMIN_USERNAME`：管理端用户名。
 - `ADMIN_PASSWORD_HASH`：管理端密码hash。
 - `ADMIN_SESSION_SECRET`：管理端会话签名密钥。
@@ -191,6 +192,15 @@ node --test
 ```bash
 npm run test:posts
 ```
+
+核心浏览器流程和前端性能预算：
+
+```bash
+npm run test:e2e
+npm run build && npm run test:performance
+```
+
+E2E会使用独立SQLite和上传目录，不会修改本地正式数据。
 
 ## 部署前检查
 
