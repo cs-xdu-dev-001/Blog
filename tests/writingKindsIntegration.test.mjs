@@ -12,13 +12,17 @@ test('writing index filters technical notes and reflections in place', () => {
   assert.match(writingPage, /data-writing-filter="all"/);
   assert.match(writingPage, /data-writing-filter="technical"/);
   assert.match(writingPage, /data-writing-filter="reflection"/);
+  assert.match(writingPage, /data-writing-filter="algorithm"/);
   assert.match(writingPage, /data-writing-kind=/);
+  assert.match(writingPage, /data-writing-algorithm=/);
+  assert.match(writingPage, /post\.topicSlugs/);
   assert.match(writingPage, /post\.kind/);
   assert.doesNotMatch(writingPage, /writingKind\(post\.data\.category\)/);
   assert.match(writingPage, /data-writing-count/);
   assert.match(writingPage, /history\.replaceState/);
   assert.match(writingPage, /prefers-reduced-motion: reduce/);
   assert.match(writingPage, /applyWritingFilter\(filterFromUrl\(\), \{ updateUrl: false, animate: false \}\)/);
+  assert.match(writingPage, /syncEmptyState/);
   assert.match(styles, /\.writing-filter\s*\{/);
   assert.match(styles, /\.writing-filter-button\.is-active/);
   assert.match(styles, /\.writing-row\[hidden\]/);

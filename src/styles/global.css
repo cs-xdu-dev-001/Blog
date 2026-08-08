@@ -1149,6 +1149,31 @@ button:focus-visible {
   letter-spacing: -0.01em;
 }
 
+.qzq-about-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.qzq-about-contact a,
+.qzq-about-contact button {
+  border: 0;
+  border-bottom: 1px solid rgba(38, 53, 72, 0.28);
+  background: transparent;
+  padding: 0 0 2px;
+  color: #263548;
+  font: inherit;
+  line-height: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.qzq-about-contact a:hover,
+.qzq-about-contact button:hover {
+  border-bottom-color: #ff7a18;
+  color: #ff7a18;
+}
+
 /* Food archive */
 
 .qzq-food-filters,

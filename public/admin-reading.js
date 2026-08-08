@@ -27,7 +27,6 @@ function escapeHtml(value) {
 }
 
 function statusLabel(item) {
-  if (item.status_label) return item.status_label;
   return item.status === 'read' ? '已读' : item.status === 'planned' ? '待读' : '在读';
 }
 

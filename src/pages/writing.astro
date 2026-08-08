@@ -4,17 +4,23 @@ import { postRepository } from '../lib/server/postRepository.mjs';
 
 postRepository.ensureSeededFromContent();
 const posts = postRepository.list({ filter: 'published', limit: 500 }).items;
+const isAlgorithmPost = (post) => [...(post.tags || []), ...(post.topicSlugs || [])]
+  .some((value) => /^(leetcode|算法|algorithm)$/i.test(String(value).trim()));
 const writingFilters = [
-  { key: 'all', label: '全部' },
   { key: 'technical', label: '技术' },
+  { key: 'algorithm', label: '算法' },
   { key: 'reflection', label: '随记' },
+  { key: 'all', label: '全部' },
 ];
-const requestedFilter = Astro.url.searchParams.get('type') || 'all';
+const requestedFilter = Astro.url.searchParams.get('type') || 'technical';
 const initialFilter = writingFilters.some((item) => item.key === requestedFilter)
   ? requestedFilter
   : 'all';
 const initialCount = posts.filter((post) => (
-  initialFilter === 'all' || post.kind === initialFilter
+  initialFilter === 'all'
+  || (initialFilter === 'algorithm' && isAlgorithmPost(post))
+  || (initialFilter === 'technical' && post.kind === 'technical' && !isAlgorithmPost(post))
+  || (initialFilter === 'reflection' && post.kind === 'reflection')
 )).length;
 
 const formatDate = (date) =>
@@ -38,22 +44,28 @@ const formatDate = (date) =>
     <nav class="writing-filter" aria-label="笔记类型">
       <button
         type="button"
-        class:list={['writing-filter-button', { 'is-active': initialFilter === 'all' }]}
-        data-writing-filter="all"
-        aria-pressed={initialFilter === 'all' ? 'true' : 'false'}
-      >全部</button>
-      <button
-        type="button"
         class:list={['writing-filter-button', { 'is-active': initialFilter === 'technical' }]}
         data-writing-filter="technical"
         aria-pressed={initialFilter === 'technical' ? 'true' : 'false'}
       >技术笔记</button>
       <button
         type="button"
+        class:list={['writing-filter-button', { 'is-active': initialFilter === 'algorithm' }]}
+        data-writing-filter="algorithm"
+        aria-pressed={initialFilter === 'algorithm' ? 'true' : 'false'}
+      >算法</button>
+      <button
+        type="button"
         class:list={['writing-filter-button', { 'is-active': initialFilter === 'reflection' }]}
         data-writing-filter="reflection"
         aria-pressed={initialFilter === 'reflection' ? 'true' : 'false'}
       >随记</button>
+      <button
+        type="button"
+        class:list={['writing-filter-button', { 'is-active': initialFilter === 'all' }]}
+        data-writing-filter="all"
+        aria-pressed={initialFilter === 'all' ? 'true' : 'false'}
+      >全部</button>
     </nav>
     <span data-writing-count>{String(initialCount).padStart(2, '0')}</span>
   </div>
@@ -61,13 +73,20 @@ const formatDate = (date) =>
   <section class="writing-list" aria-label="全部笔记">
     {posts.map((post, index) => {
       const kind = post.kind;
-      const isHidden = initialFilter !== 'all' && kind !== initialFilter;
+      const algorithm = isAlgorithmPost(post);
+      const isHidden = !(
+        initialFilter === 'all'
+        || (initialFilter === 'algorithm' && algorithm)
+        || (initialFilter === 'technical' && kind === 'technical' && !algorithm)
+        || (initialFilter === 'reflection' && kind === 'reflection')
+      );
       return (
         <a
           class="writing-row"
           href={`/posts/${post.slug}`}
           style={`--row-index: ${index};`}
           data-writing-kind={kind}
+          data-writing-algorithm={algorithm ? 'true' : 'false'}
           hidden={isHidden}
         >
           <span class="writing-row-number" data-writing-number>{String(index + 1).padStart(2, '0')}</span>
@@ -83,26 +102,45 @@ const formatDate = (date) =>
         </a>
       );
     })}
-    <p class="writing-empty" data-writing-empty hidden={initialCount > 0}>
-      {initialFilter === 'reflection' ? '还没有随记。' : '还没有这一类笔记。'}
-    </p>
+    {initialCount === 0 && (
+      <p class="writing-empty" data-writing-empty>
+        {initialFilter === 'reflection' ? '还没有随记。' : initialFilter === 'algorithm' ? '还没有算法笔记。' : '还没有这一类笔记。'}
+      </p>
+    )}
   </section>
 
   <script>
     const filterButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-writing-filter]')];
     const writingRows = [...document.querySelectorAll<HTMLElement>('[data-writing-kind]')];
     const countElement = document.querySelector<HTMLElement>('[data-writing-count]');
-    const emptyElement = document.querySelector<HTMLElement>('[data-writing-empty]');
+    let emptyElement = document.querySelector<HTMLElement>('[data-writing-empty]');
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const validFilters = new Set(['all', 'technical', 'reflection']);
+    const validFilters = new Set(['all', 'technical', 'algorithm', 'reflection']);
 
     function filterFromUrl() {
-      const value = new URL(window.location.href).searchParams.get('type') || 'all';
-      return validFilters.has(value) ? value : 'all';
+      const value = new URL(window.location.href).searchParams.get('type') || 'technical';
+      return validFilters.has(value) ? value : 'technical';
+    }
+
+    function syncEmptyState(visibleCount, selected) {
+      if (visibleCount > 0) {
+        emptyElement?.remove();
+        emptyElement = null;
+        return;
+      }
+      if (!emptyElement) {
+        emptyElement = document.createElement('p');
+        emptyElement.className = 'writing-empty';
+        emptyElement.dataset.writingEmpty = '';
+        document.querySelector('.writing-list')?.append(emptyElement);
+      }
+      emptyElement.textContent = selected === 'reflection'
+        ? '还没有随记。'
+        : selected === 'algorithm' ? '还没有算法笔记。' : '还没有这一类笔记。';
     }
 
     function applyWritingFilter(filter, { updateUrl = true, animate = true } = {}) {
-      const selected = validFilters.has(filter) ? filter : 'all';
+      const selected = validFilters.has(filter) ? filter : 'technical';
       let visibleIndex = 0;
 
       filterButtons.forEach((button) => {
@@ -112,7 +150,11 @@ const formatDate = (date) =>
       });
 
       writingRows.forEach((row) => {
-        const visible = selected === 'all' || row.dataset.writingKind === selected;
+        const algorithm = row.dataset.writingAlgorithm === 'true';
+        const visible = selected === 'all'
+          || (selected === 'algorithm' && algorithm)
+          || (selected === 'technical' && row.dataset.writingKind === 'technical' && !algorithm)
+          || (selected === 'reflection' && row.dataset.writingKind === 'reflection');
         row.hidden = !visible;
         if (!visible) return;
         visibleIndex += 1;
@@ -135,14 +177,11 @@ const formatDate = (date) =>
       });
 
       if (countElement) countElement.textContent = String(visibleIndex).padStart(2, '0');
-      if (emptyElement) {
-        emptyElement.hidden = visibleIndex > 0;
-        emptyElement.textContent = selected === 'reflection' ? '还没有随记。' : '还没有这一类笔记。';
-      }
+      syncEmptyState(visibleIndex, selected);
 
       if (updateUrl) {
         const url = new URL(window.location.href);
-        if (selected === 'all') url.searchParams.delete('type');
+        if (selected === 'technical') url.searchParams.delete('type');
         else url.searchParams.set('type', selected);
         history.replaceState({ writingFilter: selected }, '', url);
       }

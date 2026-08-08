@@ -22,7 +22,7 @@ repo.replaceAll([
     title: '自定义书',
     author: '本地管理端',
     status: 'reading',
-    status_label: '在读',
+    status_label: '错误的旧标签',
     progress: '10%',
     summary: '来自数据库的书籍。',
     quote: '数据库优先。',
@@ -56,6 +56,7 @@ repo.replaceAll([
 const dbView = createReadingArchiveView(repo);
 assert.deepEqual(dbView.getFeaturedReadingFromDb().map((book) => book.slug), ['custom-book']);
 assert.equal(dbView.getReadingGroupsFromDb().reading[0].title, '自定义书');
+assert.equal(dbView.getReadingGroupsFromDb().reading[0].statusLabel, '在读');
 assert.equal(dbView.getReadingBySlugFromDb('custom-book')?.cover, '/uploads/reading/custom.webp');
 assert.equal(dbView.getReadingBySlugFromDb('hidden-book'), null);
 assert.deepEqual(dbView.getAllReadingFromDb().map((book) => book.slug), ['custom-book']);

@@ -104,7 +104,6 @@ const travelMapStyle = [
   `--current-heat-size: ${travelMap.visual.currentHeatSize}px`,
   `--current-heat-opacity: ${travelMap.visual.currentHeatOpacity}`,
 ].join('; ');
-const readingCarousel = [...readingShelf, ...readingShelf];
 const readingTotal = readingShelf.length;
 const watchStats = {
   total: watchArchive.stats.total ?? watchArchive.items.length,
@@ -203,7 +202,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
       <div class="qzq-nav-links">
         {isSectionEnabled('topics') && <a class="qzq-nav-item" href="#topics"><span>{section('topics', { navLabel: '主线' }).navLabel}</span><small>{topicCount}</small></a>}
         <a class="qzq-nav-item" href="/writing"><span>笔记</span><small>{publishedPostCount}</small></a>
-        {isSectionEnabled('watch') && <a class="qzq-nav-item" href="#watch"><span>{section('watch', { navLabel: '影像' }).navLabel}</span><small>{navSmall('watch', String(watchStats.watched))}</small></a>}
+        {isSectionEnabled('watch') && <a class="qzq-nav-item" href="#watch"><span>{section('watch', { navLabel: '影像' }).navLabel}</span><small>{navSmall('watch', String(watchStats.total))}</small></a>}
         {isSectionEnabled('food') && <a class="qzq-nav-item" href="#food"><span>{section('food', { navLabel: '美食' }).navLabel}</span><small>{navSmall('food', String(foodItems.length))}</small></a>}
         {isSectionEnabled('reading') && <a class="qzq-nav-item" href="#reading"><span>{section('reading', { navLabel: '书架' }).navLabel}</span><small>{navSmall('reading', String(readingTotal))}</small></a>}
         {isSectionEnabled('statistics') && <a class="qzq-nav-item" href="#statistics"><span>{section('statistics', { navLabel: '统计' }).navLabel}</span><small>{navSmall('statistics', '∞')}</small></a>}
@@ -269,7 +268,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
             <path d="M11.727 6.719c0-.022.01-.375.01-.557 0-3.07-1.45-6.156-5.015-6.156S1.708 3.092 1.708 6.162c0 .182.01.535.01.557l-.72 1.795a26 26 0 0 0-.534 1.508c-.68 2.187-.46 3.093-.292 3.113.36.044 1.401-1.647 1.401-1.647 0 .979.504 2.256 1.594 3.179-.408.126-.907.319-1.228.556-.29.213-.253.43-.201.518.228.386 3.92.246 4.985.126 1.065.12 4.756.26 4.984-.126.052-.088.088-.305-.2-.518-.322-.237-.822-.43-1.23-.557 1.09-.922 1.594-2.2 1.594-3.178 0 0 1.041 1.69 1.401 1.647.168-.02.388-.926-.292-3.113a26 26 0 0 0-.534-1.508l-.72-1.795ZM9.773 5.53a.1.1 0 0 1-.009.096c-.109.159-1.554.943-3.033.943h-.017c-1.48 0-2.925-.784-3.034-.943a.1.1 0 0 1-.018-.055q0-.022.01-.04c.13-.287 1.43-.606 3.042-.606h.017c1.611 0 2.912.319 3.042.605m-4.32-.989c-.483.022-.896-.529-.922-1.229s.344-1.286.828-1.308c.483-.022.896.529.922 1.23.027.7-.344 1.286-.827 1.307Zm2.538 0c-.484-.022-.854-.607-.828-1.308.027-.7.44-1.25.923-1.23.483.023.853.608.827 1.309-.026.7-.439 1.251-.922 1.23ZM2.928 8.99q.32.063.639.117v2.336s1.104.222 2.21.068V9.363q.49.027.937.023h.017c1.117.013 2.474-.136 3.786-.396.097.622.151 1.386.097 2.284-.146 2.45-1.6 3.99-3.846 4.012h-.091c-2.245-.023-3.7-1.562-3.846-4.011-.054-.9 0-1.663.097-2.285"/>
           </svg>
         </button>
-        <span id="qq-number" class="qzq-qq-number">QQ {siteConfig.social.qq}</span>
+        <span id="qq-number" class="qzq-qq-number" data-qq-parts={String(siteConfig.social.qq || '').match(/.{1,3}/g)?.join(',') || ''}></span>
         </span>
       </div>
     </nav>
@@ -323,12 +322,12 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
           {siteConfig.heroSubline}
         </p>
         <div class="qzq-stat-rhythm" role="group" aria-label="站点内容统计">
-          <span><strong data-count-to={publishedPostCount}>0</strong><em>公开笔记</em></span>
-          <span><strong data-count-to={watchStats.total}>0</strong><em>影像作品</em></span>
-          <span><strong data-count-to={watchStats.watched}>0</strong><em>已看</em></span>
-          <span><strong data-count-to={watchStats.series}>0</strong><em>剧集</em></span>
-          <span><strong data-count-to={readingTotal}>0</strong><em>阅读书籍</em></span>
-          <span><strong data-count-to={watchStats.wanted}>0</strong><em>待看</em></span>
+          <span><strong>{publishedPostCount}</strong><em>公开笔记</em></span>
+          <span><strong>{watchStats.total}</strong><em>影像作品</em></span>
+          <span><strong>{watchStats.watched}</strong><em>已看</em></span>
+          <span><strong>{watchStats.series}</strong><em>剧集</em></span>
+          <span><strong>{readingTotal}</strong><em>阅读书籍</em></span>
+          <span><strong>{watchStats.wanted}</strong><em>待看</em></span>
         </div>
         <p>
           <mark data-highlight-sweep>{siteConfig.heroHighlight}</mark>
@@ -479,7 +478,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
             data-watch-batch-size={WATCH_TRACK_BATCH_SIZE}
             style="--watch-duration: 96s"
           >
-            {[...row.initialItems, ...row.initialItems].map((item, index) => (
+            {row.initialItems.map((item, index) => (
               <article
                 class={`qzq-watch-card qzq-work-card qzq-work-${index % 4}`}
                 tabindex="0"
@@ -581,14 +580,13 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
       <div class="qzq-bookshelf" data-reading-shelf>
         <div class="qzq-shelf-rail" aria-hidden="true"></div>
         <div class="qzq-book-row">
-          {readingCarousel.map((book, index) => (
+          {readingShelf.map((book, index) => (
             <article
               class={`qzq-book ${book.cover ? 'has-cover' : ''} ${index === 0 ? 'is-active' : ''}`}
               data-reading-book
               data-href={`/reading/${book.slug}`}
               style={`--book-spine: ${book.spineColor}; --book-accent: ${book.accentColor}; --book-index: ${index}; ${book.cover ? `--book-cover-image: url('${book.coverSmall || book.cover}');` : ''}`}
-              tabindex={index < readingShelf.length ? '0' : '-1'}
-              aria-hidden={index >= readingShelf.length ? 'true' : 'false'}
+              tabindex="0"
             >
               <div class="qzq-book-spine" aria-hidden="true">
                 <span>{book.statusLabel}</span>
@@ -1050,6 +1048,20 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
       return card;
     };
 
+    const appendHiddenWatchCopy = (track) => {
+      const sourceCards = [...track.children];
+      sourceCards.forEach((source) => {
+        const copy = source.cloneNode(true);
+        copy.setAttribute('aria-hidden', 'true');
+        copy.setAttribute('tabindex', '-1');
+        copy.removeAttribute('role');
+        copy.removeAttribute('data-watch-detail');
+        copy.removeAttribute('data-href');
+        copy.querySelectorAll('[tabindex]').forEach((item) => item.setAttribute('tabindex', '-1'));
+        track.append(copy);
+      });
+    };
+
     const renderWatchBatch = (track, catalog, offset) => {
       if (!catalog?.length) return;
       const batchSize = Math.min(Number(track.dataset.watchBatchSize) || 12, catalog.length);
@@ -1059,8 +1071,9 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
         (_, index) => catalog[(normalizedOffset + index) % catalog.length],
       );
       const fragment = document.createDocumentFragment();
-      [...batch, ...batch].forEach((item, index) => fragment.append(createWatchCard(item, index)));
+      batch.forEach((item, index) => fragment.append(createWatchCard(item, index)));
       track.replaceChildren(fragment);
+      appendHiddenWatchCopy(track);
       track.dataset.watchOffset = String(normalizedOffset);
     };
 
@@ -1068,6 +1081,7 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
       const rowIndex = Number(track.dataset.watchRow);
       const catalog = watchCatalogs[rowIndex] || [];
       const duration = Number.parseFloat(getComputedStyle(track).getPropertyValue('--watch-duration')) || 96;
+      appendHiddenWatchCopy(track);
       track.style.animationDelay = `${-(Math.random() * duration * 0.18)}s`;
       track.addEventListener('animationiteration', () => {
         const offset = Number(track.dataset.watchOffset) || 0;
@@ -1248,41 +1262,10 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
       });
     }
 
-    const formatCounter = (value) => new Intl.NumberFormat('zh-CN').format(value);
     const animateCounter = (counter) => {
       const target = Number(counter.getAttribute('data-count-to') || 0);
-      if (prefersReducedMotion.matches) {
-        counter.textContent = formatCounter(target);
-        return;
-      }
-      let start = null;
-      const scrambleUntil = 0.48;
-      const tick = (time) => {
-        start ??= time;
-        const progress = Math.min((time - start) / 2600, 1);
-        const eased = 1 - Math.pow(1 - progress, 2.4);
-        const noise = progress < scrambleUntil ? Math.random() * target * (1 - progress) * 0.1 : 0;
-        counter.textContent = formatCounter(Math.min(target, Math.round(target * eased + noise)));
-        if (progress < 1) requestAnimationFrame(tick);
-        else counter.textContent = formatCounter(target);
-      };
-      requestAnimationFrame(tick);
+      counter.textContent = new Intl.NumberFormat('zh-CN').format(target);
     };
-
-    const counterGroup = document.querySelector('.qzq-story');
-    if ('IntersectionObserver' in window && counterGroup) {
-      const counterObserver = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting || counterGroup.dataset.countStarted) return;
-          counterGroup.dataset.countStarted = 'true';
-          counterGroup.querySelectorAll('[data-count-to]').forEach(animateCounter);
-          counterObserver.unobserve(counterGroup);
-        });
-      }, { threshold: 0.45 });
-      counterObserver.observe(counterGroup);
-    } else {
-      counterGroup?.querySelectorAll('[data-count-to]').forEach(animateCounter);
-    }
 
     const revealSections = document.querySelectorAll('[data-reveal-section]');
     const revealSection = (section) => {
@@ -1404,6 +1387,20 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
     let readingRotationPaused = false;
     let readingRotationHoldUntil = 0;
 
+    const appendHiddenReadingCopy = (row) => {
+      [...row.children].forEach((source) => {
+        const copy = source.cloneNode(true);
+        copy.setAttribute('aria-hidden', 'true');
+        copy.setAttribute('tabindex', '-1');
+        copy.removeAttribute('data-reading-book');
+        copy.removeAttribute('data-href');
+        row.append(copy);
+      });
+    };
+
+    const readingRow = readingShelf?.querySelector('.qzq-book-row');
+    if (readingRow) appendHiddenReadingCopy(readingRow);
+
     const refreshBookIndexes = (row) => {
       row.querySelectorAll('[data-reading-book]').forEach((item, index) => {
         item.style.setProperty('--book-index', index);
@@ -1467,6 +1464,14 @@ const orbitTagModels = (configuredOrbitLabels.length ? configuredOrbitLabels : o
       });
       window.setInterval(rotateReadingShelf, 9000);
     }
+
+    const qqButton = document.querySelector('.qzq-qq-contact button');
+    const qqNumber = document.querySelector('#qq-number');
+    qqButton?.addEventListener('click', () => {
+      if (!qqNumber) return;
+      const number = (qqNumber.getAttribute('data-qq-parts') || '').split(',').join('');
+      qqNumber.textContent = qqNumber.textContent ? '' : number ? `QQ ${number}` : '';
+    });
   </script>
 </BaseLayout>
 

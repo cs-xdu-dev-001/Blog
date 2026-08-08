@@ -27,6 +27,16 @@ test('homepage watch archive renders a fixed card pool instead of the full dupli
   assert.match(indexPage, /data-watch-catalog/);
   assert.match(indexPage, /decoding="async"/);
   assert.match(indexPage, /fetchpriority="low"/);
+  assert.doesNotMatch(indexPage, /\[\.\.\.row\.initialItems,\s*\.\.\.row\.initialItems\]/);
+  assert.match(indexPage, /appendHiddenWatchCopy/);
+  assert.match(indexPage, /appendHiddenReadingCopy/);
+});
+
+test('homepage exposes consistent real statistics in SSR', () => {
+  assert.match(indexPage, /navSmall\('watch', String\(watchStats\.total\)\)/);
+  assert.doesNotMatch(indexPage, /data-count-to=\{publishedPostCount\}>0/);
+  assert.match(indexPage, /<strong>\{publishedPostCount\}<\/strong><em>公开笔记<\/em>/);
+  assert.match(indexPage, /<strong>\{watchStats\.total\}<\/strong><em>影像作品<\/em>/);
 });
 
 test('homepage motion uses delegated interactions and pauses work outside the visible foreground', () => {

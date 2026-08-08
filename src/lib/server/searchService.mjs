@@ -47,11 +47,16 @@ function postResult(item) {
 }
 
 function readingResult(item) {
+  const statusLabel = item.status === 'read'
+    ? '已读'
+    : item.status === 'planned'
+      ? '待读'
+      : '在读';
   return {
     id: `reading:${item.id ?? item.slug}`,
     type: 'reading',
     title: item.title,
-    meta: [item.author, item.status_label || item.statusLabel || item.status].filter(Boolean).join(' · '),
+    meta: [item.author, statusLabel].filter(Boolean).join(' · '),
     excerpt: cleanText(item.summary || item.quote || item.review),
     image: item.image_small_path || item.image_path || item.coverSmall || item.cover || '',
     href: `/reading/${item.slug}`,
@@ -143,7 +148,7 @@ export function createSearchService({
         item.title,
         item.author,
         item.status,
-        item.status_label,
+        item.status === 'read' ? '已读' : item.status === 'planned' ? '待读' : '在读',
         item.summary,
         item.quote,
         item.review,

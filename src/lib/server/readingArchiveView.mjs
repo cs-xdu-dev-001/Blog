@@ -2,12 +2,13 @@ import { getReadingBySlug, getReadingGroups, readingArchive } from '../../data/r
 import { readingRepository } from './readingRepository.mjs';
 
 function fromDb(row) {
+  const statusLabel = row.status === 'read' ? '已读' : row.status === 'planned' ? '待读' : '在读';
   return {
     slug: row.slug,
     title: row.title,
     author: row.author,
     status: row.status,
-    statusLabel: row.status_label,
+    statusLabel,
     featured: Boolean(row.is_featured),
     published: Boolean(row.published),
     progress: row.progress,

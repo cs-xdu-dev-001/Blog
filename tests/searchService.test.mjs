@@ -19,7 +19,7 @@ function createService() {
     })),
   ];
   const readingItems = [
-    { id: 1, slug: 'wave-top', title: '浪潮之巅', author: '吴军', status: 'reading', status_label: '在读', summary: '科技产业史', quote: '', review: 'AI产业变化', image_path: '/reading/wave-960.webp', image_small_path: '/reading/wave-480.webp' },
+    { id: 1, slug: 'wave-top', title: '浪潮之巅', author: '吴军', status: 'reading', status_label: '已读', summary: '科技产业史', quote: '', review: 'AI产业变化', image_path: '/reading/wave-960.webp', image_small_path: '/reading/wave-480.webp' },
     { id: 2, slug: 'three-body', title: '三体', author: '刘慈欣', status: 'read', status_label: '已读', summary: '科幻小说', quote: '', review: '', image_path: '' },
   ];
   const watchItems = [
@@ -61,6 +61,7 @@ test('search service groups public posts, reading, watch, food, and expandable t
   const reading = result.groups.find((group) => group.key === 'reading').items[0];
   assert.equal(reading.href, '/reading/wave-top');
   assert.equal(reading.image, '/reading/wave-480.webp');
+  assert.match(reading.meta, /在读/);
   const tag = result.groups.find((group) => group.key === 'tags').items[0];
   assert.equal(tag.title, 'AI');
   assert.equal(tag.children.length, 2);

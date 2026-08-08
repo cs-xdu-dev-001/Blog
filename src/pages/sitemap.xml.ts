@@ -27,7 +27,9 @@ export const GET: APIRoute = () => {
       path: `/posts/${encodeURIComponent(post.slug)}`,
       lastmod: post.updated_at || post.date,
       changefreq: 'monthly',
-      priority: 0.8,
+      priority: post.topicSlugs?.includes('leetcode') || post.tags?.some((tag) => /^leetcode$/i.test(tag))
+        ? 0.5
+        : post.featured ? 0.7 : 0.6,
     })),
     ...topics.map((topic) => ({
       path: `/topics/${encodeURIComponent(topic.slug)}`,

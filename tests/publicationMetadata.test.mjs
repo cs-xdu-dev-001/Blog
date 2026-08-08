@@ -56,6 +56,7 @@ test('public layouts and XML routes expose complete publication metadata', () =>
   const config = fs.readFileSync(new URL('../astro.config.mjs', import.meta.url), 'utf8');
   const layout = fs.readFileSync(new URL('../src/layouts/BaseLayout.astro', import.meta.url), 'utf8');
   const articleLayout = fs.readFileSync(new URL('../src/layouts/ArticleLayout.astro', import.meta.url), 'utf8');
+  const postRoute = fs.readFileSync(new URL('../src/pages/posts/[slug].astro', import.meta.url), 'utf8');
   const rssRoute = fs.readFileSync(new URL('../src/pages/rss.xml.ts', import.meta.url), 'utf8');
   const sitemapRoute = fs.readFileSync(new URL('../src/pages/sitemap.xml.ts', import.meta.url), 'utf8');
   const robots = fs.readFileSync(new URL('../public/robots.txt', import.meta.url), 'utf8');
@@ -68,6 +69,8 @@ test('public layouts and XML routes expose complete publication metadata', () =>
   assert.match(layout, /rel="alternate"[^>]*application\/rss\+xml/);
   assert.match(layout, /noindex, nofollow/);
   assert.match(articleLayout, /type="article"/);
+  assert.match(postRoute, /const fallbackDescription/);
+  assert.match(postRoute, /description=\{pageDescription\}/);
   assert.match(rssRoute, /application\/rss\+xml/);
   assert.match(rssRoute, /postRepository/);
   assert.match(sitemapRoute, /application\/xml/);
@@ -77,6 +80,7 @@ test('public layouts and XML routes expose complete publication metadata', () =>
   assert.match(sitemapRoute, /watchRepository/);
   assert.match(sitemapRoute, /foodRepository/);
   assert.match(sitemapRoute, /foodRepository\.list\(\{[^}]*publishedOnly:\s*true/);
+  assert.match(sitemapRoute, /post\.topicSlugs\?\.includes\('leetcode'\)/);
   assert.match(robots, /Disallow: \/admin\//);
   assert.match(robots, /Disallow: \/api\//);
   assert.match(robots, /Sitemap: https:\/\/blog\.kards\.asia\/sitemap\.xml/);
